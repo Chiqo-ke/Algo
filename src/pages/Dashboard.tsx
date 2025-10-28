@@ -429,7 +429,7 @@ export default function Dashboard() {
           throw new Error(`Failed to save strategy: ${response.status}`);
         }
 
-        const data = await response.json();
+        await response.json();
         
         toast({
           title: "Strategy Saved",
