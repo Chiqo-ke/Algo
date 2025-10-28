@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .test-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .loading {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.online {
+            background: #28a745;
+            color: white;
+        }
+        .status.offline {
+            background: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔌 Backend API Connection Test</h1>
+        <p>Backend URL: <strong>http://127.0.0.1:8000/api</strong></p>
+        <p>Frontend URL: <strong id="frontendUrl">Loading...</strong></p>
+        
+        <div style="margin: 20px 0;">
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000/api';
+        
+        // Display current frontend URL
+        document.getElementById('frontendUrl').textContent = window.location.origin;
+
+        async function testEndpoint(name, url, description) {
+            const resultsDiv = document.getElementById('results');
+            const testId = 'test-' + Date.now();
+            
+            // Add loading state
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = testId;
+            loadingDiv.className = 'test-item loading';
+            loadingDiv.innerHTML = `
+                <strong>${name}</strong><br>
+                <small>${description}</small><br>
+                Testing ${url}... ⏳
+            `;
+            resultsDiv.appendChild(loadingDiv);
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    loadingDiv.className = 'test-item success';
+                    loadingDiv.innerHTML = `
+                        <strong>✅ ${name}</strong>
+                        <span class="status online">ONLINE</span><br>
+                        <small>${description}</small><br>
+                        <small>Status: ${response.status} ${response.statusText}</small><br>
+                        <details>
+                            <summary>Response Data</summary>
+                            <pre>${JSON.stringify(data, null, 2).substring(0, 500)}...</pre>
+                        </details>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                loadingDiv.className = 'test-item error';
+                loadingDiv.innerHTML = `
+                    <strong>❌ ${name}</strong>
+                    <span class="status offline">OFFLINE</span><br>
+                    <small>${description}</small><br>
+                    <small>Error: ${error.message}</small>
+                `;
+            }
+        }
+
+        async function runAllTests() {
+            document.getElementById('results').innerHTML = '';
+            
+            // Test API endpoints
+            await testEndpoint(
+                'API Root',
+                `${API_BASE_URL}/`,
+                'Base API endpoint - should return API info'
+            );
+            
+            await testEndpoint(
+                'Symbols API',
+                `${API_BASE_URL}/data/symbols/`,
+                'List all available trading symbols'
+            );
+            
+            await testEndpoint(
+                'Strategies API',
+                `${API_BASE_URL}/strategies/strategies/`,
+                'List all trading strategies'
+            );
+            
+            await testEndpoint(
+                'Strategy Templates',
+                `${API_BASE_URL}/strategies/templates/`,
+                'List available strategy templates'
+            );
+            
+            await testEndpoint(
+                'Backtest Health',
+                `${API_BASE_URL}/backtests/api/health/`,
+                'Check backtest service health'
+            );
+            
+            await testEndpoint(
+                'Data Health',
+                `${API_BASE_URL}/data/api/health/`,
+                'Check data service health'
+            );
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>
