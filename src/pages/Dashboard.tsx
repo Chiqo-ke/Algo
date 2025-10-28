@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Sparkles, AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +32,15 @@ interface Message {
       rationale: string;
     }>;
   };
+  strategyData?: any; // Store full strategy data for confirmation
+}
+
+interface StrategyConfirmation {
+  strategyId?: number;
+  strategyName?: string;
+  canonicalJson?: any;
+  humanReadable?: string;
+  aiValidation?: any;
 }
 
 export default function Dashboard() {
@@ -37,9 +54,81 @@ export default function Dashboard() {
   const [hasStartedChat, setHasStartedChat] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [strategyId, setStrategyId] = useState<number | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmationData, setConfirmationData] = useState<StrategyConfirmation | null>(null);
+  const [isProceedingToNext, setIsProceedingToNext] = useState(false);
+  const [editedStrategyName, setEditedStrategyName] = useState("");
 
   // API base URL - adjust based on your environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+  // Convert canonical JSON to human-readable format
+  const formatStrategyForConfirmation = (canonicalJson: any): string => {
+    if (!canonicalJson) return "Unable to format strategy data.";
+
+    let readable = "";
+
+    // Strategy Name and Description
+    if (canonicalJson.strategy_name) {
+      readable += `📊 **Strategy Name:** ${canonicalJson.strategy_name}\n\n`;
+    }
+    if (canonicalJson.description) {
+      readable += `📝 **Description:** ${canonicalJson.description}\n\n`;
+    }
+
+    // Classification
+    if (canonicalJson.classification) {
+      const cls = canonicalJson.classification;
+      readable += `🏷️ **Classification:**\n`;
+      readable += `   • Type: ${cls.type || 'N/A'}\n`;
+      readable += `   • Risk Tier: ${cls.risk_tier || 'N/A'}\n`;
+      readable += `   • Market Condition: ${cls.market_condition || 'N/A'}\n\n`;
+    }
+
+    // Entry Rules
+    if (canonicalJson.entry_rules && canonicalJson.entry_rules.length > 0) {
+      readable += `🎯 **Entry Rules:**\n`;
+      canonicalJson.entry_rules.forEach((rule: any, idx: number) => {
+        readable += `   ${idx + 1}. ${rule.description || JSON.stringify(rule)}\n`;
+      });
+      readable += `\n`;
+    }
+
+    // Exit Rules
+    if (canonicalJson.exit_rules && canonicalJson.exit_rules.length > 0) {
+      readable += `🚪 **Exit Rules:**\n`;
+      canonicalJson.exit_rules.forEach((rule: any, idx: number) => {
+        readable += `   ${idx + 1}. ${rule.description || JSON.stringify(rule)}\n`;
+      });
+      readable += `\n`;
+    }
+
+    // Risk Management
+    if (canonicalJson.risk_management) {
+      const risk = canonicalJson.risk_management;
+      readable += `⚠️ **Risk Management:**\n`;
+      if (risk.stop_loss) readable += `   • Stop Loss: ${JSON.stringify(risk.stop_loss)}\n`;
+      if (risk.take_profit) readable += `   • Take Profit: ${JSON.stringify(risk.take_profit)}\n`;
+      if (risk.position_sizing) readable += `   • Position Sizing: ${JSON.stringify(risk.position_sizing)}\n`;
+      readable += `\n`;
+    }
+
+    // Indicators
+    if (canonicalJson.indicators && canonicalJson.indicators.length > 0) {
+      readable += `📈 **Indicators Used:**\n`;
+      canonicalJson.indicators.forEach((indicator: any) => {
+        readable += `   • ${indicator.name || indicator.type || 'Unknown'}\n`;
+      });
+      readable += `\n`;
+    }
+
+    // Timeframe
+    if (canonicalJson.timeframe) {
+      readable += `⏱️ **Timeframe:** ${canonicalJson.timeframe}\n\n`;
+    }
+
+    return readable;
+  };
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -94,6 +183,12 @@ export default function Dashboard() {
             classification: data.ai_validation?.classification,
             warnings: data.ai_validation?.warnings || [],
             recommendations: data.ai_validation?.recommendations_list || [],
+          },
+          strategyData: {
+            strategyId: data.strategy?.id,
+            canonicalJson: data.canonical_json,
+            aiValidation: data.ai_validation,
+            strategyName: strategyName,
           },
         };
         
@@ -160,6 +255,16 @@ export default function Dashboard() {
             classification: validationData?.classification,
             warnings: validationData?.warnings || [],
             recommendations: validationData?.recommendations_list || [],
+          },
+          strategyData: editMode ? {
+            strategyId: data.strategy?.id,
+            canonicalJson: data.canonical_json,
+            aiValidation: data.ai_validation,
+            strategyName: strategyName,
+          } : {
+            canonicalJson: data.canonical_json,
+            aiValidation: data,
+            strategyName: strategyName,
           },
         };
         
@@ -249,6 +354,103 @@ export default function Dashboard() {
     }
 
     return response;
+  };
+
+  const handleOpenConfirmation = (message: Message) => {
+    if (!message.strategyData) return;
+
+    const humanReadable = formatStrategyForConfirmation(message.strategyData.canonicalJson);
+    const defaultName = message.strategyData.strategyName || strategyName;
+    
+    setConfirmationData({
+      strategyId: message.strategyData.strategyId,
+      strategyName: defaultName,
+      canonicalJson: message.strategyData.canonicalJson,
+      humanReadable: humanReadable,
+      aiValidation: message.strategyData.aiValidation,
+    });
+    
+    // Set the editable name
+    setEditedStrategyName(defaultName);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmAndProceed = async () => {
+    if (!confirmationData) return;
+
+    // Validate strategy name
+    if (!editedStrategyName.trim()) {
+      toast({
+        title: "Strategy name required",
+        description: "Please enter a name for your strategy",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProceedingToNext(true);
+
+    try {
+      // If strategy was already created, just proceed to next step
+      if (confirmationData.strategyId) {
+        toast({
+          title: "Strategy Confirmed",
+          description: `Proceeding with ${editedStrategyName}`,
+        });
+        
+        // TODO: Navigate to backtest page or next step
+        // For now, just close the dialog
+        setShowConfirmDialog(false);
+        
+        // You can navigate to the next page here:
+        // navigate('/backtest', { state: { strategyId: confirmationData.strategyId } });
+        
+      } else {
+        // If only validated, create the strategy now
+        const response = await fetch(
+          `${API_BASE_URL}/api/strategies/api/create_strategy_with_ai/`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              canonical_json: confirmationData.canonicalJson,
+              name: editedStrategyName.trim(),
+              description: `Strategy confirmed on ${new Date().toLocaleDateString()}`,
+              tags: ["ai-generated", "confirmed"],
+              use_gemini: true,
+              save_to_backtest: true,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to save strategy: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        toast({
+          title: "Strategy Saved",
+          description: `${editedStrategyName} saved successfully`,
+        });
+
+        setShowConfirmDialog(false);
+        
+        // TODO: Navigate to next step with strategy ID
+        // navigate('/backtest', { state: { strategyId: data.strategy.id } });
+      }
+    } catch (error) {
+      console.error("Error confirming strategy:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to confirm strategy",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProceedingToNext(false);
+    }
   };
 
   const exampleQuestions = editMode
@@ -389,6 +591,21 @@ export default function Dashboard() {
                               )}
                             </div>
                           )}
+
+                          {/* Next Button for AI responses with strategy data */}
+                          {message.role === "assistant" && message.strategyData && (
+                            <div className="mt-4 pt-3 border-t border-border/50">
+                              <Button
+                                onClick={() => handleOpenConfirmation(message)}
+                                className="w-full bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow group"
+                                size="sm"
+                              >
+                                <FileCheck className="w-4 h-4 mr-2" />
+                                Review & Proceed to Next Step
+                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                              </Button>
+                            </div>
+                          )}
                           
                           <p className="text-xs opacity-60 mt-2">
                             {message.timestamp.toLocaleTimeString([], {
@@ -444,6 +661,165 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Strategy Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <FileCheck className="w-6 h-6 text-primary" />
+              Review & Name Your Strategy
+            </DialogTitle>
+            <DialogDescription>
+              Give your strategy a name and review how it will be saved. Make sure all the details look correct before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            {confirmationData && (
+              <div className="space-y-4">
+                {/* Editable Strategy Name */}
+                <div className="space-y-2">
+                  <label htmlFor="strategy-name" className="text-sm font-medium text-foreground flex items-center justify-between">
+                    <span>Strategy Name *</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {editedStrategyName.length}/100
+                    </span>
+                  </label>
+                  <Input
+                    id="strategy-name"
+                    value={editedStrategyName}
+                    onChange={(e) => setEditedStrategyName(e.target.value.slice(0, 100))}
+                    placeholder="e.g., RSI Mean Reversion Pro"
+                    className={cn(
+                      "text-lg font-semibold bg-background border-primary/30 focus:border-primary transition-colors",
+                      !editedStrategyName.trim() && "border-destructive/50 focus:border-destructive"
+                    )}
+                    disabled={isProceedingToNext}
+                    maxLength={100}
+                  />
+                  {confirmationData.strategyId && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Already saved with ID: {confirmationData.strategyId}
+                    </p>
+                  )}
+                </div>
+
+                {/* Human-Readable Strategy */}
+                <Card className="bg-card border-border">
+                  <CardContent className="pt-6">
+                    <div className="prose prose-sm prose-invert max-w-none">
+                      <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                        {confirmationData.humanReadable}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* AI Validation Summary */}
+                {confirmationData.aiValidation && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Confidence */}
+                    {confirmationData.aiValidation.confidence && (
+                      <div className="p-3 bg-secondary rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <CheckCircle className="w-4 h-4 text-success" />
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Confidence
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold">
+                          {confirmationData.aiValidation.confidence.toUpperCase()}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Classification */}
+                    {confirmationData.aiValidation.classification && (
+                      <div className="p-3 bg-secondary rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Type
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold">
+                          {confirmationData.aiValidation.classification}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Warnings Count */}
+                    {confirmationData.aiValidation.warnings && (
+                      <div className="p-3 bg-secondary rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4 text-warning" />
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Warnings
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold">
+                          {confirmationData.aiValidation.warnings.length || 0} Issues
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Warnings Details */}
+                {confirmationData.aiValidation?.warnings && 
+                 confirmationData.aiValidation.warnings.length > 0 && (
+                  <Card className="bg-warning/10 border-warning/30">
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        Important Warnings
+                      </h4>
+                      <ul className="space-y-1 text-sm">
+                        {confirmationData.aiValidation.warnings.map((warning: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-warning mt-0.5">•</span>
+                            <span>{warning}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex-shrink-0 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={isProceedingToNext}
+            >
+              Go Back & Edit
+            </Button>
+            <Button
+              onClick={handleConfirmAndProceed}
+              disabled={isProceedingToNext}
+              className="bg-gradient-primary shadow-glow group"
+            >
+              {isProceedingToNext ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Confirm & Proceed
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

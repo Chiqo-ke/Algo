@@ -1,17 +1,18 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Sparkles, 
-  FlaskConical, 
   Bot, 
   BarChart3, 
   GraduationCap, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -27,6 +28,14 @@ const menuItems = [
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <aside 
       className={cn(
@@ -77,16 +86,38 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
 
       {/* Bottom Section */}
       {!collapsed && (
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-2">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent">
             <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
-              AI
+              {user?.username?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">AI Trader</p>
-              <p className="text-xs text-muted-foreground">Pro Plan</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.username || 'User'}</p>
+              <p className="text-xs text-muted-foreground">{user?.email || 'user@example.com'}</p>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+      )}
+      {collapsed && (
+        <div className="p-4 border-t border-sidebar-border">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            className="w-full text-sidebar-foreground hover:bg-sidebar-accent"
+            title="Logout"
+          >
+            <LogOut className="w-5 h-5" />
+          </Button>
         </div>
       )}
     </aside>
