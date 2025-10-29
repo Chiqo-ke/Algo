@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck } from "lucide-react";
+import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 interface Message {
   id: string;
@@ -45,6 +46,7 @@ interface StrategyConfirmation {
 
 export default function Dashboard() {
   const location = useLocation();
+  const navigate = useNavigate();
   const editMode = location.state?.editMode || false;
   const strategyName = location.state?.strategyName || "Algo";
   const { toast } = useToast();
@@ -58,6 +60,15 @@ export default function Dashboard() {
   const [confirmationData, setConfirmationData] = useState<StrategyConfirmation | null>(null);
   const [isProceedingToNext, setIsProceedingToNext] = useState(false);
   const [editedStrategyName, setEditedStrategyName] = useState("");
+  
+  // NEW: Conversation memory state
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messageCount, setMessageCount] = useState(0);
+  const [useContext, setUseContext] = useState(true);
+  
+  // NEW: Metadata display configuration
+  const [showFullWarnings, setShowFullWarnings] = useState<Record<string, boolean>>({});
+  const [showFullRecommendations, setShowFullRecommendations] = useState<Record<string, boolean>>({});
 
   // API base URL - adjust based on your environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -148,7 +159,7 @@ export default function Dashboard() {
 
     try {
       if (editMode && strategyId) {
-        // Update existing strategy with AI
+        // Update existing strategy with AI + conversation memory
         const response = await fetch(
           `${API_BASE_URL}/api/strategies/api/${strategyId}/update_strategy_with_ai/`,
           {
@@ -162,6 +173,8 @@ export default function Dashboard() {
               use_gemini: true,
               strict_mode: false,
               update_description: `User requested: ${userInput.substring(0, 100)}`,
+              session_id: sessionId || undefined, // Use existing session
+              use_context: useContext,
             }),
           }
         );
@@ -171,6 +184,26 @@ export default function Dashboard() {
         }
 
         const data = await response.json();
+        
+        console.log("📊 UPDATE STRATEGY RESPONSE:", JSON.stringify(data, null, 2));
+        
+        // Update session info from response
+        if (data.session_id) {
+          setSessionId(data.session_id);
+          setMessageCount(data.message_count || messageCount + 2);
+        }
+        
+        // Parse canonical_json if it's a string
+        let canonicalJsonParsed = data.canonical_json;
+        if (typeof data.canonical_json === 'string') {
+          try {
+            canonicalJsonParsed = JSON.parse(data.canonical_json);
+          } catch (e) {
+            console.error("Failed to parse canonical_json:", e);
+          }
+        }
+        
+        console.log("🎯 Parsed canonical JSON:", canonicalJsonParsed);
         
         // Create AI response message with validation results
         const aiMessage: Message = {
@@ -186,7 +219,7 @@ export default function Dashboard() {
           },
           strategyData: {
             strategyId: data.strategy?.id,
-            canonicalJson: data.canonical_json,
+            canonicalJson: canonicalJsonParsed,
             aiValidation: data.ai_validation,
             strategyName: strategyName,
           },
@@ -200,7 +233,7 @@ export default function Dashboard() {
         });
 
       } else {
-        // Create new strategy or validate
+        // Create new strategy or validate with conversation memory
         const endpoint = editMode
           ? `${API_BASE_URL}/api/strategies/api/create_strategy_with_ai/`
           : `${API_BASE_URL}/api/strategies/api/validate_strategy_with_ai/`;
@@ -215,12 +248,16 @@ export default function Dashboard() {
               use_gemini: true,
               strict_mode: false,
               save_to_backtest: true,
+              session_id: sessionId || undefined, // Use existing session or create new
+              use_context: useContext,
             }
           : {
               strategy_text: userInput,
               input_type: "freetext",
               use_gemini: true,
               strict_mode: false,
+              session_id: sessionId || undefined, // Use existing session or create new
+              use_context: useContext,
             };
 
         const response = await fetch(endpoint, {
@@ -238,10 +275,32 @@ export default function Dashboard() {
 
         const data = await response.json();
         
+        console.log("📊 VALIDATE/CREATE STRATEGY RESPONSE:", JSON.stringify(data, null, 2));
+        
+        // Update session info from response
+        if (data.session_id) {
+          setSessionId(data.session_id);
+          setMessageCount(data.message_count || messageCount + 2);
+          console.log(`📝 Session ${data.session_id} - Message count: ${data.message_count}`);
+        }
+        
         // Save strategy ID if created
         if (editMode && data.strategy?.id) {
           setStrategyId(data.strategy.id);
         }
+
+        // Parse canonical_json if it's a string
+        let canonicalJsonParsed = data.canonical_json;
+        if (typeof data.canonical_json === 'string') {
+          try {
+            canonicalJsonParsed = JSON.parse(data.canonical_json);
+            console.log("✅ Successfully parsed canonical_json from string");
+          } catch (e) {
+            console.error("❌ Failed to parse canonical_json:", e);
+          }
+        }
+        
+        console.log("🎯 Parsed canonical JSON:", canonicalJsonParsed);
 
         // Create AI response message
         const validationData = editMode ? data.ai_validation : data;
@@ -258,11 +317,11 @@ export default function Dashboard() {
           },
           strategyData: editMode ? {
             strategyId: data.strategy?.id,
-            canonicalJson: data.canonical_json,
+            canonicalJson: canonicalJsonParsed,
             aiValidation: data.ai_validation,
             strategyName: strategyName,
           } : {
-            canonicalJson: data.canonical_json,
+            canonicalJson: canonicalJsonParsed,
             aiValidation: data,
             strategyName: strategyName,
           },
@@ -306,61 +365,40 @@ export default function Dashboard() {
       return data?.message || "Unable to process strategy. Please try again.";
     }
 
-    let response = isEdit
-      ? `✅ **Strategy ${strategyId ? 'Updated' : 'Created'} Successfully!**\n\n`
-      : `✅ **Strategy Analysis Complete**\n\n`;
-
-    // Add classification
-    if (data.classification_detail) {
-      response += `**Classification:**\n`;
-      response += `• Type: ${data.classification_detail.type}\n`;
-      response += `• Risk Tier: ${data.classification_detail.risk_tier}\n`;
-      response += `• Confidence: ${data.confidence || 'medium'}\n\n`;
+    // ✅ AI HAS FULL CONTROL - Trust the AI's formatted response completely
+    if (data.formatted_response) {
+      return data.formatted_response;
     }
 
-    // Add canonicalized steps
-    if (data.canonicalized_steps && data.canonicalized_steps.length > 0) {
-      response += `**Strategy Steps:**\n`;
-      data.canonicalized_steps.slice(0, 5).forEach((step: string) => {
-        response += `• ${step}\n`;
-      });
-      response += `\n`;
-    }
-
-    // Add warnings
-    if (data.warnings && data.warnings.length > 0) {
-      response += `⚠️ **Warnings:**\n`;
-      data.warnings.forEach((warning: string) => {
-        response += `• ${warning}\n`;
-      });
-      response += `\n`;
-    }
-
-    // Add top recommendations
-    if (data.recommendations_list && data.recommendations_list.length > 0) {
-      response += `💡 **AI Recommendations:**\n`;
-      data.recommendations_list.slice(0, 3).forEach((rec: any) => {
-        response += `• **${rec.title}** (${rec.priority})\n  ${rec.rationale}\n`;
-      });
-      response += `\n`;
-    }
-
-    // Add next actions
-    if (data.next_actions && data.next_actions.length > 0) {
-      response += `🎯 **Suggested Next Steps:**\n`;
-      data.next_actions.slice(0, 3).forEach((action: string) => {
-        response += `• ${action}\n`;
-      });
+    // ⚠️ Fallback only if backend didn't provide formatted_response
+    console.warn("⚠️ Backend didn't provide formatted_response, using minimal fallback");
+    
+    // Minimal fallback - just show the essential message
+    let response = data.message || (isEdit 
+      ? "Strategy has been processed successfully." 
+      : "Strategy analysis complete.");
+    
+    // Add basic context if available
+    if (data.context_used || sessionId) {
+      response += `\n\n🧠 *Using conversation context from previous ${messageCount} messages*`;
     }
 
     return response;
   };
 
   const handleOpenConfirmation = (message: Message) => {
-    if (!message.strategyData) return;
+    if (!message.strategyData) {
+      console.error("❌ No strategyData found in message:", message);
+      return;
+    }
+
+    console.log("📋 Opening confirmation dialog with data:", message.strategyData);
+    console.log("📋 Canonical JSON structure:", message.strategyData.canonicalJson);
 
     const humanReadable = formatStrategyForConfirmation(message.strategyData.canonicalJson);
     const defaultName = message.strategyData.strategyName || strategyName;
+    
+    console.log("📋 Generated human readable:", humanReadable);
     
     setConfirmationData({
       strategyId: message.strategyData.strategyId,
@@ -391,45 +429,122 @@ export default function Dashboard() {
     setIsProceedingToNext(true);
 
     try {
-      // If strategy was already created, just proceed to next step
+      // If strategy was already created during editMode, update the name if changed
       if (confirmationData.strategyId) {
+        console.log("✅ Strategy already exists with ID:", confirmationData.strategyId);
+        
+        // Update the strategy name if it was changed
+        if (editedStrategyName.trim() !== confirmationData.strategyName) {
+          try {
+            const updateResponse = await fetch(
+              `${API_BASE_URL}/api/strategies/api/strategies/${confirmationData.strategyId}/`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  name: editedStrategyName.trim(),
+                }),
+              }
+            );
+
+            if (!updateResponse.ok) {
+              console.warn("Failed to update strategy name, continuing anyway");
+            }
+          } catch (e) {
+            console.warn("Failed to update strategy name:", e);
+          }
+        }
+        
         toast({
           title: "Strategy Confirmed",
           description: `Proceeding with ${editedStrategyName}`,
         });
         
-        // TODO: Navigate to backtest page or next step
-        // For now, just close the dialog
         setShowConfirmDialog(false);
         
-        // You can navigate to the next page here:
-        // navigate('/backtest', { state: { strategyId: confirmationData.strategyId } });
+        // Navigate to backtest page with strategy ID
+        navigate('/backtest', { 
+          state: { 
+            strategyId: confirmationData.strategyId,
+            strategyName: editedStrategyName.trim()
+          } 
+        });
         
       } else {
-        // If only validated, create the strategy now
+        console.log("💾 Creating new strategy with canonical JSON");
+        
+        // Extract metadata from canonical JSON for proper categorization
+        const canonicalJson = confirmationData.canonicalJson;
+        const classification = confirmationData.aiValidation?.classification_detail || {};
+        
+        // Build tags array, filtering out undefined/null values
+        const tags = [
+          "ai-generated",
+          "confirmed",
+          ...(Array.isArray(classification.primary_instruments) ? classification.primary_instruments : []),
+          ...(classification.type ? [classification.type] : [])
+        ].filter(tag => tag && typeof tag === 'string').slice(0, 10); // Max 10 tags, must be strings
+        
+        // Helper function to safely parse numeric values
+        const parseOptionalDecimal = (value: any): number | null => {
+          if (value === null || value === undefined || value === '') return null;
+          const parsed = typeof value === 'string' ? parseFloat(value) : Number(value);
+          return isNaN(parsed) ? null : parsed;
+        };
+        
+        const payload = {
+          name: editedStrategyName.trim(),
+          description: canonicalJson?.description || `Strategy confirmed on ${new Date().toLocaleDateString()}`,
+          strategy_code: JSON.stringify(canonicalJson), // Store canonical JSON as strategy_code
+          parameters: canonicalJson?.metadata || {},
+          tags: tags,
+          timeframe: (canonicalJson?.timeframe || canonicalJson?.metadata?.timeframe || "").toString().slice(0, 20), // Max 20 chars
+          risk_level: (classification.risk_tier || "").toString().slice(0, 20), // Max 20 chars
+          expected_return: parseOptionalDecimal(canonicalJson?.expected_return || canonicalJson?.metadata?.expected_return),
+          max_drawdown: parseOptionalDecimal(canonicalJson?.max_drawdown || canonicalJson?.metadata?.max_drawdown),
+        };
+        
+        console.log("📤 Sending create_strategy payload:", JSON.stringify(payload, null, 2));
+        
+        // If only validated, create the strategy now using the create_strategy endpoint
         const response = await fetch(
-          `${API_BASE_URL}/api/strategies/api/create_strategy_with_ai/`,
+          `${API_BASE_URL}/api/strategies/api/create_strategy/`,
           {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              canonical_json: confirmationData.canonicalJson,
-              name: editedStrategyName.trim(),
-              description: `Strategy confirmed on ${new Date().toLocaleDateString()}`,
-              tags: ["ai-generated", "confirmed"],
-              use_gemini: true,
-              save_to_backtest: true,
-            }),
+            body: JSON.stringify(payload),
           }
         );
 
         if (!response.ok) {
-          throw new Error(`Failed to save strategy: ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          console.error("❌ Create strategy failed:");
+          console.error("Status:", response.status);
+          console.error("Error data:", JSON.stringify(errorData, null, 2));
+          console.error("Payload sent:", JSON.stringify({
+            name: editedStrategyName.trim(),
+            description: canonicalJson?.description || `Strategy confirmed on ${new Date().toLocaleDateString()}`,
+            strategy_code: JSON.stringify(canonicalJson),
+            parameters: canonicalJson?.metadata || {},
+            tags: ["ai-generated", "confirmed"],
+          }, null, 2));
+          
+          // Show detailed error message
+          const errorMessage = errorData.error 
+            || (errorData.detail ? JSON.stringify(errorData.detail) : null)
+            || Object.entries(errorData).map(([key, value]) => `${key}: ${value}`).join(', ')
+            || `Failed to save strategy: ${response.status}`;
+          
+          throw new Error(errorMessage);
         }
 
-        await response.json();
+        const data = await response.json();
+        
+        console.log("✅ Strategy created successfully:", data);
         
         toast({
           title: "Strategy Saved",
@@ -438,8 +553,17 @@ export default function Dashboard() {
 
         setShowConfirmDialog(false);
         
-        // TODO: Navigate to next step with strategy ID
-        // navigate('/backtest', { state: { strategyId: data.strategy.id } });
+        // Navigate to backtest page with new strategy ID
+        if (data.id) {
+          navigate('/backtest', { 
+            state: { 
+              strategyId: data.id,
+              strategyName: editedStrategyName.trim()
+            } 
+          });
+        } else {
+          console.error("No strategy ID returned from create API");
+        }
       }
     } catch (error) {
       console.error("Error confirming strategy:", error);
@@ -471,194 +595,249 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout hideAssistant={true}>
-      <div className="flex flex-col items-center justify-center min-h-screen p-8">
-        {/* Header at Top Center */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground flex items-center justify-center gap-3">
-            <Sparkles className="w-10 h-10" />
+      <div className="flex flex-col h-full p-4 gap-4">
+        {/* Header */}
+        <div className="text-center flex-shrink-0">
+          <h1 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
+            <Sparkles className="w-6 h-6" />
             {strategyName}
           </h1>
           {editMode && (
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-1 text-xs">
               Editing strategy - Ask AI to help improve and optimize
             </p>
           )}
+          {/* Conversation Memory Indicator */}
+          {sessionId && (
+            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span>
+                Conversation memory active • {messageCount} messages • Session: {sessionId.substring(0, 12)}...
+              </span>
+            </div>
+          )}
         </div>
-        {/* AI Assistant Section - Centered */}
-        <div className={cn(
-          "transition-all duration-500 ease-in-out w-full",
-          hasStartedChat ? "max-w-4xl" : "max-w-4xl"
-        )}>
-            {!hasStartedChat && (
-              <div className="text-center mb-8 space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
-                  <Sparkles className="w-8 h-8 text-primary-foreground" />
-                </div>
-                <h2 className="text-2xl font-bold text-foreground">
-                  {editMode ? `Edit ${strategyName}` : "Ask AI about your trading"}
-                </h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  {editMode 
-                    ? "Describe the changes you want to make to your strategy. I can help optimize parameters, add new indicators, or improve risk management."
-                    : "Get insights about your portfolio performance, optimize your bots, or analyze market conditions. Ask about strategy adjustments, risk management, or any trading questions you have."}
-                </p>              {/* Example Questions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
+
+        {/* Chat Area - Fills available space */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {!hasStartedChat && (
+            <div className="text-center mb-6 space-y-3">
+              <div className="w-10 h-10 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <h2 className="text-lg font-bold text-foreground">
+                {editMode ? `Edit ${strategyName}` : "Ask AI about your trading"}
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-xs">
+                {editMode 
+                  ? "Describe the changes you want to make to your strategy. I can help optimize parameters, add new indicators, or improve risk management."
+                  : "Get insights about your portfolio performance, optimize your bots, or analyze market conditions. Ask about strategy adjustments, risk management, or any trading questions you have."}
+              </p>
+              
+              {/* Example Questions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 max-w-xl mx-auto">
                 {exampleQuestions.map((question, i) => (
                   <Button
                     key={i}
                     variant="outline"
-                    className="h-auto p-4 text-left justify-start hover:bg-secondary"
+                    className="h-auto p-2.5 text-left justify-start hover:bg-secondary text-[11px]"
                     onClick={() => setInput(question)}
                   >
-                    <span className="text-sm">{question}</span>
+                    <span>{question}</span>
                   </Button>
                 ))}
               </div>
             </div>
           )}
 
-          <Card className="bg-card border-border shadow-card">
-            <CardContent className="space-y-4 pt-6">
-              {/* Messages */}
-              {messages.length > 0 && (
-                <ScrollArea className="h-96 pr-4">
-                  <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "flex gap-3",
-                          message.role === "user" ? "flex-row-reverse" : "flex-row"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                            message.role === "assistant"
-                              ? "bg-gradient-primary text-primary-foreground"
-                              : "bg-secondary text-secondary-foreground"
-                          )}
-                        >
-                          {message.role === "assistant" ? (
-                            <Sparkles className="w-4 h-4" />
-                          ) : (
-                            <span className="text-xs font-bold">U</span>
-                          )}
-                        </div>
-                        <div
-                          className={cn(
-                            "flex-1 px-4 py-2 rounded-lg max-w-lg space-y-2",
-                            message.role === "assistant"
-                              ? "bg-secondary text-secondary-foreground"
-                              : "bg-primary text-primary-foreground"
-                          )}
-                        >
-                          <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-                          
-                          {/* Display AI Metadata (Confidence, Warnings, etc.) */}
-                          {message.metadata && message.role === "assistant" && (
-                            <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
-                              {/* Confidence Badge */}
-                              {message.metadata.confidence && (
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle className="w-4 h-4 text-green-500" />
-                                  <span className="text-xs font-medium">
-                                    Confidence: {message.metadata.confidence.toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {/* Warnings */}
-                              {message.metadata.warnings && message.metadata.warnings.length > 0 && (
-                                <div className="flex items-start gap-2">
-                                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5" />
-                                  <div className="flex-1">
-                                    <span className="text-xs font-medium block mb-1">
-                                      Warnings ({message.metadata.warnings.length})
-                                    </span>
-                                    <ul className="text-xs opacity-80 space-y-1">
-                                      {message.metadata.warnings.slice(0, 2).map((warning, i) => (
-                                        <li key={i}>• {warning}</li>
-                                      ))}
-                                      {message.metadata.warnings.length > 2 && (
-                                        <li className="italic">
-                                          +{message.metadata.warnings.length - 2} more...
-                                        </li>
-                                      )}
-                                    </ul>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Next Button for AI responses with strategy data */}
-                          {message.role === "assistant" && message.strategyData && (
-                            <div className="mt-4 pt-3 border-t border-border/50">
-                              <Button
-                                onClick={() => handleOpenConfirmation(message)}
-                                className="w-full bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow group"
-                                size="sm"
-                              >
-                                <FileCheck className="w-4 h-4 mr-2" />
-                                Review & Proceed to Next Step
-                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                              </Button>
-                            </div>
-                          )}
-                          
-                          <p className="text-xs opacity-60 mt-2">
-                            {message.timestamp.toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {/* Loading Indicator */}
-                    {isLoading && (
-                      <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        </div>
-                        <div className="flex-1 px-4 py-2 rounded-lg max-w-lg bg-secondary text-secondary-foreground">
-                          <p className="text-sm">Analyzing your strategy with AI...</p>
-                        </div>
-                      </div>
+          {/* Messages Area - Scrollable */}
+          {messages.length > 0 && (
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4 pb-4 max-w-xl mx-auto">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      "flex gap-3",
+                      message.role === "user" ? "flex-row-reverse" : "flex-row"
                     )}
-                  </div>
-                </ScrollArea>
-              )}
+                  >
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                        message.role === "assistant"
+                          ? "bg-gradient-primary text-primary-foreground"
+                          : "bg-secondary text-secondary-foreground"
+                      )}
+                    >
+                      {message.role === "assistant" ? (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      ) : (
+                        <span className="text-[10px] font-bold">U</span>
+                      )}
+                    </div>
+                    <div
+                      className={cn(
+                        "flex-1 px-3 py-2.5 rounded-lg space-y-2",
+                        message.role === "assistant"
+                          ? "bg-secondary text-secondary-foreground"
+                          : "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {/* Render markdown content */}
+                      <MarkdownRenderer content={message.content} />
+                      
+                      {/* Display AI Metadata (Confidence, Warnings, etc.) */}
+                      {message.metadata && message.role === "assistant" && (
+                        <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+                          {/* Confidence Badge */}
+                          {message.metadata.confidence && (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                              <span className="text-[10px] font-medium">
+                                Confidence: {message.metadata.confidence.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Warnings - Configurable Display */}
+                          {message.metadata.warnings && message.metadata.warnings.length > 0 && (
+                            <div className="flex items-start gap-2">
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-500 mt-0.5" />
+                              <div className="flex-1">
+                                <span className="text-[10px] font-medium block mb-1">
+                                  Warnings ({message.metadata.warnings.length})
+                                </span>
+                                <ul className="text-[10px] opacity-80 space-y-1">
+                                  {(showFullWarnings[message.id] 
+                                    ? message.metadata.warnings 
+                                    : message.metadata.warnings.slice(0, 2)
+                                  ).map((warning, i) => (
+                                    <li key={i}>• {warning}</li>
+                                  ))}
+                                </ul>
+                                {message.metadata.warnings.length > 2 && (
+                                  <button
+                                    onClick={() => setShowFullWarnings(prev => ({
+                                      ...prev,
+                                      [message.id]: !prev[message.id]
+                                    }))}
+                                    className="text-[10px] text-blue-500 hover:text-blue-600 mt-1 underline"
+                                  >
+                                    {showFullWarnings[message.id] 
+                                      ? 'Show less' 
+                                      : `Show ${message.metadata.warnings.length - 2} more...`}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Recommendations - Configurable Display */}
+                          {message.metadata.recommendations && message.metadata.recommendations.length > 0 && (
+                            <div className="flex items-start gap-2">
+                              <Lightbulb className="w-3.5 h-3.5 text-blue-500 mt-0.5" />
+                              <div className="flex-1">
+                                <span className="text-[10px] font-medium block mb-1">
+                                  AI Recommendations ({message.metadata.recommendations.length})
+                                </span>
+                                <ul className="text-[10px] opacity-80 space-y-1.5">
+                                  {(showFullRecommendations[message.id] 
+                                    ? message.metadata.recommendations 
+                                    : message.metadata.recommendations.slice(0, 3)
+                                  ).map((rec, i) => (
+                                    <li key={i} className="space-y-0.5">
+                                      <div className="font-medium">
+                                        • {rec.title} <span className="text-[9px] opacity-60">({rec.priority})</span>
+                                      </div>
+                                      <div className="pl-3 opacity-70">{rec.rationale}</div>
+                                    </li>
+                                  ))}
+                                </ul>
+                                {message.metadata.recommendations.length > 3 && (
+                                  <button
+                                    onClick={() => setShowFullRecommendations(prev => ({
+                                      ...prev,
+                                      [message.id]: !prev[message.id]
+                                    }))}
+                                    className="text-[10px] text-blue-500 hover:text-blue-600 mt-1 underline"
+                                  >
+                                    {showFullRecommendations[message.id] 
+                                      ? 'Show less' 
+                                      : `Show ${message.metadata.recommendations.length - 3} more...`}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-              {/* Input */}
-              <div className="flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && !isLoading && handleSendMessage()}
-                  placeholder={editMode 
-                    ? `Ask about editing ${strategyName}...`
-                    : "Ask about your trading strategy, bots, or market analysis..."}
-                  className="flex-1"
-                  disabled={isLoading}
-                />
-                <Button 
-                  onClick={handleSendMessage} 
-                  size="icon" 
-                  className="bg-gradient-primary"
-                  disabled={isLoading || !input.trim()}
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
+                      {/* Next Button for AI responses with strategy data */}
+                      {message.role === "assistant" && message.strategyData && (
+                        <div className="mt-4 pt-3 border-t border-border/50">
+                          <Button
+                            onClick={() => handleOpenConfirmation(message)}
+                            className="w-full bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow group"
+                            size="sm"
+                          >
+                            <FileCheck className="w-4 h-4 mr-2" />
+                            Review & Proceed to Next Step
+                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <p className="text-[10px] opacity-60 mt-2">
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Loading Indicator */}
+                {isLoading && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    </div>
+                    <div className="flex-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground">
+                      <p className="text-xs">Analyzing your strategy with AI...</p>
+                    </div>
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </ScrollArea>
+          )}
+
+          {/* Input Area - Fixed at bottom */}
+          <div className="flex gap-2 pt-4 flex-shrink-0 max-w-xl mx-auto w-full">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && !isLoading && handleSendMessage()}
+              placeholder={editMode 
+                ? `Ask about editing ${strategyName}...`
+                : "Ask about your trading strategy, bots, or market analysis..."}
+              className="flex-1"
+              disabled={isLoading}
+            />
+            <Button 
+              onClick={handleSendMessage} 
+              size="icon" 
+              className="bg-gradient-primary"
+              disabled={isLoading || !input.trim()}
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -709,11 +888,7 @@ export default function Dashboard() {
                 {/* Human-Readable Strategy */}
                 <Card className="bg-card border-border">
                   <CardContent className="pt-6">
-                    <div className="prose prose-sm prose-invert max-w-none">
-                      <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                        {confirmationData.humanReadable}
-                      </div>
-                    </div>
+                    <MarkdownRenderer content={confirmationData.humanReadable} />
                   </CardContent>
                 </Card>
 
