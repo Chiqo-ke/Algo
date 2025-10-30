@@ -75,6 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (username: string, email: string, password: string, firstName?: string, lastName?: string) => {
+    // Build payload, only include first_name/last_name if they have values
+    const payload: any = {
+      username, 
+      email, 
+      password,
+      password2: password, // Backend expects password confirmation
+    };
+    
+    if (firstName) payload.first_name = firstName;
+    if (lastName) payload.last_name = lastName;
+    
     const { data, error } = await apiPost<{
       tokens: {
         access: string;
@@ -82,14 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       user: User;
       message: string;
-    }>(API_ENDPOINTS.auth.register, { 
-      username, 
-      email, 
-      password,
-      password2: password, // Backend expects password confirmation
-      first_name: firstName || "",
-      last_name: lastName || ""
-    });
+    }>(API_ENDPOINTS.auth.register, payload);
 
     if (error) {
       throw new Error(error);

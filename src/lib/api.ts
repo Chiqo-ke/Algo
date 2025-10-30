@@ -72,14 +72,25 @@ export async function apiCall<T>(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      if (DEBUG_API) {
+        console.error('❌ API Error:', response.status, errorData);
+      }
+      
+      // Handle validation errors (field-specific errors)
+      if (errorData && typeof errorData === 'object' && !errorData.message && !errorData.detail && !errorData.error) {
+        // Format field errors: { "username": ["This field is required"], "email": ["Invalid email"] }
+        const fieldErrors = Object.entries(errorData)
+          .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+          .join('; ');
+        throw new Error(fieldErrors || `HTTP error! status: ${response.status}`);
+      }
+      
       const errorMessage = errorData.message || 
         errorData.detail || 
         errorData.error ||
         `HTTP error! status: ${response.status}`;
       
-      if (DEBUG_API) {
-        console.error('❌ API Error:', errorMessage, errorData);
-      }
       throw new Error(errorMessage);
     }
 

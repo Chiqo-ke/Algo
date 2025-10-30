@@ -64,27 +64,8 @@ export default function Strategy() {
           description: error,
           variant: "destructive",
         });
-        // Set mock data as fallback
-        setStrategies([
-          {
-            id: 1,
-            name: "Momentum Scalper",
-            status: "live",
-            performance: 12.5,
-            profitLoss: "+$1,234",
-            winRate: "73.5%",
-            trades: 45
-          },
-          {
-            id: 2,
-            name: "RSI Mean Reversion",
-            status: "live",
-            performance: 8.3,
-            profitLoss: "+$856",
-            winRate: "68.2%",
-            trades: 32
-          },
-        ]);
+        // Don't load example/mock strategies here — show empty state instead
+        setStrategies([]);
       } else if (data) {
         // Handle paginated response - Django REST framework returns {count, next, previous, results}
         const strategiesList = (data as any).results || data;
