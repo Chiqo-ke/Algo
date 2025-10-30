@@ -15,11 +15,20 @@ export interface Strategy {
   id: number;
   name: string;
   description?: string;
-  code: string;
-  category?: string;
-  is_active?: boolean;
+  strategy_code: string;  // Changed from 'code' to match Django model
+  status?: string;  // Django status: 'draft', 'validating', 'valid', 'invalid', 'active', 'inactive'
+  version?: string;
+  tags?: string[];
+  timeframe?: string;
+  risk_level?: string;
+  expected_return?: number;
+  max_drawdown?: number;
+  template?: number;
+  parameters?: Record<string, any>;
+  created_by?: number;
   created_at?: string;
   updated_at?: string;
+  last_validated?: string;
 }
 
 export interface BacktestConfig {

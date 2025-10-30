@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,14 +26,39 @@ export default function Strategy() {
   const { toast } = useToast();
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const [highlightedStrategyId, setHighlightedStrategyId] = useState<number | null>(null);
+
+  // Show success message if redirected from Dashboard after strategy creation
+  useEffect(() => {
+    const state = location.state as { newStrategyId?: number; newStrategyName?: string; showSuccessMessage?: boolean } | null;
+    if (state?.showSuccessMessage && state?.newStrategyName) {
+      toast({
+        title: "Strategy Created Successfully! 🎉",
+        description: `${state.newStrategyName} is ready for backtesting`,
+      });
+      
+      // Highlight the new strategy
+      if (state.newStrategyId) {
+        setHighlightedStrategyId(state.newStrategyId);
+        // Clear highlight after 3 seconds
+        setTimeout(() => setHighlightedStrategyId(null), 3000);
+      }
+      
+      // Clear the location state to prevent toast on refresh
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, toast, navigate]);
 
   // Fetch strategies from API
   useEffect(() => {
     const fetchStrategies = async () => {
       setLoading(true);
+      console.log("📡 Fetching strategies from API...");
       const { data, error } = await strategyService.getAll();
       
       if (error) {
+        console.error("❌ Error fetching strategies:", error);
         toast({
           title: "Error loading strategies",
           description: error,
@@ -61,18 +86,45 @@ export default function Strategy() {
           },
         ]);
       } else if (data) {
+        // Handle paginated response - Django REST framework returns {count, next, previous, results}
+        const strategiesList = (data as any).results || data;
+        
+        if (!Array.isArray(strategiesList)) {
+          console.error("❌ Expected array of strategies, got:", strategiesList);
+          setStrategies([]);
+          setLoading(false);
+          return;
+        }
+        
         // Transform API data to match UI expectations
-        const transformedStrategies: Strategy[] = data.map((strategy) => ({
-          id: strategy.id,
-          name: strategy.name,
-          status: strategy.is_active ? "live" : "paused",
-          performance: 0, // Will be populated from backtest results
-          profitLoss: "$0",
-          winRate: "0%",
-          trades: 0,
-          category: strategy.category,
-          description: strategy.description,
-        }));
+        const transformedStrategies: Strategy[] = strategiesList.map((strategy: any) => {
+          // Map Django status to UI status
+          let uiStatus: "live" | "testing" | "paused" = "paused";
+          if (strategy.status === "active") {
+            uiStatus = "live";
+          } else if (strategy.status === "validating" || strategy.status === "valid") {
+            uiStatus = "testing";
+          }
+          
+          // Extract category from tags if available
+          const category = Array.isArray(strategy.tags) && strategy.tags.length > 0 
+            ? strategy.tags[0] 
+            : undefined;
+          
+          return {
+            id: strategy.id,
+            name: strategy.name,
+            status: uiStatus,
+            performance: 0, // Will be populated from backtest results
+            profitLoss: "$0",
+            winRate: "0%",
+            trades: 0,
+            category: category,
+            description: strategy.description || "",
+          };
+        });
+        
+        console.log("✅ Loaded strategies from API:", transformedStrategies);
         setStrategies(transformedStrategies);
       }
       setLoading(false);
@@ -127,7 +179,8 @@ export default function Strategy() {
                 key={strategy.id}
                 className={cn(
                   "bg-card border-border shadow-card hover:shadow-lg transition-all",
-                  "w-full max-w-sm"
+                  "w-full max-w-sm",
+                  highlightedStrategyId === strategy.id && "ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse"
                 )}
               >
                 <CardHeader className="pb-4">

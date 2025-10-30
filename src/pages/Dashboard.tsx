@@ -548,22 +548,20 @@ export default function Dashboard() {
         
         toast({
           title: "Strategy Saved",
-          description: `${editedStrategyName} saved successfully`,
+          description: `${editedStrategyName} saved successfully. Redirecting to strategies page...`,
         });
 
         setShowConfirmDialog(false);
         
-        // Navigate to backtest page with new strategy ID
-        if (data.id) {
-          navigate('/backtest', { 
-            state: { 
-              strategyId: data.id,
-              strategyName: editedStrategyName.trim()
-            } 
-          });
-        } else {
-          console.error("No strategy ID returned from create API");
-        }
+        // Navigate to strategy page to view all strategies
+        // The newly created strategy will be visible in the list
+        navigate('/strategy', { 
+          state: { 
+            newStrategyId: data.id,
+            newStrategyName: editedStrategyName.trim(),
+            showSuccessMessage: true
+          } 
+        });
       }
     } catch (error) {
       console.error("Error confirming strategy:", error);
