@@ -9,10 +9,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, Play, BarChart3, PieChart, CalendarIcon, Edit, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, BarChart3, PieChart, Edit, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { symbolService, strategyService, backtestService, type Symbol, type Strategy, type BacktestResult } from "@/lib/services";
+import { symbolService, strategyService, backtestService, type Symbol, type Strategy } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 
 interface BacktestParams {
@@ -192,7 +192,7 @@ export default function Backtesting() {
       return;
     }
 
-    if (!strategy?.code && !strategyId) {
+  if (!strategy?.strategy_code && !strategyId) {
       toast({
         title: "Strategy not found",
         description: "Strategy code is required to run backtest",
@@ -229,7 +229,7 @@ export default function Backtesting() {
 
       // Prepare backtest configuration
       const backtestConfig = {
-        strategy_code: strategy?.code,
+        strategy_code: strategy?.strategy_code,
         strategy_id: strategyId,
         symbol: params.symbol,
         start_date: format(startDate, "yyyy-MM-dd"),
