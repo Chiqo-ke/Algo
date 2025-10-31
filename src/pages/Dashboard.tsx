@@ -17,6 +17,39 @@ import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileChec
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { WorkflowProgress } from "@/components/WorkflowProgress";
+
+interface WorkflowStep {
+  id: string;
+  title: string;
+  description: string;
+  status: "pending" | "in_progress" | "completed" | "failed" | "skipped";
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  substeps: string[];
+  current_substep: string | null;
+  progress_percentage: number;
+}
+
+interface WorkflowState {
+  workflow_name: string;
+  started_at: string;
+  completed_at: string | null;
+  steps: WorkflowStep[];
+  current_step_index: number;
+  progress_summary: {
+    workflow_name: string;
+    total_steps: number;
+    completed_steps: number;
+    failed_steps: number;
+    in_progress_steps: number;
+    overall_percentage: number;
+    current_step_index: number;
+    is_complete: boolean;
+    duration_seconds: number;
+  };
+}
 
 interface Message {
   id: string;
@@ -34,6 +67,7 @@ interface Message {
     }>;
   };
   strategyData?: any; // Store full strategy data for confirmation
+  workflow?: WorkflowState | null; // NEW: Track workflow progress
 }
 
 interface StrategyConfirmation {
@@ -69,6 +103,9 @@ export default function Dashboard() {
   // NEW: Metadata display configuration
   const [showFullWarnings, setShowFullWarnings] = useState<Record<string, boolean>>({});
   const [showFullRecommendations, setShowFullRecommendations] = useState<Record<string, boolean>>({});
+  
+  // NEW: Workflow state
+  const [currentWorkflow, setCurrentWorkflow] = useState<WorkflowState | null>(null);
 
   // API base URL - adjust based on your environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -223,7 +260,13 @@ export default function Dashboard() {
             aiValidation: data.ai_validation,
             strategyName: strategyName,
           },
+          workflow: data.workflow || null, // NEW: Capture workflow state
         };
+        
+        // Update current workflow display
+        if (data.workflow) {
+          setCurrentWorkflow(data.workflow);
+        }
         
         setMessages((prev) => [...prev, aiMessage]);
         
@@ -325,7 +368,13 @@ export default function Dashboard() {
             aiValidation: data,
             strategyName: strategyName,
           },
+          workflow: data.workflow || null, // NEW: Capture workflow state
         };
+        
+        // Update current workflow display
+        if (data.workflow) {
+          setCurrentWorkflow(data.workflow);
+        }
         
         setMessages((prev) => [...prev, aiMessage]);
 
@@ -457,20 +506,81 @@ export default function Dashboard() {
           }
         }
         
-        toast({
-          title: "Strategy Confirmed",
-          description: `Proceeding with ${editedStrategyName}`,
-        });
+        // Generate executable code from canonical JSON
+        console.log("🔧 Generating executable strategy code...");
         
-        setShowConfirmDialog(false);
-        
-        // Navigate to backtest page with strategy ID
-        navigate('/backtest', { 
-          state: { 
-            strategyId: confirmationData.strategyId,
-            strategyName: editedStrategyName.trim()
-          } 
-        });
+        try {
+          const codeGenResponse = await fetch(
+            `${API_BASE_URL}/api/strategies/api/generate_executable_code/`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                canonical_json: confirmationData.canonicalJson,
+                strategy_name: editedStrategyName.trim(),
+                strategy_id: confirmationData.strategyId,
+              }),
+            }
+          );
+
+          if (codeGenResponse.ok) {
+            const codeGenData = await codeGenResponse.json();
+            console.log("✅ Strategy code generated:", codeGenData.file_name);
+            
+            toast({
+              title: "Strategy Ready",
+              description: `${editedStrategyName} is ready for backtesting!`,
+            });
+            
+            setShowConfirmDialog(false);
+            
+            // Navigate to backtesting page with strategy ID and code file info
+            navigate(`/backtesting/${confirmationData.strategyId}`, { 
+              state: { 
+                strategyId: confirmationData.strategyId,
+                strategyName: editedStrategyName.trim(),
+                codeFilePath: codeGenData.file_path,
+                codeFileName: codeGenData.file_name
+              } 
+            });
+          } else {
+            console.warn("⚠️ Code generation failed, proceeding without executable code");
+            
+            toast({
+              title: "Strategy Confirmed",
+              description: `Proceeding with ${editedStrategyName}`,
+            });
+            
+            setShowConfirmDialog(false);
+            
+            // Navigate to backtesting page with strategy ID
+            navigate(`/backtesting/${confirmationData.strategyId}`, { 
+              state: { 
+                strategyId: confirmationData.strategyId,
+                strategyName: editedStrategyName.trim()
+              } 
+            });
+          }
+        } catch (codeGenError) {
+          console.error("❌ Code generation error:", codeGenError);
+          
+          toast({
+            title: "Strategy Confirmed",
+            description: `Proceeding with ${editedStrategyName}`,
+          });
+          
+          setShowConfirmDialog(false);
+          
+          // Navigate to backtesting page with strategy ID
+          navigate(`/backtesting/${confirmationData.strategyId}`, { 
+            state: { 
+              strategyId: confirmationData.strategyId,
+              strategyName: editedStrategyName.trim()
+            } 
+          });
+        }
         
       } else {
         console.log("💾 Creating new strategy with canonical JSON");
@@ -546,22 +656,84 @@ export default function Dashboard() {
         
         console.log("✅ Strategy created successfully:", data);
         
-        toast({
-          title: "Strategy Saved",
-          description: `${editedStrategyName} saved successfully. Redirecting to strategies page...`,
-        });
-
-        setShowConfirmDialog(false);
+        // Generate executable code from canonical JSON
+        console.log("🔧 Generating executable strategy code...");
         
-        // Navigate to strategy page to view all strategies
-        // The newly created strategy will be visible in the list
-        navigate('/strategy', { 
-          state: { 
-            newStrategyId: data.id,
-            newStrategyName: editedStrategyName.trim(),
-            showSuccessMessage: true
-          } 
-        });
+        try {
+          const codeGenResponse = await fetch(
+            `${API_BASE_URL}/api/strategies/api/generate_executable_code/`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                canonical_json: confirmationData.canonicalJson,
+                strategy_name: editedStrategyName.trim(),
+                strategy_id: data.id,
+              }),
+            }
+          );
+
+          if (codeGenResponse.ok) {
+            const codeGenData = await codeGenResponse.json();
+            console.log("✅ Strategy code generated:", codeGenData.file_name);
+            
+            toast({
+              title: "Strategy Ready",
+              description: `${editedStrategyName} is ready! Code generated at ${codeGenData.file_name}`,
+            });
+
+            setShowConfirmDialog(false);
+            
+            // Navigate to backtesting page with strategy info
+            navigate(`/backtesting/${data.id}`, { 
+              state: { 
+                strategyId: data.id,
+                strategyName: editedStrategyName.trim(),
+                codeFilePath: codeGenData.file_path,
+                codeFileName: codeGenData.file_name,
+                fromNewStrategy: true
+              } 
+            });
+          } else {
+            console.warn("⚠️ Code generation failed, proceeding to strategies page");
+            
+            toast({
+              title: "Strategy Saved",
+              description: `${editedStrategyName} saved successfully. Redirecting to strategies page...`,
+            });
+
+            setShowConfirmDialog(false);
+            
+            // Navigate to strategy page to view all strategies
+            navigate('/strategy', { 
+              state: { 
+                newStrategyId: data.id,
+                newStrategyName: editedStrategyName.trim(),
+                showSuccessMessage: true
+              } 
+            });
+          }
+        } catch (codeGenError) {
+          console.error("❌ Code generation error:", codeGenError);
+          
+          toast({
+            title: "Strategy Saved",
+            description: `${editedStrategyName} saved successfully. Redirecting to strategies page...`,
+          });
+
+          setShowConfirmDialog(false);
+          
+          // Navigate to strategy page to view all strategies
+          navigate('/strategy', { 
+            state: { 
+              newStrategyId: data.id,
+              newStrategyName: editedStrategyName.trim(),
+              showSuccessMessage: true
+            } 
+          });
+        }
       }
     } catch (error) {
       console.error("Error confirming strategy:", error);
@@ -652,6 +824,12 @@ export default function Dashboard() {
           {messages.length > 0 && (
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-4 pb-4 max-w-xl mx-auto">
+                {/* Active Workflow Progress (shown while loading) */}
+                {isLoading && currentWorkflow && (
+                  <div className="sticky top-0 z-10 mb-4">
+                    <WorkflowProgress workflow={currentWorkflow} isLoading={true} />
+                  </div>
+                )}
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -768,6 +946,13 @@ export default function Dashboard() {
                               </div>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Workflow Progress Display */}
+                      {message.role === "assistant" && message.workflow && (
+                        <div className="mt-4">
+                          <WorkflowProgress workflow={message.workflow} />
                         </div>
                       )}
 
