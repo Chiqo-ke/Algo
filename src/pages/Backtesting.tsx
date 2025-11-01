@@ -22,6 +22,8 @@ interface BacktestParams {
   useRealMoney: boolean;
   lotSize: string;
   initialBalance: string;
+  commission: string;
+  slippage: string;
   customDateFrom?: Date;
   customDateTo?: Date;
 }
@@ -52,6 +54,7 @@ export default function Backtesting() {
   const { toast } = useToast();
   const strategyId = location.state?.strategyId;
   const strategyName = location.state?.strategyName || "Strategy";
+  const backtestConfig = location.state?.backtestConfig; // NEW: Get config from Strategy page
 
   // State for fetched data
   const [symbols, setSymbols] = useState<Symbol[]>([]);
@@ -60,12 +63,14 @@ export default function Backtesting() {
   const [loadingStrategy, setLoadingStrategy] = useState(true);
 
   const [params, setParams] = useState<BacktestParams>({
-    symbol: "",
-    period: "",
-    timeframe: "",
+    symbol: backtestConfig?.symbol || "",
+    period: backtestConfig?.period || "",
+    timeframe: backtestConfig?.interval || "",
     useRealMoney: false,
     lotSize: "1.0",
-    initialBalance: "10000"
+    initialBalance: backtestConfig?.initialCapital?.toString() || "10000",
+    commission: "0.001",
+    slippage: "0.0005"
   });
 
   const [isRunning, setIsRunning] = useState(false);
@@ -125,6 +130,23 @@ export default function Backtesting() {
 
     fetchStrategy();
   }, [strategyId, toast]);
+
+  // Auto-run backtest if config is provided from Strategy page
+  useEffect(() => {
+    if (backtestConfig && !loadingSymbols && !loadingStrategy && params.symbol) {
+      console.log("Auto-running backtest with config:", backtestConfig);
+      toast({
+        title: "Starting Backtest",
+        description: `Testing ${strategyName} on ${backtestConfig.symbol}`,
+      });
+      // Note: You can manually trigger backtest or add a "Run Backtest" button
+      // Auto-running is commented out to give user control
+      // setTimeout(() => {
+      //   document.getElementById('run-backtest-button')?.click();
+      // }, 1000);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backtestConfig, loadingSymbols, loadingStrategy]);
 
   const handlePeriodChange = (value: string) => {
     if (value === "custom") {
@@ -237,10 +259,8 @@ export default function Backtesting() {
         timeframe: params.timeframe,
         initial_balance: parseFloat(params.initialBalance) || 10000,
         lot_size: parseFloat(params.lotSize) || 1.0,
-        config: {
-          commission: 0.001,
-          slippage: 0.001,
-        }
+        commission: parseFloat(params.commission) || 0.001,
+        slippage: parseFloat(params.slippage) || 0.0005,
       };
 
       // Run backtest using the API
@@ -322,22 +342,27 @@ export default function Backtesting() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   </div>
                 ) : (
-                  <Select value={params.symbol} onValueChange={(value) => setParams({ ...params, symbol: value })}>
-                    <SelectTrigger id="symbol">
-                      <SelectValue placeholder="Select symbol" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <div className="relative">
+                    <Input
+                      id="symbol"
+                      list="symbols-list"
+                      placeholder="Enter symbol (e.g., AAPL, EURUSD)"
+                      value={params.symbol}
+                      onChange={(e) => setParams({ ...params, symbol: e.target.value.toUpperCase() })}
+                      className="uppercase"
+                    />
+                    <datalist id="symbols-list">
                       {symbols.length > 0 ? (
                         symbols.map((symbol) => (
-                          <SelectItem key={symbol.id} value={symbol.symbol}>
-                            {symbol.symbol} {symbol.name ? `- ${symbol.name}` : ''}
-                          </SelectItem>
+                          <option key={symbol.id} value={symbol.symbol}>
+                            {symbol.name ? `${symbol.symbol} - ${symbol.name}` : symbol.symbol}
+                          </option>
                         ))
                       ) : (
-                        <SelectItem value="EURUSD">EURUSD - No symbols loaded</SelectItem>
+                        <option value="AAPL">AAPL - Apple Inc.</option>
                       )}
-                    </SelectContent>
-                  </Select>
+                    </datalist>
+                  </div>
                 )}
               </div>
 
@@ -429,6 +454,38 @@ export default function Backtesting() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Advanced Parameters */}
+            <div className="space-y-4 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold text-foreground">Advanced Parameters</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="commission">Commission *</Label>
+                  <Input
+                    id="commission"
+                    type="number"
+                    step="0.0001"
+                    placeholder="e.g., 0.001"
+                    value={params.commission}
+                    onChange={(e) => setParams({ ...params, commission: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Commission rate per trade (e.g., 0.001 = 0.1%)</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="slippage">Slippage *</Label>
+                  <Input
+                    id="slippage"
+                    type="number"
+                    step="0.0001"
+                    placeholder="e.g., 0.0005"
+                    value={params.slippage}
+                    onChange={(e) => setParams({ ...params, slippage: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Expected slippage per trade (e.g., 0.0005 = 0.05%)</p>
+                </div>
+              </div>
             </div>
 
             {/* Run Button */}

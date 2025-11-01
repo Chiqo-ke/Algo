@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck, Lightbulb } from "lucide-react";
+import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck, Lightbulb, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -94,6 +96,11 @@ export default function Dashboard() {
   const [confirmationData, setConfirmationData] = useState<StrategyConfirmation | null>(null);
   const [isProceedingToNext, setIsProceedingToNext] = useState(false);
   const [editedStrategyName, setEditedStrategyName] = useState("");
+  
+  // Backtest configuration fields
+  const [backtestSymbol, setBacktestSymbol] = useState("AAPL");
+  const [backtestPeriod, setBacktestPeriod] = useState("1y");
+  const [backtestInterval, setBacktestInterval] = useState("1d");
   
   // NEW: Conversation memory state
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -536,13 +543,18 @@ export default function Dashboard() {
             
             setShowConfirmDialog(false);
             
-            // Navigate to backtesting page with strategy ID and code file info
+            // Navigate to backtesting page with strategy ID, code file info, and backtest config
             navigate(`/backtesting/${confirmationData.strategyId}`, { 
               state: { 
                 strategyId: confirmationData.strategyId,
                 strategyName: editedStrategyName.trim(),
                 codeFilePath: codeGenData.file_path,
-                codeFileName: codeGenData.file_name
+                codeFileName: codeGenData.file_name,
+                backtestConfig: {
+                  symbol: backtestSymbol,
+                  period: backtestPeriod,
+                  interval: backtestInterval
+                }
               } 
             });
           } else {
@@ -555,11 +567,16 @@ export default function Dashboard() {
             
             setShowConfirmDialog(false);
             
-            // Navigate to backtesting page with strategy ID
+            // Navigate to backtesting page with strategy ID and backtest config
             navigate(`/backtesting/${confirmationData.strategyId}`, { 
               state: { 
                 strategyId: confirmationData.strategyId,
-                strategyName: editedStrategyName.trim()
+                strategyName: editedStrategyName.trim(),
+                backtestConfig: {
+                  symbol: backtestSymbol,
+                  period: backtestPeriod,
+                  interval: backtestInterval
+                }
               } 
             });
           }
@@ -573,11 +590,16 @@ export default function Dashboard() {
           
           setShowConfirmDialog(false);
           
-          // Navigate to backtesting page with strategy ID
+          // Navigate to backtesting page with strategy ID and backtest config
           navigate(`/backtesting/${confirmationData.strategyId}`, { 
             state: { 
               strategyId: confirmationData.strategyId,
-              strategyName: editedStrategyName.trim()
+              strategyName: editedStrategyName.trim(),
+              backtestConfig: {
+                symbol: backtestSymbol,
+                period: backtestPeriod,
+                interval: backtestInterval
+              }
             } 
           });
         }
@@ -686,14 +708,19 @@ export default function Dashboard() {
 
             setShowConfirmDialog(false);
             
-            // Navigate to backtesting page with strategy info
+            // Navigate to backtesting page with strategy info and backtest config
             navigate(`/backtesting/${data.id}`, { 
               state: { 
                 strategyId: data.id,
                 strategyName: editedStrategyName.trim(),
                 codeFilePath: codeGenData.file_path,
                 codeFileName: codeGenData.file_name,
-                fromNewStrategy: true
+                fromNewStrategy: true,
+                backtestConfig: {
+                  symbol: backtestSymbol,
+                  period: backtestPeriod,
+                  interval: backtestInterval
+                }
               } 
             });
           } else {
@@ -1066,6 +1093,65 @@ export default function Dashboard() {
                       Already saved with ID: {confirmationData.strategyId}
                     </p>
                   )}
+                </div>
+
+                {/* Backtest Configuration Section */}
+                <div className="space-y-3 p-4 bg-secondary/50 rounded-lg border border-border">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-primary" />
+                    Backtest Configuration
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Symbol */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="backtest-symbol" className="text-xs">Symbol/Ticker</Label>
+                      <Input
+                        id="backtest-symbol"
+                        value={backtestSymbol}
+                        onChange={(e) => setBacktestSymbol(e.target.value.toUpperCase())}
+                        placeholder="AAPL"
+                        className="uppercase"
+                        disabled={isProceedingToNext}
+                      />
+                    </div>
+
+                    {/* Period */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="backtest-period" className="text-xs">Period</Label>
+                      <Select value={backtestPeriod} onValueChange={setBacktestPeriod} disabled={isProceedingToNext}>
+                        <SelectTrigger id="backtest-period">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1mo">1 Month</SelectItem>
+                          <SelectItem value="3mo">3 Months</SelectItem>
+                          <SelectItem value="6mo">6 Months</SelectItem>
+                          <SelectItem value="1y">1 Year</SelectItem>
+                          <SelectItem value="2y">2 Years</SelectItem>
+                          <SelectItem value="5y">5 Years</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Interval */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="backtest-interval" className="text-xs">Interval</Label>
+                      <Select value={backtestInterval} onValueChange={setBacktestInterval} disabled={isProceedingToNext}>
+                        <SelectTrigger id="backtest-interval">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1m">1 Minute</SelectItem>
+                          <SelectItem value="5m">5 Minutes</SelectItem>
+                          <SelectItem value="15m">15 Minutes</SelectItem>
+                          <SelectItem value="1h">1 Hour</SelectItem>
+                          <SelectItem value="1d">1 Day</SelectItem>
+                          <SelectItem value="1wk">1 Week</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Human-Readable Strategy */}

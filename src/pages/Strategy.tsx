@@ -120,8 +120,13 @@ export default function Strategy() {
   };
 
   const handleTest = (strategyId: number, strategyName: string) => {
-    // Navigate to backtesting page with strategy info
-    navigate(`/backtesting/${strategyId}`, { state: { strategyId, strategyName } });
+    // Navigate directly to backtesting page where user can enter configuration
+    navigate(`/backtesting/${strategyId}`, {
+      state: {
+        strategyId: strategyId,
+        strategyName: strategyName,
+      },
+    });
   };
 
   const handleGoLive = (strategyId: number) => {
@@ -286,6 +291,7 @@ export default function Strategy() {
           </div>
         </div>
         )}
+
       </div>
     </DashboardLayout>
   );
