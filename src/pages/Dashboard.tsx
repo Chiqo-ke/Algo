@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { WorkflowProgress } from "@/components/WorkflowProgress";
+import * as ProductionAPI from "@/lib/productionApi";
 
 interface WorkflowStep {
   id: string;
@@ -113,6 +114,16 @@ export default function Dashboard() {
   
   // NEW: Workflow state
   const [currentWorkflow, setCurrentWorkflow] = useState<WorkflowState | null>(null);
+  
+  // NEW: Production features state
+  const [productionHealth, setProductionHealth] = useState<ProductionAPI.HealthStatus | null>(null);
+  const [showSandboxTest, setShowSandboxTest] = useState(false);
+  const [sandboxResults, setSandboxResults] = useState<ProductionAPI.SandboxTestResponse | null>(null);
+  const [showBacktestDialog, setShowBacktestDialog] = useState(false);
+  const [backtestResults, setBacktestResults] = useState<ProductionAPI.BacktestResults | null>(null);
+  // Lifecycle data will be used in Strategy.tsx
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [lifecycleData, setLifecycleData] = useState<ProductionAPI.LifecycleData | null>(null);
 
   // API base URL - adjust based on your environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -184,6 +195,175 @@ export default function Dashboard() {
 
     return readable;
   };
+
+  // NEW: Validate strategy schema with Pydantic
+  const validateStrategySchema = async (strategyData: any): Promise<boolean> => {
+    try {
+      const result = await ProductionAPI.validateStrategySchema(strategyData);
+      
+      if (result.status === "invalid") {
+        toast({
+          title: "❌ Schema Validation Failed",
+          description: `${result.errors?.length || 0} validation errors found`,
+          variant: "destructive",
+        });
+        console.error("Schema validation errors:", result.errors);
+        return false;
+      }
+      
+      console.log("✅ Schema validation passed");
+      return true;
+    } catch (error) {
+      console.error("Schema validation error:", error);
+      toast({
+        title: "Validation Error",
+        description: "Could not validate strategy schema",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // NEW: Validate generated code for safety
+  const validateCodeSafety = async (code: string): Promise<boolean> => {
+    try {
+      const result = await ProductionAPI.validateCodeSafety(code, true);
+      
+      if (!result.safe) {
+        toast({
+          title: "🚨 Dangerous Code Detected",
+          description: `Found ${result.issues?.length || 0} security issues`,
+          variant: "destructive",
+        });
+        console.error("Code safety issues:", result.issues);
+        return false;
+      }
+      
+      console.log("✅ Code safety check passed");
+      return true;
+    } catch (error) {
+      console.error("Code safety validation error:", error);
+      // Don't block on error, but warn
+      toast({
+        title: "⚠️ Safety Check Warning",
+        description: "Could not validate code safety",
+      });
+      return true; // Allow to proceed with warning
+    }
+  };
+
+  // NEW: Run sandbox test
+  // Will be used when adding test buttons to strategy cards
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const runSandboxTest = async (strategyId: number) => {
+    try {
+      setShowSandboxTest(true);
+      toast({
+        title: "🐳 Running Sandbox Test",
+        description: "Testing strategy in isolated environment...",
+      });
+
+      const result = await ProductionAPI.runSandboxTest(strategyId, 60);
+      setSandboxResults(result);
+
+      if (result.success) {
+        toast({
+          title: "✅ Sandbox Test Passed",
+          description: `Execution time: ${result.execution_time.toFixed(2)}s`,
+        });
+      } else {
+        toast({
+          title: "❌ Sandbox Test Failed",
+          description: result.errors || "Test execution failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Sandbox test error:", error);
+      toast({
+        title: "Test Error",
+        description: "Failed to run sandbox test",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // NEW: Run backtest
+  // Will be used when adding backtest buttons
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const runBacktest = async (strategyId: number, configId: number) => {
+    try {
+      setShowBacktestDialog(true);
+      toast({
+        title: "📊 Running Backtest",
+        description: "Analyzing strategy performance...",
+      });
+
+      const result = await ProductionAPI.runBacktestSandbox(
+        strategyId,
+        configId,
+        "2024-01-01",
+        "2024-12-31",
+        ["AAPL"],
+        { cpu: "1.0", memory: "1g", timeout: 300 }
+      );
+
+      setBacktestResults(result);
+
+      if (result.status === "completed") {
+        toast({
+          title: "✅ Backtest Complete",
+          description: `Total Return: ${((result.results?.total_return || 0) * 100).toFixed(2)}%`,
+        });
+      } else {
+        toast({
+          title: "❌ Backtest Failed",
+          description: result.error || "Backtest execution failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Backtest error:", error);
+      toast({
+        title: "Backtest Error",
+        description: "Failed to run backtest",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // NEW: Get lifecycle status
+  // Will be used in Strategy.tsx for status tracking
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const fetchLifecycleStatus = async (strategyId: number) => {
+    try {
+      const data = await ProductionAPI.getStrategyLifecycle(strategyId);
+      setLifecycleData(data);
+    } catch (error) {
+      console.error("Failed to fetch lifecycle data:", error);
+    }
+  };
+
+  // NEW: Check production health on mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const health = await ProductionAPI.checkStrategyHealth();
+        setProductionHealth(health);
+        
+        if (health.overall === "unhealthy") {
+          toast({
+            title: "⚠️ Production Components Degraded",
+            description: "Some features may be limited",
+          });
+        }
+      } catch (error) {
+        console.error("Health check failed:", error);
+      }
+    };
+
+    checkHealth();
+  }, []);
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -513,6 +693,16 @@ export default function Dashboard() {
           }
         }
         
+        // 🔒 PRODUCTION: Validate schema before code generation
+        console.log("🔍 Running production schema validation...");
+        const isSchemaValid = await validateStrategySchema(confirmationData.canonicalJson);
+        if (!isSchemaValid) {
+          console.error("❌ Schema validation failed, aborting code generation");
+          setIsProceedingToNext(false);
+          return;
+        }
+        console.log("✅ Schema validation passed");
+        
         // Generate executable code from canonical JSON
         console.log("🔧 Generating executable strategy code...");
         
@@ -535,6 +725,31 @@ export default function Dashboard() {
           if (codeGenResponse.ok) {
             const codeGenData = await codeGenResponse.json();
             console.log("✅ Strategy code generated:", codeGenData.file_name);
+            
+            // 🔒 PRODUCTION: Validate code safety after generation
+            console.log("🔍 Running production code safety check...");
+            const isCodeSafe = await validateCodeSafety(codeGenData.code || codeGenData.strategy_code);
+            if (!isCodeSafe) {
+              console.warn("⚠️ Code safety check failed - dangerous code detected");
+              // Show warning but allow user to proceed with confirmation
+              const proceedAnyway = window.confirm(
+                "⚠️ Warning: The generated code contains potentially unsafe operations.\n\n" +
+                "This may include:\n" +
+                "- File system access\n" +
+                "- Network operations\n" +
+                "- System commands\n\n" +
+                "Do you want to proceed anyway?"
+              );
+              
+              if (!proceedAnyway) {
+                console.log("❌ User chose not to proceed with unsafe code");
+                setIsProceedingToNext(false);
+                return;
+              }
+              console.log("⚠️ User chose to proceed despite safety warnings");
+            } else {
+              console.log("✅ Code safety check passed");
+            }
             
             toast({
               title: "Strategy Ready",
@@ -610,6 +825,16 @@ export default function Dashboard() {
         // Extract metadata from canonical JSON for proper categorization
         const canonicalJson = confirmationData.canonicalJson;
         const classification = confirmationData.aiValidation?.classification_detail || {};
+        
+        // 🔒 PRODUCTION: Validate schema before creating strategy
+        console.log("🔍 Running production schema validation...");
+        const isSchemaValid = await validateStrategySchema(canonicalJson);
+        if (!isSchemaValid) {
+          console.error("❌ Schema validation failed, aborting strategy creation");
+          setIsProceedingToNext(false);
+          return;
+        }
+        console.log("✅ Schema validation passed");
         
         // Build tags array, filtering out undefined/null values
         const tags = [
@@ -700,6 +925,31 @@ export default function Dashboard() {
           if (codeGenResponse.ok) {
             const codeGenData = await codeGenResponse.json();
             console.log("✅ Strategy code generated:", codeGenData.file_name);
+            
+            // 🔒 PRODUCTION: Validate code safety after generation
+            console.log("🔍 Running production code safety check...");
+            const isCodeSafe = await validateCodeSafety(codeGenData.code || codeGenData.strategy_code);
+            if (!isCodeSafe) {
+              console.warn("⚠️ Code safety check failed - dangerous code detected");
+              // Show warning but allow user to proceed with confirmation
+              const proceedAnyway = window.confirm(
+                "⚠️ Warning: The generated code contains potentially unsafe operations.\n\n" +
+                "This may include:\n" +
+                "- File system access\n" +
+                "- Network operations\n" +
+                "- System commands\n\n" +
+                "Do you want to proceed anyway?"
+              );
+              
+              if (!proceedAnyway) {
+                console.log("❌ User chose not to proceed with unsafe code");
+                setIsProceedingToNext(false);
+                return;
+              }
+              console.log("⚠️ User chose to proceed despite safety warnings");
+            } else {
+              console.log("✅ Code safety check passed");
+            }
             
             toast({
               title: "Strategy Ready",
@@ -811,6 +1061,30 @@ export default function Dashboard() {
               <span>
                 Conversation memory active • {messageCount} messages • Session: {sessionId.substring(0, 12)}...
               </span>
+            </div>
+          )}
+          
+          {/* Production Health Indicator */}
+          {productionHealth && (
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <div className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border",
+                ProductionAPI.isProductionHealthy(productionHealth) 
+                  ? "bg-green-500/10 border-green-500/30 text-green-700"
+                  : productionHealth.overall === 'degraded'
+                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-700"
+                  : "bg-red-500/10 border-red-500/30 text-red-700"
+              )}>
+                <span className={cn(
+                  "w-2 h-2 rounded-full",
+                  ProductionAPI.isProductionHealthy(productionHealth) ? "bg-green-500" :
+                  productionHealth.overall === 'degraded' ? "bg-yellow-500" : "bg-red-500"
+                )} />
+                Production System: {productionHealth.overall.toUpperCase()}
+                {productionHealth.error && (
+                  <span className="ml-1 opacity-75">• {productionHealth.error}</span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1260,6 +1534,213 @@ export default function Dashboard() {
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sandbox Test Results Dialog */}
+      <Dialog open={showSandboxTest} onOpenChange={setShowSandboxTest}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              Sandbox Test Results
+            </DialogTitle>
+            <DialogDescription>
+              Strategy execution in isolated Docker environment
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+            {sandboxResults && (
+              <>
+                {/* Status Badge */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Status:</span>
+                  {sandboxResults.status === 'completed' ? (
+                    <span className="px-3 py-1 bg-green-500/20 text-green-600 rounded-full text-sm font-semibold flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      Completed
+                    </span>
+                  ) : sandboxResults.status === 'failed' ? (
+                    <span className="px-3 py-1 bg-red-500/20 text-red-600 rounded-full text-sm font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      Failed
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-yellow-500/20 text-yellow-600 rounded-full text-sm font-semibold">
+                      {sandboxResults.status}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    Execution time: {sandboxResults.execution_time}s
+                  </span>
+                </div>
+
+                {/* Output */}
+                {sandboxResults.output && (
+                  <Card>
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-semibold mb-2">Output:</h4>
+                      <pre className="text-xs bg-secondary p-3 rounded overflow-x-auto">
+                        {sandboxResults.output}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Error */}
+                {sandboxResults.errors && (
+                  <Card className="border-destructive/30">
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-semibold mb-2 text-destructive">Errors:</h4>
+                      <pre className="text-xs bg-destructive/10 p-3 rounded overflow-x-auto text-destructive">
+                        {sandboxResults.errors}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Resource Usage */}
+                {sandboxResults.resource_usage && (
+                  <Card>
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-semibold mb-3">Resource Usage:</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        {sandboxResults.resource_usage.max_memory_mb && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Memory:</span>
+                            <p className="text-sm font-semibold">{sandboxResults.resource_usage.max_memory_mb} MB</p>
+                          </div>
+                        )}
+                        {sandboxResults.resource_usage.cpu_percent && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">CPU:</span>
+                            <p className="text-sm font-semibold">{sandboxResults.resource_usage.cpu_percent}%</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Timed Out Warning */}
+                {sandboxResults.timed_out && (
+                  <Card className="border-warning/30">
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-warning" />
+                        Execution Timed Out
+                      </h4>
+                      <p className="text-sm">The strategy execution exceeded the allowed time limit.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowSandboxTest(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Backtest Results Dialog */}
+      <Dialog open={showBacktestDialog} onOpenChange={setShowBacktestDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              Backtest Results
+            </DialogTitle>
+            <DialogDescription>
+              Historical performance metrics
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+            {backtestResults && (
+              <>
+                {/* Status */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Status:</span>
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-sm font-semibold",
+                    backtestResults.status === 'completed' && "bg-green-500/20 text-green-600",
+                    backtestResults.status === 'failed' && "bg-red-500/20 text-red-600"
+                  )}>
+                    {backtestResults.status}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    Execution time: {backtestResults.execution_time}s
+                  </span>
+                </div>
+
+                {/* Performance Metrics */}
+                {backtestResults.results && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {backtestResults.results.total_return !== undefined && (
+                      <Card>
+                        <CardContent className="pt-4">
+                          <span className="text-xs text-muted-foreground">Total Return</span>
+                          <p className={cn(
+                            "text-lg font-bold",
+                            backtestResults.results.total_return >= 0 ? "text-green-600" : "text-red-600"
+                          )}>
+                            {backtestResults.results.total_return}%
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {backtestResults.results.sharpe_ratio !== undefined && (
+                      <Card>
+                        <CardContent className="pt-4">
+                          <span className="text-xs text-muted-foreground">Sharpe Ratio</span>
+                          <p className="text-lg font-bold">{backtestResults.results.sharpe_ratio}</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {backtestResults.results.max_drawdown !== undefined && (
+                      <Card>
+                        <CardContent className="pt-4">
+                          <span className="text-xs text-muted-foreground">Max Drawdown</span>
+                          <p className="text-lg font-bold text-red-600">
+                            {backtestResults.results.max_drawdown}%
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {backtestResults.results.win_rate !== undefined && (
+                      <Card>
+                        <CardContent className="pt-4">
+                          <span className="text-xs text-muted-foreground">Win Rate</span>
+                          <p className="text-lg font-bold">{backtestResults.results.win_rate}%</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
+                {/* Error */}
+                {backtestResults.error && (
+                  <Card className="border-destructive/30">
+                    <CardContent className="pt-4">
+                      <h4 className="text-sm font-semibold mb-2 text-destructive">Error:</h4>
+                      <p className="text-sm text-destructive">{backtestResults.error}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowBacktestDialog(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
