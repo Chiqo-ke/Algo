@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { symbolService, strategyService, backtestService, type Symbol, type Strategy } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
+import { RealtimeBacktestChart } from "@/components/RealtimeBacktestChart";
 
 interface BacktestParams {
   symbol: string;
@@ -26,6 +27,7 @@ interface BacktestParams {
   slippage: string;
   customDateFrom?: Date;
   customDateTo?: Date;
+  indicators?: Record<string, any>; // For strategy indicators
 }
 
 interface BacktestResults {
@@ -74,6 +76,7 @@ export default function Backtesting() {
   });
 
   const [isRunning, setIsRunning] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [results, setResults] = useState<BacktestResults | null>(null);
   const [showCustomDateDialog, setShowCustomDateDialog] = useState(false);
@@ -83,6 +86,16 @@ export default function Backtesting() {
   const [tempYear, setTempYear] = useState<number>(new Date().getFullYear());
   const [tempMonth, setTempMonth] = useState<number>(new Date().getMonth());
   const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(new Date());
+
+  // Handler for when streaming backtest completes
+  const handleStreamingComplete = () => {
+    setIsStreaming(false);
+    setIsRunning(false);
+    toast({
+      title: "Backtest completed",
+      description: "Real-time backtest streaming finished successfully",
+    });
+  };
 
   // Fetch symbols on component mount
   useEffect(() => {
@@ -224,6 +237,7 @@ export default function Backtesting() {
     }
 
     setIsRunning(true);
+    setIsStreaming(true);
     setHasResults(false);
 
     try {
@@ -515,6 +529,24 @@ export default function Backtesting() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Real-time Chart - Shows during backtest streaming */}
+        {isStreaming && params.symbol && (
+          <RealtimeBacktestChart
+            symbol={params.symbol}
+            isStreaming={isStreaming}
+            config={{
+              symbol: params.symbol,
+              period: params.period,
+              interval: params.timeframe, // Use timeframe as interval
+              initial_balance: parseFloat(params.initialBalance),
+              commission: parseFloat(params.commission),
+              slippage: parseFloat(params.slippage),
+              indicators: params.indicators || {},
+            }}
+            onComplete={handleStreamingComplete}
+          />
+        )}
 
         {/* Backtest Results - Lower Half */}
         {hasResults && results && (
