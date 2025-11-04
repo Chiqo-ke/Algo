@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     templates: `${API_BASE_URL}/strategies/templates/`,
     categories: `${API_BASE_URL}/strategies/api/categories/`,
     health: `${API_BASE_URL}/strategies/api/health/`,
+    validate: `${API_BASE_URL}/strategies/validate/`,
   },
   // Data API
   data: {

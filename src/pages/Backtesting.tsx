@@ -9,10 +9,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, Play, BarChart3, PieChart, Edit, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, BarChart3, PieChart, Edit, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { symbolService, strategyService, backtestService, type Symbol, type Strategy } from "@/lib/services";
+import { API_ENDPOINTS, apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { RealtimeBacktestChart } from "@/components/RealtimeBacktestChart";
 
@@ -87,6 +88,15 @@ export default function Backtesting() {
   const [tempMonth, setTempMonth] = useState<number>(new Date().getMonth());
   const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(new Date());
 
+  // Validation state
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    isValid: boolean;
+    tradesExecuted: number;
+    errors: string[];
+    warnings: string[];
+  } | null>(null);
+
   // Handler for when streaming backtest completes
   const handleStreamingComplete = () => {
     setIsStreaming(false);
@@ -144,6 +154,39 @@ export default function Backtesting() {
     fetchStrategy();
   }, [strategyId, toast]);
 
+  // Poll strategy status if validating
+  useEffect(() => {
+    if (!strategy || strategy.status !== 'validating') return;
+
+    const pollInterval = setInterval(async () => {
+      const { data, error } = await strategyService.getById(strategyId);
+      if (error) {
+        console.error("Error polling strategy:", error);
+        return;
+      }
+      if (data && data.status !== 'validating') {
+        setStrategy(data);
+        clearInterval(pollInterval);
+        
+        // Show validation result
+        if (data.status === 'valid') {
+          toast({
+            title: "Strategy validated",
+            description: "Strategy passed validation and is ready for backtesting",
+          });
+        } else if (data.status === 'invalid') {
+          toast({
+            title: "Validation failed",
+            description: "Strategy did not pass validation. Check details below.",
+            variant: "destructive",
+          });
+        }
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [strategy, strategyId, toast]);
+
   // Auto-run backtest if config is provided from Strategy page
   useEffect(() => {
     if (backtestConfig && !loadingSymbols && !loadingStrategy && params.symbol) {
@@ -186,6 +229,73 @@ export default function Backtesting() {
 
   const handleEditStrategy = () => {
     navigate("/", { state: { editMode: true, strategyName } });
+  };
+
+  const validateStrategy = async (): Promise<boolean> => {
+    if (!strategy?.strategy_code) {
+      toast({
+        title: "No strategy code",
+        description: "Strategy code is required for validation",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    setIsValidating(true);
+    setValidationResult(null);
+
+    try {
+      const { data, error } = await apiPost(API_ENDPOINTS.strategies.validate, {
+        strategy_code: strategy.strategy_code,
+        test_period_days: 365,
+      });
+
+      if (error) {
+        throw new Error(error);
+      }
+
+      if (!data) {
+        throw new Error("No validation response received");
+      }
+      
+      setValidationResult({
+        isValid: data.valid,
+        tradesExecuted: data.trades_executed || 0,
+        errors: data.errors || [],
+        warnings: data.warnings || [],
+      });
+
+      if (data.valid) {
+        toast({
+          title: "Validation passed",
+          description: `Strategy validated successfully with ${data.trades_executed} trades`,
+        });
+        return true;
+      } else {
+        toast({
+          title: "Validation failed",
+          description: data.errors?.[0] || "Strategy validation failed",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("Validation error:", error);
+      toast({
+        title: "Validation error",
+        description: error instanceof Error ? error.message : "Failed to validate strategy",
+        variant: "destructive",
+      });
+      setValidationResult({
+        isValid: false,
+        tradesExecuted: 0,
+        errors: ["Failed to connect to validation service"],
+        warnings: [],
+      });
+      return false;
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleCustomDateSelect = (date: Date | undefined) => {
@@ -233,6 +343,12 @@ export default function Backtesting() {
         description: "Strategy code is required to run backtest",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Validate strategy before running backtest
+    const isValid = await validateStrategy();
+    if (!isValid) {
       return;
     }
 
@@ -340,6 +456,57 @@ export default function Backtesting() {
             </p>
           </div>
         </div>
+
+        {/* Strategy Validation Status */}
+        {strategy && strategy.status === 'validating' && (
+          <Card className="bg-yellow-50 border-yellow-200">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 animate-spin text-yellow-600" />
+                <div>
+                  <h3 className="font-semibold text-yellow-900">Validating Strategy...</h3>
+                  <p className="text-sm text-yellow-700">
+                    Strategy is being validated with 1 year of test data. This usually takes 20-30 seconds.
+                    You'll be notified when validation completes.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {strategy && strategy.status === 'invalid' && (
+          <Card className="bg-red-50 border-red-200">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <XCircle className="w-5 h-5 text-red-600" />
+                <div>
+                  <h3 className="font-semibold text-red-900">Validation Failed</h3>
+                  <p className="text-sm text-red-700">
+                    This strategy did not pass validation (no trades executed in 1-year test).
+                    The generated code may have issues. Please review or regenerate the strategy.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {strategy && strategy.status === 'valid' && (
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <div>
+                  <h3 className="font-semibold text-green-900">Strategy Validated</h3>
+                  <p className="text-sm text-green-700">
+                    Strategy passed validation and is ready for backtesting.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Backtest Parameters - Upper Half */}
         <Card className="bg-card border-border shadow-card">
@@ -502,14 +669,73 @@ export default function Backtesting() {
               </div>
             </div>
 
+            {/* Validation Status */}
+            {validationResult && (
+              <div className={cn(
+                "p-4 rounded-lg border mt-6",
+                validationResult.isValid 
+                  ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800" 
+                  : "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800"
+              )}>
+                <div className="flex items-start gap-3">
+                  {validationResult.isValid ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <p className={cn(
+                      "font-semibold",
+                      validationResult.isValid 
+                        ? "text-green-800 dark:text-green-200" 
+                        : "text-red-800 dark:text-red-200"
+                    )}>
+                      {validationResult.isValid 
+                        ? `Validation Passed (${validationResult.tradesExecuted} trades executed)`
+                        : "Validation Failed"}
+                    </p>
+                    {validationResult.errors.length > 0 && (
+                      <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                        {validationResult.errors.map((error, idx) => (
+                          <li key={idx}>• {error}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {validationResult.warnings.length > 0 && (
+                      <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                        {validationResult.warnings.map((warning, idx) => (
+                          <li key={idx}>⚠ {warning}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Run Button */}
             <div className="flex justify-end pt-4">
               <Button 
                 onClick={handleRunBacktest}
-                disabled={isRunning || loadingStrategy}
+                disabled={isRunning || loadingStrategy || isValidating || strategy?.status === 'validating' || strategy?.status === 'invalid'}
                 className="bg-gradient-primary min-w-[200px]"
               >
-                {isRunning ? (
+                {strategy?.status === 'validating' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Strategy Validating...
+                  </>
+                ) : strategy?.status === 'invalid' ? (
+                  <>
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Strategy Invalid
+                  </>
+                ) : isValidating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Validating Parameters...
+                  </>
+                ) : isRunning ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Running Backtest...
@@ -543,6 +769,7 @@ export default function Backtesting() {
               commission: parseFloat(params.commission),
               slippage: parseFloat(params.slippage),
               indicators: params.indicators || {},
+              strategy_code: strategy?.strategy_code, // Pass strategy code for execution
             }}
             onComplete={handleStreamingComplete}
           />

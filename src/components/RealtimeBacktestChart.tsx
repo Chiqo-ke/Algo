@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ComposedChart,
-  Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   ReferenceDot,
-  Cell,
+  Scatter,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -149,26 +149,80 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
     };
   }, [isStreaming, onComplete]);
 
+  // Custom Candlestick Shape
+  const Candlestick = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    const { open, high, low, close } = payload;
+    
+    const isGreen = close >= open;
+    const color = isGreen ? "#10b981" : "#ef4444";
+    
+    // Calculate positions
+    const bodyTop = Math.min(open, close);
+    const bodyBottom = Math.max(open, close);
+    const bodyHeight = Math.abs(close - open);
+    
+    // Get y scale from chart
+    const yScale = props.yAxis?.scale;
+    if (!yScale) return null;
+    
+    const highY = yScale(high);
+    const lowY = yScale(low);
+    const bodyTopY = yScale(bodyTop);
+    const bodyBottomY = yScale(bodyBottom);
+    
+    const wickWidth = 1;
+    const candleWidth = Math.max(width * 0.6, 2);
+    const centerX = x + width / 2;
+    
+    return (
+      <g>
+        {/* Upper wick */}
+        <line
+          x1={centerX}
+          y1={highY}
+          x2={centerX}
+          y2={bodyTopY}
+          stroke={color}
+          strokeWidth={wickWidth}
+        />
+        {/* Lower wick */}
+        <line
+          x1={centerX}
+          y1={bodyBottomY}
+          x2={centerX}
+          y2={lowY}
+          stroke={color}
+          strokeWidth={wickWidth}
+        />
+        {/* Body */}
+        <rect
+          x={centerX - candleWidth / 2}
+          y={bodyTopY}
+          width={candleWidth}
+          height={Math.max(bodyBottomY - bodyTopY, 1)}
+          fill={color}
+          stroke={color}
+          strokeWidth={1}
+        />
+      </g>
+    );
+  };
+
   // Transform candle data for Recharts
   const chartData = candleData.map((candle) => {
     const isGreen = candle.close >= candle.open;
     return {
       timestamp: new Date(candle.timestamp).toLocaleTimeString(),
       date: candle.timestamp,
-      // Candlestick body
-      bodyLow: Math.min(candle.open, candle.close),
-      bodyHigh: Math.max(candle.open, candle.close),
-      // Wick
-      wickLow: candle.low,
-      wickHigh: candle.high,
-      // Color
-      fill: isGreen ? "#10b981" : "#ef4444",
-      // Original values for tooltip
+      // Original values for candlestick
       open: candle.open,
       high: candle.high,
       low: candle.low,
       close: candle.close,
       volume: candle.volume,
+      // Color
+      fill: isGreen ? "#10b981" : "#ef4444",
     };
   });
 
@@ -333,7 +387,31 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
         <CardContent>
           <div ref={chartRef} className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={400} minWidth={800}>
-              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <ComposedChart data={chartData} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
+                <defs>
+                  {/* Arrow markers for buy/sell signals */}
+                  <marker
+                    id="arrowBuy"
+                    markerWidth="10"
+                    markerHeight="10"
+                    refX="5"
+                    refY="5"
+                    orient="auto"
+                  >
+                    <path d="M 0 5 L 5 0 L 10 5 L 5 3 Z" fill="#10b981" />
+                  </marker>
+                  <marker
+                    id="arrowSell"
+                    markerWidth="10"
+                    markerHeight="10"
+                    refX="5"
+                    refY="5"
+                    orient="auto"
+                  >
+                    <path d="M 0 5 L 5 10 L 10 5 L 5 7 Z" fill="#ef4444" />
+                  </marker>
+                </defs>
+                
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.1} />
                 <XAxis
                   dataKey="timestamp"
@@ -347,35 +425,61 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
                   tickLine={false}
                   domain={["auto", "auto"]}
                   tickFormatter={(value) => `$${value.toFixed(2)}`}
+                  yAxisId="price"
                 />
                 <Tooltip content={<CustomTooltip />} />
                 
-                {/* Candlesticks using Bar chart */}
-                <Bar dataKey="bodyHigh" fill="#10b981" isAnimationActive={false}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
+                {/* Candlesticks using custom shape */}
+                <Scatter
+                  data={chartData}
+                  yAxisId="price"
+                  shape={<Candlestick />}
+                  isAnimationActive={false}
+                />
 
-                {/* Trade signals */}
+                {/* Trade signal arrows */}
                 {signals.map((signal, index) => {
                   const matchingCandle = chartData.find((c) => c.date === signal.timestamp);
                   if (!matchingCandle) return null;
 
-                  let fill = "#3b82f6"; // blue for exits
-                  if (signal.type === "entry") {
-                    fill = signal.side === "buy" ? "#10b981" : "#ef4444";
+                  // Position arrows above (buy) or below (sell) the candle
+                  const isEntry = signal.type === "entry";
+                  const isBuy = signal.side === "buy";
+                  const offset = matchingCandle.high * 0.005; // 0.5% offset
+                  const arrowY = isBuy 
+                    ? matchingCandle.low - offset 
+                    : matchingCandle.high + offset;
+                  
+                  let color = "#3b82f6"; // blue for exits
+                  let label = "✕";
+                  
+                  if (isEntry) {
+                    if (isBuy) {
+                      color = "#10b981";
+                      label = "↑";
+                    } else {
+                      color = "#ef4444";
+                      label = "↓";
+                    }
                   }
 
                   return (
                     <ReferenceDot
                       key={`signal-${index}`}
                       x={matchingCandle.timestamp}
-                      y={signal.price}
-                      r={6}
-                      fill={fill}
+                      y={arrowY}
+                      yAxisId="price"
+                      r={8}
+                      fill={color}
                       stroke="#fff"
                       strokeWidth={2}
+                      label={{
+                        value: label,
+                        fill: "#fff",
+                        fontSize: 14,
+                        fontWeight: "bold",
+                        position: "center",
+                      }}
                     />
                   );
                 })}
