@@ -81,7 +81,7 @@ export const validateCodeSafety = async (
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        code,
+        strategy_code: code,  // ✅ Fixed: Use strategy_code not code
         strict_mode: strictMode,
       }),
     });

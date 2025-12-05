@@ -20,8 +20,11 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { WorkflowProgress } from "@/components/WorkflowProgress";
+import { CodeGenerationStatus } from "@/components/CodeGenerationStatus";
 import * as ProductionAPI from "@/lib/productionApi";
 import { apiCall } from "@/lib/api";
+import { codeGenerationService, type CodeGenerationRequest } from "@/lib/codeGenerationService";
+import type { CodeGenerationProgress } from "@/lib/types";
 
 interface WorkflowStep {
   id: string;
@@ -125,6 +128,10 @@ export default function Dashboard() {
   // Lifecycle data will be used in Strategy.tsx
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [lifecycleData, setLifecycleData] = useState<ProductionAPI.LifecycleData | null>(null);
+  
+  // NEW: Code generation progress state
+  const [codeGenProgress, setCodeGenProgress] = useState<CodeGenerationProgress | null>(null);
+  const [showCodeGenProgress, setShowCodeGenProgress] = useState(false);
 
   // API base URL - adjust based on your environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -698,10 +705,17 @@ export default function Dashboard() {
         // }
         // console.log("✅ Schema validation passed");
         
-        // Generate executable code from canonical JSON
-        console.log("🔧 Generating executable strategy code...");
+        // Generate executable code with automatic validation and error fixing
+        console.log("🔧 Generating executable strategy code with auto-fix...");
+        
+        // Show progress to user
+        toast({
+          title: "Generating Code",
+          description: "Generating and validating your strategy...",
+        });
         
         try {
+          // Use the new auto-fix endpoint that handles validation and fixing
           const codeGenResult = await apiCall(
             `${API_BASE_URL}/api/strategies/api/generate_executable_code/`,
             {
@@ -710,6 +724,11 @@ export default function Dashboard() {
                 canonical_json: confirmationData.canonicalJson,
                 strategy_name: editedStrategyName.trim(),
                 strategy_id: confirmationData.strategyId,
+                test_config: {
+                  symbol: backtestSymbol,
+                  period: backtestPeriod,
+                  interval: backtestInterval,
+                },
               }),
             }
           );
@@ -718,29 +737,45 @@ export default function Dashboard() {
             const codeGenData = codeGenResult.data;
             console.log("✅ Strategy code generated:", codeGenData.file_name);
             
-            // 🔒 PRODUCTION: Validate code safety after generation
-            console.log("🔍 Running production code safety check...");
-            const isCodeSafe = await validateCodeSafety(codeGenData.code || codeGenData.strategy_code);
-            if (!isCodeSafe) {
-              console.warn("⚠️ Code safety check failed - dangerous code detected");
-              // Show warning but allow user to proceed with confirmation
-              const proceedAnyway = window.confirm(
-                "⚠️ Warning: The generated code contains potentially unsafe operations.\n\n" +
-                "This may include:\n" +
-                "- File system access\n" +
-                "- Network operations\n" +
-                "- System commands\n\n" +
-                "Do you want to proceed anyway?"
-              );
+            // Check execution results if available
+            if (codeGenData.execution) {
+              console.log("📊 Execution results:", codeGenData.execution);
               
-              if (!proceedAnyway) {
-                console.log("❌ User chose not to proceed with unsafe code");
-                setIsProceedingToNext(false);
-                return;
+              if (!codeGenData.execution.success) {
+                console.warn("⚠️ Strategy execution failed:", codeGenData.execution.error_message);
+                
+                // Check if error fixing was attempted
+                if (codeGenData.error_fixing && codeGenData.error_fixing.attempted) {
+                  const fixAttempts = codeGenData.error_fixing.attempts || 0;
+                  const fixStatus = codeGenData.error_fixing.final_status;
+                  
+                  toast({
+                    title: "Code Generation Complete",
+                    description: `Generated code with ${fixAttempts} fix attempt(s). Status: ${fixStatus}`,
+                    variant: fixStatus === 'fixed' ? 'default' : 'destructive',
+                  });
+                  
+                  if (fixStatus !== 'fixed') {
+                    // Show error details and don't navigate
+                    console.error("❌ Failed to fix errors after", fixAttempts, "attempts");
+                    setIsProceedingToNext(false);
+                    return;
+                  }
+                } else {
+                  // No auto-fix, just warn but allow proceeding
+                  toast({
+                    title: "Validation Warning",
+                    description: "Code generated but not validated. Proceed with caution.",
+                    variant: "destructive",
+                  });
+                }
+              } else {
+                // Execution successful!
+                console.log("✅ Strategy validated successfully!");
+                if (codeGenData.execution.metrics) {
+                  console.log("📈 Metrics:", codeGenData.execution.metrics);
+                }
               }
-              console.log("⚠️ User chose to proceed despite safety warnings");
-            } else {
-              console.log("✅ Code safety check passed");
             }
             
             toast({
@@ -757,6 +792,7 @@ export default function Dashboard() {
                 strategyName: editedStrategyName.trim(),
                 codeFilePath: codeGenData.file_path,
                 codeFileName: codeGenData.file_name,
+                executionResults: codeGenData.execution,
                 backtestConfig: {
                   symbol: backtestSymbol,
                   period: backtestPeriod,
@@ -904,29 +940,45 @@ export default function Dashboard() {
             const codeGenData = codeGenResult.data;
             console.log("✅ Strategy code generated:", codeGenData.file_name);
             
-            // 🔒 PRODUCTION: Validate code safety after generation
-            console.log("🔍 Running production code safety check...");
-            const isCodeSafe = await validateCodeSafety(codeGenData.code || codeGenData.strategy_code);
-            if (!isCodeSafe) {
-              console.warn("⚠️ Code safety check failed - dangerous code detected");
-              // Show warning but allow user to proceed with confirmation
-              const proceedAnyway = window.confirm(
-                "⚠️ Warning: The generated code contains potentially unsafe operations.\n\n" +
-                "This may include:\n" +
-                "- File system access\n" +
-                "- Network operations\n" +
-                "- System commands\n\n" +
-                "Do you want to proceed anyway?"
-              );
+            // Check execution results if available
+            if (codeGenData.execution) {
+              console.log("📊 Execution results:", codeGenData.execution);
               
-              if (!proceedAnyway) {
-                console.log("❌ User chose not to proceed with unsafe code");
-                setIsProceedingToNext(false);
-                return;
+              if (!codeGenData.execution.success) {
+                console.warn("⚠️ Strategy execution failed:", codeGenData.execution.error_message);
+                
+                // Check if error fixing was attempted
+                if (codeGenData.error_fixing && codeGenData.error_fixing.attempted) {
+                  const fixAttempts = codeGenData.error_fixing.attempts || 0;
+                  const fixStatus = codeGenData.error_fixing.final_status;
+                  
+                  toast({
+                    title: "Code Generation Complete",
+                    description: `Generated code with ${fixAttempts} fix attempt(s). Status: ${fixStatus}`,
+                    variant: fixStatus === 'fixed' ? 'default' : 'destructive',
+                  });
+                  
+                  if (fixStatus !== 'fixed') {
+                    console.error("❌ Failed to fix errors after", fixAttempts, "attempts");
+                    // Navigate to strategy list instead
+                    navigate('/strategy', { 
+                      state: { 
+                        newStrategyId: data.id,
+                        newStrategyName: editedStrategyName.trim(),
+                        showSuccessMessage: false,
+                        errorMessage: 'Code validation failed'
+                      } 
+                    });
+                    setIsProceedingToNext(false);
+                    return;
+                  }
+                }
+              } else {
+                console.log("✅ Strategy validated successfully!");
+                if (codeGenData.execution.metrics) {
+                  console.log("📈 Metrics:", codeGenData.execution.metrics);
+                }
               }
-              console.log("⚠️ User chose to proceed despite safety warnings");
-            } else {
-              console.log("✅ Code safety check passed");
             }
             
             toast({
@@ -943,6 +995,7 @@ export default function Dashboard() {
                 strategyName: editedStrategyName.trim(),
                 codeFilePath: codeGenData.file_path,
                 codeFileName: codeGenData.file_name,
+                executionResults: codeGenData.execution,
                 fromNewStrategy: true,
                 backtestConfig: {
                   symbol: backtestSymbol,
