@@ -1,5 +1,6 @@
 import { API_ENDPOINTS, apiPost } from './api';
-import type { CodeGenerationResponse, CodeGenerationProgress, ErrorFixAttempt } from './types';
+import type { CodeGenerationResponse, CodeGenerationProgress } from './types';
+import { logger } from './logger';
 
 /**
  * Code Generation Service with Iterative Error Fixing
@@ -64,6 +65,13 @@ export class CodeGenerationService {
       timestamp?: string;
     }> = [];
     
+    logger.strategy.info("Starting code generation with auto-fix", { 
+      strategyName: request.strategy_name,
+      strategyId: request.strategy_id,
+      maxAttempts,
+      autoFixEnabled: request.auto_fix_enabled
+    });
+    
     try {
       // Step 1: Generate initial code
       this.notifyProgress({
@@ -74,6 +82,9 @@ export class CodeGenerationService {
         max_attempts: maxAttempts,
       });
       
+      logger.strategy.debug("Generating initial code", { strategyName: request.strategy_name });
+      const codeGenStartTime = performance.now();
+      
       const { data: codeGenData, error: codeGenError } = await apiPost<CodeGenerationResponse>(
         API_ENDPOINTS.strategies.generateExecutableCode,
         {
@@ -83,9 +94,21 @@ export class CodeGenerationService {
         }
       );
       
+      const codeGenDuration = Math.round(performance.now() - codeGenStartTime);
+      
       if (codeGenError || !codeGenData) {
+        logger.strategy.error("Code generation failed", new Error(codeGenError || 'No data returned'), { 
+          strategyName: request.strategy_name,
+          duration: codeGenDuration
+        });
         throw new Error(codeGenError || 'Code generation failed');
       }
+      
+      logger.strategy.info("Initial code generated successfully", { 
+        strategyName: request.strategy_name,
+        codeLength: codeGenData.strategy_code?.length,
+        duration: codeGenDuration
+      });
       
       this.notifyProgress({
         status: 'validating',
@@ -93,6 +116,11 @@ export class CodeGenerationService {
         progress_percentage: 30,
         current_attempt: 0,
         max_attempts: maxAttempts,
+      });
+      
+      logger.strategy.debug("Validating generated code", { 
+        strategyName: request.strategy_name,
+        codeLength: codeGenData.strategy_code?.length
       });
       
       // Step 2: Validate generated code

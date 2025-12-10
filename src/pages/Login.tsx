@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth.tsx";
+import { logger } from "@/lib/logger";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -20,11 +21,15 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    
+    logger.ui.info("User submitting login form", { username });
 
     try {
       await login(username, password);
+      logger.ui.info("Login form successful, navigating to home", { username });
       navigate("/");
     } catch (err: any) {
+      logger.ui.error("Login form error", err, { username });
       setError(err.message || "Failed to login. Please check your credentials.");
     } finally {
       setIsLoading(false);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { symbolService, strategyService, backtestService, type Symbol, type Stra
 import { API_ENDPOINTS, apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { RealtimeBacktestChart } from "@/components/RealtimeBacktestChart";
+import { logger } from "@/lib/logger";
 
 interface BacktestParams {
   symbol: string;
@@ -54,10 +55,24 @@ interface BacktestResults {
 export default function Backtesting() {
   const navigate = useNavigate();
   const location = useLocation();
+  const params = useParams();
   const { toast } = useToast();
-  const strategyId = location.state?.strategyId;
+  
+  // Extract strategyId from URL params as fallback
+  const urlStrategyId = params.strategyId ? parseInt(params.strategyId) : undefined;
+  const strategyId = location.state?.strategyId || urlStrategyId;
   const strategyName = location.state?.strategyName || "Strategy";
   const backtestConfig = location.state?.backtestConfig; // NEW: Get config from Strategy page
+
+  // Log the strategyId source for debugging
+  useEffect(() => {
+    logger.backtest.debug("Backtest page loaded", {
+      strategyIdFromState: location.state?.strategyId,
+      strategyIdFromURL: urlStrategyId,
+      finalStrategyId: strategyId,
+      hasStrategyName: !!strategyName
+    });
+  }, []);
 
   // State for fetched data
   const [symbols, setSymbols] = useState<Symbol[]>([]);
@@ -65,7 +80,7 @@ export default function Backtesting() {
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [loadingStrategy, setLoadingStrategy] = useState(true);
 
-  const [params, setParams] = useState<BacktestParams>({
+  const [backtestParams, setBacktestParams] = useState<BacktestParams>({
     symbol: backtestConfig?.symbol || "",
     period: backtestConfig?.period || "",
     timeframe: backtestConfig?.interval || "",
@@ -132,20 +147,29 @@ export default function Backtesting() {
   useEffect(() => {
     const fetchStrategy = async () => {
       if (!strategyId) {
+        logger.backtest.debug("No strategy ID provided, skipping strategy fetch");
         setLoadingStrategy(false);
         return;
       }
 
+      logger.backtest.info("Fetching strategy details", { strategyId });
       setLoadingStrategy(true);
       const { data, error } = await strategyService.getById(strategyId);
       
       if (error) {
+        logger.backtest.error("Failed to fetch strategy", new Error(error), { strategyId });
         toast({
           title: "Error loading strategy",
           description: error,
           variant: "destructive",
         });
       } else if (data) {
+        logger.backtest.info("Strategy loaded successfully", { 
+          strategyId: data.id,
+          strategyName: data.name,
+          hasStrategyCode: !!data.strategy_code,
+          codeLength: data.strategy_code?.length || 0
+        });
         setStrategy(data);
       }
       setLoadingStrategy(false);
@@ -189,7 +213,7 @@ export default function Backtesting() {
 
   // Auto-run backtest if config is provided from Strategy page
   useEffect(() => {
-    if (backtestConfig && !loadingSymbols && !loadingStrategy && params.symbol) {
+    if (backtestConfig && !loadingSymbols && !loadingStrategy && backtestParams.symbol) {
       console.log("Auto-running backtest with config:", backtestConfig);
       toast({
         title: "Starting Backtest",
@@ -211,7 +235,7 @@ export default function Backtesting() {
       setTempFromDate(undefined);
       setCurrentCalendarDate(new Date());
     } else {
-      setParams({ ...params, period: value, customDateFrom: undefined, customDateTo: undefined });
+      setBacktestParams({ ...backtestParams, period: value, customDateFrom: undefined, customDateTo: undefined });
     }
   };
 
@@ -258,23 +282,31 @@ export default function Backtesting() {
         throw new Error("No validation response received");
       }
       
+      // Type assertion for validation response
+      const validationData = data as { 
+        valid: boolean; 
+        trades_executed?: number; 
+        errors?: string[]; 
+        warnings?: string[] 
+      };
+      
       setValidationResult({
-        isValid: data.valid,
-        tradesExecuted: data.trades_executed || 0,
-        errors: data.errors || [],
-        warnings: data.warnings || [],
+        isValid: validationData.valid,
+        tradesExecuted: validationData.trades_executed || 0,
+        errors: validationData.errors || [],
+        warnings: validationData.warnings || [],
       });
 
-      if (data.valid) {
+      if (validationData.valid) {
         toast({
           title: "Validation passed",
-          description: `Strategy validated successfully with ${data.trades_executed} trades`,
+          description: `Strategy validated successfully with ${validationData.trades_executed} trades`,
         });
         return true;
       } else {
         toast({
           title: "Validation failed",
-          description: data.errors?.[0] || "Strategy validation failed",
+          description: validationData.errors?.[0] || "Strategy validation failed",
           variant: "destructive",
         });
         return false;
@@ -306,8 +338,8 @@ export default function Backtesting() {
       setCustomDateStep("to");
     } else {
       // Step is "to"
-      setParams({ 
-        ...params, 
+      setBacktestParams({ 
+        ...backtestParams, 
         period: "custom",
         customDateFrom: tempFromDate,
         customDateTo: date
@@ -319,7 +351,17 @@ export default function Backtesting() {
   };
 
   const handleRunBacktest = async () => {
-    if (!params.symbol || !params.period || !params.timeframe) {
+    logger.backtest.info("Starting backtest execution", { 
+      strategyId,
+      strategyName,
+      symbol: backtestParams.symbol,
+      period: backtestParams.period,
+      timeframe: backtestParams.timeframe,
+      hasStrategyCode: !!strategy?.strategy_code
+    });
+    
+    if (!backtestParams.symbol || !backtestParams.period || !backtestParams.timeframe) {
+      logger.backtest.warn("Missing required fields", { backtestParams });
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields",
@@ -328,7 +370,7 @@ export default function Backtesting() {
       return;
     }
 
-    if (params.useRealMoney && (!params.lotSize || !params.initialBalance)) {
+    if (backtestParams.useRealMoney && (!backtestParams.lotSize || !backtestParams.initialBalance)) {
       toast({
         title: "Missing fields",
         description: "Please enter lot size and initial balance for real money simulation",
@@ -337,19 +379,31 @@ export default function Backtesting() {
       return;
     }
 
-  if (!strategy?.strategy_code && !strategyId) {
+    // Check if we have strategy_code or strategy_id
+    if (!strategy?.strategy_code && !strategyId) {
+      logger.backtest.error("Cannot run backtest: no strategy code or ID", undefined, { 
+        hasStrategy: !!strategy,
+        strategyId 
+      });
       toast({
         title: "Strategy not found",
-        description: "Strategy code is required to run backtest",
+        description: "Strategy ID or strategy code is required to run backtest",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate strategy before running backtest
-    const isValid = await validateStrategy();
-    if (!isValid) {
-      return;
+    // Only validate if we have strategy_code
+    // If we only have strategy_id, backend will fetch the code
+    if (strategy?.strategy_code) {
+      logger.backtest.info("Validating strategy before backtest");
+      const isValid = await validateStrategy();
+      if (!isValid) {
+        logger.backtest.warn("Strategy validation failed, aborting backtest");
+        return;
+      }
+    } else {
+      logger.backtest.info("Skipping frontend validation - backend will fetch strategy code by ID", { strategyId });
     }
 
     setIsRunning(true);
@@ -358,10 +412,10 @@ export default function Backtesting() {
 
     try {
       // Calculate date range based on period
-      const endDate = params.customDateTo || new Date();
-      let startDate = params.customDateFrom;
-      
-      if (!startDate && params.period !== "custom") {
+      const endDate = backtestParams.customDateTo || new Date();
+      let startDate = backtestParams.customDateFrom;
+
+      if (!startDate && backtestParams.period !== "custom") {
         const daysMap: { [key: string]: number } = {
           "1week": 7,
           "1month": 30,
@@ -370,7 +424,7 @@ export default function Backtesting() {
           "1year": 365,
           "2years": 730,
         };
-        const days = daysMap[params.period] || 30;
+        const days = daysMap[backtestParams.period] || 30;
         startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
       }
@@ -383,15 +437,23 @@ export default function Backtesting() {
       const backtestConfig = {
         strategy_code: strategy?.strategy_code,
         strategy_id: strategyId,
-        symbol: params.symbol,
+        symbol: backtestParams.symbol,
         start_date: format(startDate, "yyyy-MM-dd"),
         end_date: format(endDate, "yyyy-MM-dd"),
-        timeframe: params.timeframe,
-        initial_balance: parseFloat(params.initialBalance) || 10000,
-        lot_size: parseFloat(params.lotSize) || 1.0,
-        commission: parseFloat(params.commission) || 0.001,
-        slippage: parseFloat(params.slippage) || 0.0005,
+        timeframe: backtestParams.timeframe,
+        initial_balance: parseFloat(backtestParams.initialBalance) || 10000,
+        lot_size: parseFloat(backtestParams.lotSize) || 1.0,
+        commission: parseFloat(backtestParams.commission) || 0.001,
+        slippage: parseFloat(backtestParams.slippage) || 0.0005,
       };
+
+      logger.backtest.info("Sending backtest request to API", { 
+        strategyId,
+        symbol: backtestConfig.symbol,
+        startDate: backtestConfig.start_date,
+        endDate: backtestConfig.end_date,
+        hasStrategyCode: !!backtestConfig.strategy_code
+      });
 
       // Run backtest using the API
       const { data, error } = await backtestService.quickRun(backtestConfig);
@@ -401,6 +463,12 @@ export default function Backtesting() {
       }
 
       if (data) {
+        logger.backtest.info("Backtest API response received", { 
+          hasDailyStats: !!data.daily_stats,
+          totalTrades: data.total_trades,
+          totalReturn: data.total_return
+        });
+        
         // Transform API response to match UI expectations
         const transformedResults: BacktestResults = {
           dailyStats: data.daily_stats || [],
@@ -417,13 +485,23 @@ export default function Backtesting() {
         setResults(transformedResults);
         setHasResults(true);
         
+        logger.backtest.info("Backtest completed successfully", {
+          totalTrades: transformedResults.summary.totalTrades,
+          winRate: transformedResults.summary.winRate,
+          totalProfit: transformedResults.summary.totalProfit
+        });
+        
         toast({
           title: "Backtest completed",
           description: `Successfully ran backtest with ${transformedResults.summary.totalTrades} trades`,
         });
       }
     } catch (error) {
-      console.error('Backtest failed:', error);
+      logger.backtest.error("Backtest execution failed", error as Error, { 
+        strategyId,
+        symbol: backtestParams.symbol,
+        timeframe: backtestParams.timeframe
+      });
       toast({
         title: "Backtest failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -528,8 +606,8 @@ export default function Backtesting() {
                       id="symbol"
                       list="symbols-list"
                       placeholder="Enter symbol (e.g., AAPL, EURUSD)"
-                      value={params.symbol}
-                      onChange={(e) => setParams({ ...params, symbol: e.target.value.toUpperCase() })}
+                      value={backtestParams.symbol}
+                      onChange={(e) => setBacktestParams({ ...backtestParams, symbol: e.target.value.toUpperCase() })}
                       className="uppercase"
                     />
                     <datalist id="symbols-list">
@@ -550,11 +628,11 @@ export default function Backtesting() {
               {/* Period */}
               <div className="space-y-2">
                 <Label htmlFor="period">Period *</Label>
-                <Select value={params.period} onValueChange={handlePeriodChange}>
+                <Select value={backtestParams.period} onValueChange={handlePeriodChange}>
                   <SelectTrigger id="period">
                     <SelectValue placeholder="Select period">
-                      {params.period === "custom" && params.customDateFrom && params.customDateTo
-                        ? `${format(params.customDateFrom, "MMM dd, yyyy")} - ${format(params.customDateTo, "MMM dd, yyyy")}`
+                      {backtestParams.period === "custom" && backtestParams.customDateFrom && backtestParams.customDateTo
+                        ? `${format(backtestParams.customDateFrom, "MMM dd, yyyy")} - ${format(backtestParams.customDateTo, "MMM dd, yyyy")}`
                         : undefined}
                     </SelectValue>
                   </SelectTrigger>
@@ -574,7 +652,7 @@ export default function Backtesting() {
               {/* Timeframe */}
               <div className="space-y-2">
                 <Label htmlFor="timeframe">Timeframe *</Label>
-                <Select value={params.timeframe} onValueChange={(value) => setParams({ ...params, timeframe: value })}>
+                <Select value={backtestParams.timeframe} onValueChange={(value) => setBacktestParams({ ...backtestParams, timeframe: value })}>
                   <SelectTrigger id="timeframe">
                     <SelectValue placeholder="Select timeframe" />
                   </SelectTrigger>
@@ -597,8 +675,8 @@ export default function Backtesting() {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="realMoney" 
-                  checked={params.useRealMoney}
-                  onCheckedChange={(checked) => setParams({ ...params, useRealMoney: checked as boolean })}
+                  checked={backtestParams.useRealMoney}
+                  onCheckedChange={(checked) => setBacktestParams({ ...backtestParams, useRealMoney: checked as boolean })}
                 />
                 <Label 
                   htmlFor="realMoney" 
@@ -609,7 +687,7 @@ export default function Backtesting() {
               </div>
 
               {/* Real Money Parameters */}
-              {params.useRealMoney && (
+              {backtestParams.useRealMoney && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6 border-l-2 border-primary/20">
                   <div className="space-y-2">
                     <Label htmlFor="lotSize">Lot Size *</Label>
@@ -618,8 +696,8 @@ export default function Backtesting() {
                       type="number"
                       step="0.01"
                       placeholder="e.g., 0.1, 1.0"
-                      value={params.lotSize}
-                      onChange={(e) => setParams({ ...params, lotSize: e.target.value })}
+                      value={backtestParams.lotSize}
+                      onChange={(e) => setBacktestParams({ ...backtestParams, lotSize: e.target.value })}
                     />
                   </div>
 
@@ -629,8 +707,8 @@ export default function Backtesting() {
                       id="initialBalance"
                       type="number"
                       placeholder="e.g., 10000"
-                      value={params.initialBalance}
-                      onChange={(e) => setParams({ ...params, initialBalance: e.target.value })}
+                      value={backtestParams.initialBalance}
+                      onChange={(e) => setBacktestParams({ ...backtestParams, initialBalance: e.target.value })}
                     />
                   </div>
                 </div>
@@ -648,8 +726,8 @@ export default function Backtesting() {
                     type="number"
                     step="0.0001"
                     placeholder="e.g., 0.001"
-                    value={params.commission}
-                    onChange={(e) => setParams({ ...params, commission: e.target.value })}
+                    value={backtestParams.commission}
+                    onChange={(e) => setBacktestParams({ ...backtestParams, commission: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">Commission rate per trade (e.g., 0.001 = 0.1%)</p>
                 </div>
@@ -661,8 +739,8 @@ export default function Backtesting() {
                     type="number"
                     step="0.0001"
                     placeholder="e.g., 0.0005"
-                    value={params.slippage}
-                    onChange={(e) => setParams({ ...params, slippage: e.target.value })}
+                    value={backtestParams.slippage}
+                    onChange={(e) => setBacktestParams({ ...backtestParams, slippage: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">Expected slippage per trade (e.g., 0.0005 = 0.05%)</p>
                 </div>
@@ -757,18 +835,18 @@ export default function Backtesting() {
         </Card>
 
         {/* Real-time Chart - Shows during backtest streaming */}
-        {isStreaming && params.symbol && (
+        {isStreaming && backtestParams.symbol && (
           <RealtimeBacktestChart
-            symbol={params.symbol}
+            symbol={backtestParams.symbol}
             isStreaming={isStreaming}
             config={{
-              symbol: params.symbol,
-              period: params.period,
-              interval: params.timeframe, // Use timeframe as interval
-              initial_balance: parseFloat(params.initialBalance),
-              commission: parseFloat(params.commission),
-              slippage: parseFloat(params.slippage),
-              indicators: params.indicators || {},
+              symbol: backtestParams.symbol,
+              period: backtestParams.period,
+              interval: backtestParams.timeframe, // Use timeframe as interval
+              initial_balance: parseFloat(backtestParams.initialBalance),
+              commission: parseFloat(backtestParams.commission),
+              slippage: parseFloat(backtestParams.slippage),
+              indicators: backtestParams.indicators || {},
               strategy_code: strategy?.strategy_code, // Pass strategy code for execution
             }}
             onComplete={handleStreamingComplete}
@@ -806,7 +884,7 @@ export default function Backtesting() {
                       "text-3xl font-bold",
                       results.summary.totalProfit >= 0 ? "text-green-500" : "text-red-500"
                     )}>
-                      {params.useRealMoney ? `$${results.summary.totalProfit}` : `${results.summary.totalProfit} pips`}
+                      {backtestParams.useRealMoney ? `$${results.summary.totalProfit}` : `${results.summary.totalProfit} pips`}
                     </p>
                   </div>
                 </CardContent>
@@ -817,7 +895,7 @@ export default function Backtesting() {
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-1">Avg Trade</p>
                     <p className="text-3xl font-bold text-foreground">
-                      {params.useRealMoney ? `$${results.summary.averageTrade}` : `${results.summary.averageTrade} pips`}
+                      {backtestParams.useRealMoney ? `$${results.summary.averageTrade}` : `${results.summary.averageTrade} pips`}
                     </p>
                   </div>
                 </CardContent>
@@ -844,7 +922,7 @@ export default function Backtesting() {
                             "font-semibold",
                             day.profit >= 0 ? "text-green-500" : "text-red-500"
                           )}>
-                            {params.useRealMoney ? `$${day.profit}` : `${day.profit} pips`} ({day.trades} trades)
+                            {backtestParams.useRealMoney ? `$${day.profit}` : `${day.profit} pips`} ({day.trades} trades)
                           </span>
                         </div>
                         <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
@@ -923,7 +1001,7 @@ export default function Backtesting() {
                                 "text-sm font-semibold",
                                 symbol.profit >= 0 ? "text-green-500" : "text-red-500"
                               )}>
-                                {params.useRealMoney ? `$${symbol.profit}` : `${symbol.profit} pips`}
+                                {backtestParams.useRealMoney ? `$${symbol.profit}` : `${symbol.profit} pips`}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {symbol.trades} trades ({symbol.percentage}%)
@@ -961,7 +1039,7 @@ export default function Backtesting() {
           <div className="flex flex-col items-center space-y-4 py-4">
             <Calendar
               mode="single"
-              selected={customDateStep === "from" ? tempFromDate : params.customDateTo}
+              selected={customDateStep === "from" ? tempFromDate : backtestParams.customDateTo}
               onSelect={handleCustomDateSelect}
               month={currentCalendarDate}
               onMonthChange={setCurrentCalendarDate}

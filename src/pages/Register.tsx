@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth.tsx";
+import { logger } from "@/lib/logger";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -32,14 +33,23 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    
+    logger.ui.info("User submitting registration form", { 
+      username: formData.username,
+      email: formData.email,
+      hasFirstName: !!formData.firstName,
+      hasLastName: !!formData.lastName
+    });
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
+      logger.ui.warn("Registration validation failed: passwords do not match", undefined, { username: formData.username });
       setError("Passwords do not match");
       return;
     }
 
     if (formData.password.length < 8) {
+      logger.ui.warn("Registration validation failed: password too short", undefined, { username: formData.username });
       setError("Password must be at least 8 characters long");
       return;
     }
@@ -49,8 +59,13 @@ export default function Register() {
     try {
       await register(formData.username, formData.email, formData.password, formData.firstName, formData.lastName);
       // Auto-login after registration, navigate to home
+      logger.ui.info("Registration form successful, navigating to home", { username: formData.username });
       navigate("/");
     } catch (err: any) {
+      logger.ui.error("Registration form error", err, { 
+        username: formData.username,
+        email: formData.email
+      });
       setError(err.message || "Failed to register. Please try again.");
     } finally {
       setIsLoading(false);

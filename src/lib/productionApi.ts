@@ -11,6 +11,8 @@
  * - Git deployment
  */
 
+import { logger } from './logger';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PRODUCTION_API = `${API_BASE_URL}/api/production`;
 
@@ -43,6 +45,9 @@ export interface SchemaValidationResponse {
 export const validateStrategySchema = async (
   strategyData: any
 ): Promise<SchemaValidationResponse> => {
+  logger.production.info("Validating strategy schema", { strategyName: strategyData.name });
+  const startTime = performance.now();
+  
   try {
     const response = await fetch(`${PRODUCTION_API}/strategies/validate-schema/`, {
       method: "POST",
@@ -51,9 +56,29 @@ export const validateStrategySchema = async (
     });
 
     const data = await response.json();
+    const duration = Math.round(performance.now() - startTime);
+    
+    if (data.status === 'valid') {
+      logger.production.info("Schema validation successful", { 
+        strategyName: strategyData.name,
+        schemaVersion: data.schema_version,
+        duration
+      });
+    } else {
+      logger.production.warn("Schema validation failed", undefined, { 
+        strategyName: strategyData.name,
+        errors: data.errors,
+        duration
+      });
+    }
+    
     return data;
   } catch (error) {
-    console.error("Schema validation error:", error);
+    const duration = Math.round(performance.now() - startTime);
+    logger.production.error("Schema validation error", error as Error, { 
+      strategyName: strategyData.name,
+      duration
+    });
     throw error;
   }
 };
@@ -76,6 +101,12 @@ export const validateCodeSafety = async (
   code: string,
   strictMode: boolean = true
 ): Promise<CodeSafetyResponse> => {
+  logger.production.info("Validating code safety", { 
+    codeLength: code.length,
+    strictMode
+  });
+  const startTime = performance.now();
+  
   try {
     const response = await fetch(`${PRODUCTION_API}/strategies/validate-code/`, {
       method: "POST",
@@ -87,9 +118,30 @@ export const validateCodeSafety = async (
     });
 
     const data = await response.json();
+    const duration = Math.round(performance.now() - startTime);
+    
+    if (data.safe) {
+      logger.production.info("Code safety validation passed", { 
+        codeLength: code.length,
+        checksPassedCount: data.checks_passed?.length,
+        duration
+      });
+    } else {
+      logger.production.warn("Code safety validation failed", undefined, { 
+        codeLength: code.length,
+        issuesCount: data.issues?.length,
+        severity: data.severity,
+        duration
+      });
+    }
+    
     return data;
   } catch (error) {
-    console.error("Code safety validation error:", error);
+    const duration = Math.round(performance.now() - startTime);
+    logger.production.error("Code safety validation error", error as Error, { 
+      codeLength: code.length,
+      duration
+    });
     throw error;
   }
 };

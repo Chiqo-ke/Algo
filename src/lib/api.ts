@@ -1,4 +1,6 @@
 // API Configuration and Base URL
+import { logger } from './logger';
+
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 // Enable detailed logging for debugging
@@ -51,6 +53,13 @@ export const API_ENDPOINTS = {
     // Code generation endpoints
     generateExecutableCode: `${API_BASE_URL}/strategies/api/generate_executable_code/`,
     generateWithFixing: `${API_BASE_URL}/strategies/api/generate_with_auto_fix/`,
+    // Bot performance endpoints
+    botPerformance: `${API_BASE_URL}/strategies/bot-performance/`,
+    botPerformanceDetail: (id: number) => `${API_BASE_URL}/strategies/bot-performance/${id}/`,
+    verifiedBots: `${API_BASE_URL}/strategies/bot-performance/verified_bots/`,
+    verifyBot: `${API_BASE_URL}/strategies/bot-performance/verify_bot/`,
+    verifyAllBots: `${API_BASE_URL}/strategies/bot-performance/verify_all/`,
+    botTestHistory: (id: number) => `${API_BASE_URL}/strategies/bot-performance/${id}/test_history/`,
   },
   // Data API
   data: {
@@ -112,12 +121,15 @@ export async function apiCall<T>(
   url: string,
   options?: RequestInit
 ): Promise<{ data?: T; error?: string }> {
+  const startTime = performance.now();
+  const method = options?.method || 'GET';
+  
   try {
     // Get token from localStorage
     const token = localStorage.getItem('access_token');
     
     if (DEBUG_API) {
-      console.log(`🌐 API Request: ${options?.method || 'GET'} ${url}`);
+      logger.api.request(method, url, options?.body ? JSON.parse(options.body as string) : undefined);
     }
     
     const response = await fetch(url, {
@@ -129,15 +141,23 @@ export async function apiCall<T>(
       },
     });
 
+    const duration = Math.round(performance.now() - startTime);
+    
     if (DEBUG_API) {
-      console.log(`📡 API Response: ${response.status} ${response.statusText}`);
+      logger.api.response(response.status, url, duration);
     }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       
       if (DEBUG_API) {
-        console.error('❌ API Error:', response.status, errorData);
+        logger.api.error(`HTTP ${response.status} error`, new Error(response.statusText), {
+          url,
+          method,
+          status: response.status,
+          errorData,
+          duration
+        });
       }
       
       // Handle validation errors (field-specific errors)
@@ -159,24 +179,23 @@ export async function apiCall<T>(
 
     const data = await response.json();
     if (DEBUG_API) {
-      console.log('✅ API Success:', data);
+      logger.api.debug('API request successful', { url, method, duration, dataKeys: Object.keys(data) });
     }
     return { data };
   } catch (error) {
-    if (DEBUG_API) {
-      console.error('❌ API call failed:', error);
-    }
+    const duration = Math.round(performance.now() - startTime);
     
     // Check if it's a network error (server not reachable)
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      return { 
-        error: '🔌 Cannot connect to server. Make sure Django is running on http://127.0.0.1:8000' 
-      };
+      const networkError = '🔌 Cannot connect to server. Make sure Django is running on http://127.0.0.1:8000';
+      logger.api.error('Network error - server unreachable', error as Error, { url, method, duration });
+      return { error: networkError };
     }
     
-    return { 
-      error: error instanceof Error ? error.message : 'An unknown error occurred' 
-    };
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.api.error('API call failed', error as Error, { url, method, duration });
+    
+    return { error: errorMessage };
   }
 }
 

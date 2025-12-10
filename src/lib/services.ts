@@ -21,6 +21,7 @@ export type {
   BacktestAlert,
   MarketData,
   Indicator,
+  BotPerformance,
 } from './types';
 
 // ============================================================================
@@ -597,3 +598,91 @@ export const backtestAlertService = {
     return apiGet<Types.BacktestAlert>(API_ENDPOINTS.backtest.alertDetail(id));
   },
 };
+
+// ============================================================================
+// BOT PERFORMANCE & VERIFICATION SERVICES
+// ============================================================================
+
+export const botPerformanceService = {
+  /**
+   * Get all bot performance records
+   */
+  async getAll(): Promise<{ data?: Types.BotPerformance[]; error?: string }> {
+    return apiGet<Types.BotPerformance[]>(API_ENDPOINTS.strategies.botPerformance);
+  },
+
+  /**
+   * Get bot performance by ID
+   */
+  async getById(id: number): Promise<{ data?: Types.BotPerformance; error?: string }> {
+    return apiGet<Types.BotPerformance>(API_ENDPOINTS.strategies.botPerformanceDetail(id));
+  },
+
+  /**
+   * Get bot performance by strategy ID
+   */
+  async getByStrategyId(strategyId: number): Promise<{ data?: Types.BotPerformance; error?: string }> {
+    const result = await apiGet<Types.BotPerformance[]>(`${API_ENDPOINTS.strategies.botPerformance}?strategy_id=${strategyId}`);
+    if (result.data && result.data.length > 0) {
+      return { data: result.data[0] };
+    }
+    return { error: 'No bot performance found for this strategy' };
+  },
+
+  /**
+   * Get all verified bots
+   */
+  async getVerifiedBots(): Promise<{ data?: Types.VerifiedBotsResponse; error?: string }> {
+    return apiGet<Types.VerifiedBotsResponse>(API_ENDPOINTS.strategies.verifiedBots);
+  },
+
+  /**
+   * Verify a single bot
+   */
+  async verifyBot(request: Types.BotVerificationRequest): Promise<{ data?: Types.BotVerificationResponse; error?: string }> {
+    return apiPost<Types.BotVerificationResponse>(API_ENDPOINTS.strategies.verifyBot, request);
+  },
+
+  /**
+   * Verify all bots in the system
+   */
+  async verifyAllBots(params?: { force_retest?: boolean; strategy_ids?: number[] }): Promise<{ 
+    data?: { 
+      status: string; 
+      summary: { 
+        total: number; 
+        verified: number; 
+        failed: number; 
+        testing: number; 
+        errors: string[] 
+      } 
+    }; 
+    error?: string 
+  }> {
+    return apiPost(API_ENDPOINTS.strategies.verifyAllBots, params || {});
+  },
+
+  /**
+   * Get test history for a bot
+   */
+  async getTestHistory(performanceId: number): Promise<{ data?: Types.BotTestHistoryResponse; error?: string }> {
+    return apiGet<Types.BotTestHistoryResponse>(API_ENDPOINTS.strategies.botTestHistory(performanceId));
+  },
+
+  /**
+   * Check if a strategy has a verified bot
+   */
+  async isStrategyVerified(strategyId: number): Promise<boolean> {
+    const result = await this.getByStrategyId(strategyId);
+    return result.data?.is_verified || false;
+  },
+
+  /**
+   * Get verification badge for a strategy
+   */
+  async getVerificationBadge(strategyId: number): Promise<Types.BotPerformance['verification_badge'] | null> {
+    const result = await this.getByStrategyId(strategyId);
+    return result.data?.verification_badge || null;
+  },
+};
+

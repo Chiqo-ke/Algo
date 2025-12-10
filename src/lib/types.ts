@@ -570,3 +570,81 @@ export interface CodeGenerationResponse {
   }>;
   validation_passed?: boolean;
 }
+
+// ============================================================================
+// Bot Performance & Verification
+// ============================================================================
+
+export interface BotPerformance {
+  id: number;
+  strategy_id: number;
+  strategy_name: string;
+  verification_status: 'pending' | 'testing' | 'verified' | 'failed';
+  is_verified: boolean;
+  total_trades: number;
+  entry_trades: number;
+  exit_trades: number;
+  win_rate: number | null;
+  total_return: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+  symbol_tested: string;
+  timeframe_tested: string;
+  test_period_start: string | null;
+  test_period_end: string | null;
+  trades_threshold: number;
+  verification_notes: string;
+  created_at: string;
+  updated_at: string;
+  last_test_at: string;
+  verified_at: string | null;
+  verification_badge: {
+    status: string;
+    label: string;
+    icon: string;
+    color: string;
+    description: string;
+  };
+}
+
+export interface BotTestRun {
+  id: number;
+  performance_id: number;
+  backtest_run_id: number | null;
+  passed: boolean;
+  trades_made: number;
+  profit: number | null;
+  return_percentage: number | null;
+  tested_at: string;
+  test_duration: number | null;
+  status: 'completed' | 'failed' | 'timeout';
+  error_message: string;
+}
+
+export interface BotVerificationRequest {
+  strategy_id: number;
+  symbol?: string;
+  start_date?: string;
+  end_date?: string;
+  timeframe?: string;
+  initial_balance?: number;
+  commission?: number;
+}
+
+export interface BotVerificationResponse {
+  status: string;
+  performance: BotPerformance;
+  message: string;
+}
+
+export interface VerifiedBotsResponse {
+  count: number;
+  verified_bots: BotPerformance[];
+}
+
+export interface BotTestHistoryResponse {
+  strategy_name: string;
+  is_verified: boolean;
+  test_runs: BotTestRun[];
+}
+

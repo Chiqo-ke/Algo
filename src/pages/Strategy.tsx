@@ -4,10 +4,12 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, Activity, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { strategyService, type Strategy as StrategyType } from "@/lib/services";
+import { strategyService, botPerformanceService } from "@/lib/services";
+import type { BotPerformance } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
 interface Strategy {
   id: number;
@@ -28,6 +30,8 @@ export default function Strategy() {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const [highlightedStrategyId, setHighlightedStrategyId] = useState<number | null>(null);
+  const [botPerformances, setBotPerformances] = useState<Map<number, BotPerformance>>(new Map());
+  const [_loadingPerformance, setLoadingPerformance] = useState(false);
 
   // Show success message if redirected from Dashboard after strategy creation
   useEffect(() => {
@@ -54,11 +58,14 @@ export default function Strategy() {
   useEffect(() => {
     const fetchStrategies = async () => {
       setLoading(true);
-      console.log("📡 Fetching strategies from API...");
+      logger.strategy.info("Fetching strategies from API");
+      const startTime = performance.now();
+      
       const { data, error } = await strategyService.getAll();
       
       if (error) {
-        console.error("❌ Error fetching strategies:", error);
+        const duration = Math.round(performance.now() - startTime);
+        logger.strategy.error("Failed to fetch strategies", new Error(error), { duration });
         toast({
           title: "Error loading strategies",
           description: error,
@@ -71,7 +78,10 @@ export default function Strategy() {
         const strategiesList = (data as any).results || data;
         
         if (!Array.isArray(strategiesList)) {
-          console.error("❌ Expected array of strategies, got:", strategiesList);
+          logger.strategy.error("Invalid strategies response format", undefined, { 
+            receivedType: typeof strategiesList,
+            data: strategiesList 
+          });
           setStrategies([]);
           setLoading(false);
           return;
@@ -105,7 +115,11 @@ export default function Strategy() {
           };
         });
         
-        console.log("✅ Loaded strategies from API:", transformedStrategies);
+        const duration = Math.round(performance.now() - startTime);
+        logger.strategy.info("Successfully loaded strategies", { 
+          count: transformedStrategies.length,
+          duration
+        });
         setStrategies(transformedStrategies);
       }
       setLoading(false);
@@ -114,23 +128,69 @@ export default function Strategy() {
     fetchStrategies();
   }, [toast]);
 
+  // Fetch bot performance data for all strategies
+  useEffect(() => {
+    const fetchBotPerformances = async () => {
+      if (strategies.length === 0) return;
+      
+      setLoadingPerformance(true);
+      logger.strategy.info("Fetching bot performance data", { strategyCount: strategies.length });
+      const startTime = performance.now();
+      
+      const { data, error } = await botPerformanceService.getAll();
+      
+      if (data && !error) {
+        const performanceMap = new Map<number, BotPerformance>();
+        // Handle both paginated and non-paginated responses
+        const performances = Array.isArray(data) ? data : (data as any).results || [];
+        performances.forEach((perf: BotPerformance) => {
+          performanceMap.set(perf.strategy_id, perf);
+        });
+        setBotPerformances(performanceMap);
+        
+        const duration = Math.round(performance.now() - startTime);
+        logger.strategy.info("Successfully loaded bot performance data", { 
+          performanceCount: performanceMap.size,
+          duration
+        });
+      } else if (error) {
+        const duration = Math.round(performance.now() - startTime);
+        logger.strategy.warn(`Failed to fetch bot performance data: ${error}`, { duration });
+      }
+      setLoadingPerformance(false);
+    };
+
+    fetchBotPerformances();
+  }, [strategies]);
+
   const handleAddStrategy = () => {
-    console.log("Add new strategy");
+    logger.ui.info("User clicked Add Strategy button");
     // This will later open a dialog or navigate to strategy creation
   };
 
-  const handleTest = (strategyId: number, strategyName: string) => {
-    // Navigate directly to backtesting page where user can enter configuration
+  const handleRunBacktest = (strategyId: number, strategyName: string) => {
+    // Get bot performance if available
+    const botPerf = botPerformances.get(strategyId);
+    
+    logger.strategy.info("Navigating to backtest page", { 
+      strategyId, 
+      strategyName,
+      isVerified: botPerf?.is_verified || false
+    });
+    
+    // Navigate to backtesting page with strategy ID in URL AND state
     navigate(`/backtesting/${strategyId}`, {
       state: {
-        strategyId: strategyId,
+        strategyId: strategyId,  // FIX: Add strategyId to state
         strategyName: strategyName,
+        botVerified: botPerf?.is_verified || false,
+        botPerformance: botPerf,
       },
     });
   };
 
   const handleGoLive = (strategyId: number) => {
-    console.log("Go live with strategy:", strategyId);
+    logger.strategy.info("User attempted to go live with strategy", { strategyId });
     toast({
       title: "Feature coming soon",
       description: "Live trading will be available in the next version",
@@ -170,10 +230,45 @@ export default function Strategy() {
                 )}
               >
                 <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg text-card-foreground">
-                      {strategy.name}
-                    </CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg text-card-foreground mb-2">
+                        {strategy.name}
+                      </CardTitle>
+                      {/* Bot Verification Badge */}
+                      {(() => {
+                        const botPerf = botPerformances.get(strategy.id);
+                        if (botPerf) {
+                          const badge = botPerf.verification_badge;
+                          return (
+                            <div className="flex items-center gap-2 mt-1">
+                              {botPerf.is_verified ? (
+                                <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  Verified Bot
+                                </Badge>
+                              ) : botPerf.verification_status === 'testing' ? (
+                                <Badge variant="secondary" className="bg-blue-500 hover:bg-blue-600">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Testing
+                                </Badge>
+                              ) : botPerf.verification_status === 'failed' ? (
+                                <Badge variant="destructive">
+                                  <XCircle className="w-3 h-3 mr-1" />
+                                  {badge.label}
+                                </Badge>
+                              ) : null}
+                              {botPerf.is_verified && (
+                                <span className="text-xs text-muted-foreground">
+                                  {botPerf.win_rate}% WR • {botPerf.total_trades} trades
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                     <Badge 
                       variant={
                         strategy.status === "live" 
@@ -246,10 +341,10 @@ export default function Strategy() {
                     <Button 
                       variant="outline" 
                       className="flex-1"
-                      onClick={() => handleTest(strategy.id, strategy.name)}
-                      disabled={strategy.status === "testing"}
+                      onClick={() => handleRunBacktest(strategy.id, strategy.name)}
                     >
-                      Test
+                      <Play className="w-4 h-4 mr-2" />
+                      Run Backtest
                     </Button>
                     <Button 
                       className={cn(
