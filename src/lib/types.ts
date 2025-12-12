@@ -326,6 +326,41 @@ export interface BacktestAlert {
   created_at: string;
 }
 
+// Latest backtest result per strategy (replaces previous on new backtest)
+export interface LatestBacktestResult {
+  strategy_id: number;
+  strategy_name: string;
+  symbol: string;
+  timeframe: string;
+  period: string;
+  initial_balance: number;
+  commission: number;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: number;
+  net_profit: number;
+  total_return_pct: number;
+  final_equity: number | null;
+  max_drawdown: number;
+  sharpe_ratio: number | null;
+  trades: Array<{
+    entry_time: string;
+    exit_time: string;
+    entry_price: number;
+    exit_price: number;
+    size: number;
+    pnl: number;
+    return_pct: number;
+  }>;
+  equity_curve: Array<{
+    timestamp: string;
+    equity: number;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================================================
 // Production API Types
 // ============================================================================

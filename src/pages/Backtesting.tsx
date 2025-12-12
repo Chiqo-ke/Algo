@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Play, BarChart3, PieChart, Edit, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { symbolService, strategyService, backtestService, type Symbol, type Strategy } from "@/lib/services";
+import { symbolService, strategyService, backtestService, type Symbol, type Strategy, type LatestBacktestResult } from "@/lib/services";
 import { API_ENDPOINTS, apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { RealtimeBacktestChart } from "@/components/RealtimeBacktestChart";
@@ -113,12 +113,51 @@ export default function Backtesting() {
   } | null>(null);
 
   // Handler for when streaming backtest completes
-  const handleStreamingComplete = () => {
+  const handleStreamingComplete = (streamResults?: {
+    totalTrades: number;
+    winningTrades: number;
+    losingTrades: number;
+    winRate: number;
+    pnl: number;
+    maxDrawdown?: number;
+    sharpeRatio?: number;
+    finalEquity?: number;
+  }) => {
     setIsStreaming(false);
     setIsRunning(false);
+    
+    // If we got results from the stream, update the results state
+    if (streamResults && streamResults.totalTrades > 0) {
+      const transformedResults: BacktestResults = {
+        dailyStats: [], // Daily stats would need to be computed from trades
+        symbolStats: [{
+          symbol: backtestParams.symbol,
+          trades: streamResults.totalTrades,
+          profit: streamResults.pnl,
+          percentage: 100,
+        }],
+        summary: {
+          totalTrades: streamResults.totalTrades,
+          winRate: streamResults.winRate,
+          totalProfit: streamResults.pnl,
+          averageTrade: streamResults.totalTrades > 0 
+            ? streamResults.pnl / streamResults.totalTrades 
+            : 0,
+        },
+      };
+      setResults(transformedResults);
+      setHasResults(true);
+      
+      logger.backtest.info("Stream backtest results received", {
+        totalTrades: streamResults.totalTrades,
+        winRate: streamResults.winRate,
+        pnl: streamResults.pnl,
+      });
+    }
+    
     toast({
       title: "Backtest completed",
-      description: "Real-time backtest streaming finished successfully",
+      description: `Real-time backtest finished with ${streamResults?.totalTrades || 0} trades`,
     });
   };
 
@@ -171,8 +210,60 @@ export default function Backtesting() {
           codeLength: data.strategy_code?.length || 0
         });
         setStrategy(data);
+        
+        // Also fetch saved backtest results for this strategy
+        fetchSavedResults(data.id);
       }
       setLoadingStrategy(false);
+    };
+
+    // Function to fetch saved backtest results from database
+    const fetchSavedResults = async (stratId: number) => {
+      logger.backtest.info("Fetching saved backtest results", { strategyId: stratId });
+      const { data: savedResults, error: savedError } = await backtestService.getLatestResult(stratId);
+      
+      if (savedError) {
+        // No saved results is not an error - just means no previous backtest
+        logger.backtest.debug("No saved backtest results found", { strategyId: stratId, error: savedError });
+      } else if (savedResults) {
+        logger.backtest.info("Loaded saved backtest results", { 
+          strategyId: stratId,
+          totalTrades: savedResults.total_trades,
+          winRate: savedResults.win_rate,
+          netProfit: savedResults.net_profit
+        });
+        
+        // Transform saved results to match BacktestResults interface
+        const transformedResults: BacktestResults = {
+          dailyStats: [],
+          symbolStats: [{
+            symbol: savedResults.symbol || backtestParams.symbol || "N/A",
+            trades: savedResults.total_trades,
+            profit: savedResults.net_profit,
+            percentage: 100,
+          }],
+          summary: {
+            totalTrades: savedResults.total_trades,
+            winRate: savedResults.win_rate,
+            totalProfit: savedResults.net_profit,
+            averageTrade: savedResults.total_trades > 0 
+              ? savedResults.net_profit / savedResults.total_trades 
+              : 0,
+          },
+        };
+        
+        setResults(transformedResults);
+        setHasResults(true);
+        
+        // Also set the backtest params from saved data if available
+        if (savedResults.symbol && !backtestParams.symbol) {
+          setBacktestParams(prev => ({
+            ...prev,
+            symbol: savedResults.symbol || prev.symbol,
+            initialBalance: savedResults.initial_balance?.toString() || prev.initialBalance,
+          }));
+        }
+      }
     };
 
     fetchStrategy();
@@ -871,7 +962,7 @@ export default function Backtesting() {
                 <CardContent className="pt-6">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-1">Win Rate</p>
-                    <p className="text-3xl font-bold text-green-500">{results.summary.winRate}%</p>
+                    <p className="text-3xl font-bold text-green-500">{typeof results.summary.winRate === 'number' ? results.summary.winRate.toFixed(1) : results.summary.winRate}%</p>
                   </div>
                 </CardContent>
               </Card>
@@ -884,7 +975,9 @@ export default function Backtesting() {
                       "text-3xl font-bold",
                       results.summary.totalProfit >= 0 ? "text-green-500" : "text-red-500"
                     )}>
-                      {backtestParams.useRealMoney ? `$${results.summary.totalProfit}` : `${results.summary.totalProfit} pips`}
+                      {backtestParams.useRealMoney 
+                        ? `$${typeof results.summary.totalProfit === 'number' ? results.summary.totalProfit.toFixed(2) : results.summary.totalProfit}` 
+                        : `${typeof results.summary.totalProfit === 'number' ? results.summary.totalProfit.toFixed(2) : results.summary.totalProfit} pips`}
                     </p>
                   </div>
                 </CardContent>
@@ -895,7 +988,9 @@ export default function Backtesting() {
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-1">Avg Trade</p>
                     <p className="text-3xl font-bold text-foreground">
-                      {backtestParams.useRealMoney ? `$${results.summary.averageTrade}` : `${results.summary.averageTrade} pips`}
+                      {backtestParams.useRealMoney 
+                        ? `$${typeof results.summary.averageTrade === 'number' ? results.summary.averageTrade.toFixed(2) : results.summary.averageTrade}` 
+                        : `${typeof results.summary.averageTrade === 'number' ? results.summary.averageTrade.toFixed(2) : results.summary.averageTrade} pips`}
                     </p>
                   </div>
                 </CardContent>
@@ -922,7 +1017,9 @@ export default function Backtesting() {
                             "font-semibold",
                             day.profit >= 0 ? "text-green-500" : "text-red-500"
                           )}>
-                            {backtestParams.useRealMoney ? `$${day.profit}` : `${day.profit} pips`} ({day.trades} trades)
+                            {backtestParams.useRealMoney 
+                              ? `$${typeof day.profit === 'number' ? day.profit.toFixed(2) : day.profit}` 
+                              : `${typeof day.profit === 'number' ? day.profit.toFixed(2) : day.profit} pips`} ({day.trades} trades)
                           </span>
                         </div>
                         <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
@@ -1001,7 +1098,9 @@ export default function Backtesting() {
                                 "text-sm font-semibold",
                                 symbol.profit >= 0 ? "text-green-500" : "text-red-500"
                               )}>
-                                {backtestParams.useRealMoney ? `$${symbol.profit}` : `${symbol.profit} pips`}
+                                {backtestParams.useRealMoney 
+                                  ? `$${typeof symbol.profit === 'number' ? symbol.profit.toFixed(2) : symbol.profit}` 
+                                  : `${typeof symbol.profit === 'number' ? symbol.profit.toFixed(2) : symbol.profit} pips`}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {symbol.trades} trades ({symbol.percentage}%)

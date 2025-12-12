@@ -22,6 +22,7 @@ export type {
   MarketData,
   Indicator,
   BotPerformance,
+  LatestBacktestResult,
 } from './types';
 
 // ============================================================================
@@ -535,6 +536,16 @@ export const backtestService = {
   // Health check
   async health(): Promise<{ data?: Types.HealthStatus; error?: string }> {
     return apiGet<Types.HealthStatus>(API_ENDPOINTS.backtest.health);
+  },
+
+  // Get latest backtest result for a strategy (replaces previous on new backtest)
+  async getLatestResult(strategyId: number): Promise<{ data?: Types.LatestBacktestResult; error?: string }> {
+    return apiGet<Types.LatestBacktestResult>(API_ENDPOINTS.backtest.latestResultByStrategy(strategyId));
+  },
+
+  // Get all latest backtest results
+  async getAllLatestResults(): Promise<{ data?: Types.LatestBacktestResult[]; error?: string }> {
+    return apiGet<Types.LatestBacktestResult[]>(API_ENDPOINTS.backtest.latestResults);
   },
 };
 

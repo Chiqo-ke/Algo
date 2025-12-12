@@ -95,6 +95,10 @@ export const API_ENDPOINTS = {
     monitor: `${API_BASE_URL}/backtests/api/monitor/`,
     status: `${API_BASE_URL}/backtests/api/status/`,
     health: `${API_BASE_URL}/backtests/api/health/`,
+    // Latest backtest results per strategy (replaces previous on new backtest)
+    latestResults: `${API_BASE_URL}/strategies/backtest-results/`,
+    latestResultByStrategy: (strategyId: number) => `${API_BASE_URL}/strategies/backtest-results/${strategyId}/`,
+    latestResultByStrategyQuery: (strategyId: number) => `${API_BASE_URL}/strategies/backtest-results/by_strategy/?strategy_id=${strategyId}`,
   },
   // Production API
   production: {

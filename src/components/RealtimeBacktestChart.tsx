@@ -42,11 +42,23 @@ interface BacktestConfig {
   strategy_code?: string;
 }
 
+interface BacktestResults {
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  pnl: number;
+  maxDrawdown?: number;
+  sharpeRatio?: number;
+  finalEquity?: number;
+  trades?: TradeSignal[];
+}
+
 interface RealtimeChartProps {
   symbol: string;
   isStreaming: boolean;
   config: BacktestConfig;
-  onComplete?: () => void;
+  onComplete?: (results: BacktestResults) => void;
 }
 
 export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete }: RealtimeChartProps) {
@@ -127,10 +139,34 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
           losingTrades: data.losing_trades,
           pnl: data.pnl,
         });
+        console.log(`📊 Stats update: ${data.total_trades} trades, PnL: $${data.pnl?.toFixed(2)}`);
       } else if (data.type === "complete") {
-        // Backtest completed
-        console.log("✅ Backtest completed");
-        onComplete?.();
+        // Backtest completed - also update stats from metrics if available
+        console.log("✅ Backtest completed", data.metrics);
+        const finalStats = {
+          totalTrades: data.metrics?.total_trades || stats.totalTrades,
+          winningTrades: data.metrics?.winning_trades || stats.winningTrades,
+          losingTrades: data.metrics?.losing_trades || stats.losingTrades,
+          pnl: data.metrics?.net_profit || stats.pnl,
+        };
+        if (data.metrics) {
+          setStats(finalStats);
+        }
+        // Pass final results to parent
+        const winRate = finalStats.totalTrades > 0 
+          ? (finalStats.winningTrades / finalStats.totalTrades) * 100 
+          : 0;
+        onComplete?.({
+          totalTrades: finalStats.totalTrades,
+          winningTrades: finalStats.winningTrades,
+          losingTrades: finalStats.losingTrades,
+          winRate: winRate,
+          pnl: finalStats.pnl,
+          maxDrawdown: data.metrics?.max_drawdown,
+          sharpeRatio: data.metrics?.sharpe_ratio,
+          finalEquity: data.metrics?.final_equity,
+          trades: signals,
+        });
       } else if (data.type === "error") {
         console.error("❌ Backtest error:", data.message);
       }
