@@ -49,6 +49,7 @@ interface BacktestConfig {
   period: string;
   interval: string;
   initial_balance: number;
+  lot_size: number;
   commission: number;
   slippage: number;
   indicators?: Record<string, any>;

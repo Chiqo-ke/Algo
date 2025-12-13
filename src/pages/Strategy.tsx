@@ -4,6 +4,12 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { strategyService, botPerformanceService } from "@/lib/services";
@@ -217,24 +223,33 @@ export default function Strategy() {
           </div>
         ) : (
           /* Strategy Grid - Centered and wrapping */
-          <div className="flex justify-center">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl">
+          <div className="flex justify-center w-full px-2 sm:px-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 max-w-7xl w-full">
             {/* Strategy Cards */}
             {strategies.map((strategy) => (
               <Card 
                 key={strategy.id}
                 className={cn(
                   "bg-card border-border shadow-card hover:shadow-lg transition-all",
-                  "w-full max-w-sm",
+                  "w-full overflow-hidden",
                   highlightedStrategyId === strategy.id && "ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse"
                 )}
               >
                 <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg text-card-foreground mb-2">
-                        {strategy.name}
-                      </CardTitle>
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <CardTitle className="text-lg text-card-foreground mb-2 truncate cursor-default">
+                              {strategy.name}
+                            </CardTitle>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="break-words">{strategy.name}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       {/* Bot Verification Badge */}
                       {(() => {
                         const botPerf = botPerformances.get(strategy.id);
@@ -278,6 +293,7 @@ export default function Strategy() {
                           : "outline"
                       }
                       className={cn(
+                        "flex-shrink-0",
                         strategy.status === "live" && "bg-green-500 hover:bg-green-600",
                         strategy.status === "testing" && "bg-blue-500 hover:bg-blue-600",
                         strategy.status === "paused" && "bg-gray-500 hover:bg-gray-600"
@@ -288,7 +304,7 @@ export default function Strategy() {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 overflow-hidden">
                   {/* Performance Metrics */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -340,22 +356,22 @@ export default function Strategy() {
                   <div className="flex gap-2 pt-2">
                     <Button 
                       variant="outline" 
-                      className="flex-1"
+                      className="flex-1 min-w-0 px-2 sm:px-4"
                       onClick={() => handleRunBacktest(strategy.id, strategy.name)}
                     >
-                      <Play className="w-4 h-4 mr-2" />
-                      Run Backtest
+                      <Play className="w-4 h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                      <span className="truncate">Backtest</span>
                     </Button>
                     <Button 
                       className={cn(
-                        "flex-1",
+                        "flex-1 min-w-0 px-2 sm:px-4",
                         strategy.status === "live" 
                           ? "bg-red-500 hover:bg-red-600" 
                           : "bg-green-500 hover:bg-green-600"
                       )}
                       onClick={() => handleGoLive(strategy.id)}
                     >
-                      {strategy.status === "live" ? "Pause" : "Go Live"}
+                      <span className="truncate">{strategy.status === "live" ? "Pause" : "Go Live"}</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -366,8 +382,8 @@ export default function Strategy() {
             <Card 
               className={cn(
                 "bg-card border-border border-dashed shadow-card hover:shadow-lg transition-all cursor-pointer",
-                "hover:border-primary/50 w-full max-w-sm",
-                "flex items-center justify-center min-h-[320px]"
+                "hover:border-primary/50 w-full",
+                "flex items-center justify-center min-h-[280px] sm:min-h-[320px]"
               )}
               onClick={handleAddStrategy}
             >

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Lock, Sliders, CreditCard, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiGet, apiPut, API_ENDPOINTS } from "@/lib/api";
+import { apiGet, apiPut, apiPost, API_ENDPOINTS } from "@/lib/api";
 import { logger } from "@/lib/logger";
 
 interface UserProfile {
@@ -161,7 +161,7 @@ export default function Settings() {
     }
 
     setPasswordLoading(true);
-    const { error } = await apiPut(`${API_ENDPOINTS.auth.user}change_password/`, {
+    const { error } = await apiPost(API_ENDPOINTS.auth.changePassword, {
       current_password: passwordData.current_password,
       new_password: passwordData.new_password,
     });

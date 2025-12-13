@@ -875,6 +875,7 @@ export default function Backtesting() {
               period: backtestParams.period,
               interval: backtestParams.timeframe, // Use timeframe as interval
               initial_balance: parseFloat(backtestParams.initialBalance),
+              lot_size: parseFloat(backtestParams.lotSize),
               commission: parseFloat(backtestParams.commission),
               slippage: parseFloat(backtestParams.slippage),
               indicators: backtestParams.indicators || {},

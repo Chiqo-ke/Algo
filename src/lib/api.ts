@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     logout: `${API_BASE_URL}/auth/logout/`,
     refresh: `${API_BASE_URL}/auth/token/refresh/`,
     user: `${API_BASE_URL}/auth/user/me/`,
+    changePassword: `${API_BASE_URL}/auth/change-password/`,
     profile: `${API_BASE_URL}/auth/profiles/me/`,
     profiles: `${API_BASE_URL}/auth/profiles/`,
     profileDetail: (id: number) => `${API_BASE_URL}/auth/profiles/${id}/`,
