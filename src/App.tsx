@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import StrategyBuilder from "./pages/StrategyBuilder";
 import Strategy from "./pages/Strategy";
 import Backtesting from "./pages/Backtesting";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ConnectionTest from "./pages/ConnectionTest";
@@ -56,6 +57,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Backtesting />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

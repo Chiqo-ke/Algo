@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, Play, BarChart3, PieChart, Edit, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Play, Edit, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { symbolService, strategyService, backtestService, type Symbol, type Strategy, type LatestBacktestResult } from "@/lib/services";
@@ -22,7 +22,6 @@ interface BacktestParams {
   symbol: string;
   period: string;
   timeframe: string;
-  useRealMoney: boolean;
   lotSize: string;
   initialBalance: string;
   commission: string;
@@ -84,7 +83,6 @@ export default function Backtesting() {
     symbol: backtestConfig?.symbol || "",
     period: backtestConfig?.period || "",
     timeframe: backtestConfig?.interval || "",
-    useRealMoney: false,
     lotSize: "1.0",
     initialBalance: backtestConfig?.initialCapital?.toString() || "10000",
     commission: "0.001",
@@ -461,10 +459,10 @@ export default function Backtesting() {
       return;
     }
 
-    if (backtestParams.useRealMoney && (!backtestParams.lotSize || !backtestParams.initialBalance)) {
+    if (!backtestParams.lotSize || !backtestParams.initialBalance) {
       toast({
         title: "Missing fields",
-        description: "Please enter lot size and initial balance for real money simulation",
+        description: "Please enter lot size and initial balance for simulation",
         variant: "destructive",
       });
       return;
@@ -761,49 +759,35 @@ export default function Backtesting() {
               </div>
             </div>
 
-            {/* Simulation Mode */}
+            {/* Simulation Parameters */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="realMoney" 
-                  checked={backtestParams.useRealMoney}
-                  onCheckedChange={(checked) => setBacktestParams({ ...backtestParams, useRealMoney: checked as boolean })}
-                />
-                <Label 
-                  htmlFor="realMoney" 
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Simulate using real money (otherwise results in pips)
-                </Label>
-              </div>
-
-              {/* Real Money Parameters */}
-              {backtestParams.useRealMoney && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6 border-l-2 border-primary/20">
-                  <div className="space-y-2">
-                    <Label htmlFor="lotSize">Lot Size *</Label>
-                    <Input
-                      id="lotSize"
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g., 0.1, 1.0"
-                      value={backtestParams.lotSize}
-                      onChange={(e) => setBacktestParams({ ...backtestParams, lotSize: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="initialBalance">Initial Balance *</Label>
-                    <Input
-                      id="initialBalance"
-                      type="number"
-                      placeholder="e.g., 10000"
-                      value={backtestParams.initialBalance}
-                      onChange={(e) => setBacktestParams({ ...backtestParams, initialBalance: e.target.value })}
-                    />
-                  </div>
+              <h3 className="text-sm font-semibold text-foreground">Simulation Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="initialBalance">Initial Balance ($) *</Label>
+                  <Input
+                    id="initialBalance"
+                    type="number"
+                    placeholder="e.g., 10000"
+                    value={backtestParams.initialBalance}
+                    onChange={(e) => setBacktestParams({ ...backtestParams, initialBalance: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Starting capital for the simulation</p>
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="lotSize">Lot Size *</Label>
+                  <Input
+                    id="lotSize"
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g., 0.1, 1.0"
+                    value={backtestParams.lotSize}
+                    onChange={(e) => setBacktestParams({ ...backtestParams, lotSize: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Position size per trade (standard lot = 1.0)</p>
+                </div>
+              </div>
             </div>
 
             {/* Advanced Parameters */}
@@ -837,50 +821,6 @@ export default function Backtesting() {
                 </div>
               </div>
             </div>
-
-            {/* Validation Status */}
-            {validationResult && (
-              <div className={cn(
-                "p-4 rounded-lg border mt-6",
-                validationResult.isValid 
-                  ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800" 
-                  : "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800"
-              )}>
-                <div className="flex items-start gap-3">
-                  {validationResult.isValid ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
-                  )}
-                  <div className="flex-1 space-y-2">
-                    <p className={cn(
-                      "font-semibold",
-                      validationResult.isValid 
-                        ? "text-green-800 dark:text-green-200" 
-                        : "text-red-800 dark:text-red-200"
-                    )}>
-                      {validationResult.isValid 
-                        ? `Validation Passed (${validationResult.tradesExecuted} trades executed)`
-                        : "Validation Failed"}
-                    </p>
-                    {validationResult.errors.length > 0 && (
-                      <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
-                        {validationResult.errors.map((error, idx) => (
-                          <li key={idx}>• {error}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {validationResult.warnings.length > 0 && (
-                      <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-                        {validationResult.warnings.map((warning, idx) => (
-                          <li key={idx}>⚠ {warning}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Run Button */}
             <div className="flex justify-end pt-4">
@@ -925,8 +865,8 @@ export default function Backtesting() {
           </CardContent>
         </Card>
 
-        {/* Real-time Chart - Shows during backtest streaming */}
-        {isStreaming && backtestParams.symbol && (
+        {/* Real-time Chart - Shows during and after backtest */}
+        {(isStreaming || hasResults) && backtestParams.symbol && (
           <RealtimeBacktestChart
             symbol={backtestParams.symbol}
             isStreaming={isStreaming}
@@ -942,179 +882,6 @@ export default function Backtesting() {
             }}
             onComplete={handleStreamingComplete}
           />
-        )}
-
-        {/* Backtest Results - Lower Half */}
-        {hasResults && results && (
-          <div className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="bg-card border-border shadow-card">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-1">Total Trades</p>
-                    <p className="text-3xl font-bold text-foreground">{results.summary.totalTrades}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border shadow-card">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-1">Win Rate</p>
-                    <p className="text-3xl font-bold text-green-500">{typeof results.summary.winRate === 'number' ? results.summary.winRate.toFixed(1) : results.summary.winRate}%</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border shadow-card">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-1">Total Profit</p>
-                    <p className={cn(
-                      "text-3xl font-bold",
-                      results.summary.totalProfit >= 0 ? "text-green-500" : "text-red-500"
-                    )}>
-                      {backtestParams.useRealMoney 
-                        ? `$${typeof results.summary.totalProfit === 'number' ? results.summary.totalProfit.toFixed(2) : results.summary.totalProfit}` 
-                        : `${typeof results.summary.totalProfit === 'number' ? results.summary.totalProfit.toFixed(2) : results.summary.totalProfit} pips`}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border shadow-card">
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-1">Avg Trade</p>
-                    <p className="text-3xl font-bold text-foreground">
-                      {backtestParams.useRealMoney 
-                        ? `$${typeof results.summary.averageTrade === 'number' ? results.summary.averageTrade.toFixed(2) : results.summary.averageTrade}` 
-                        : `${typeof results.summary.averageTrade === 'number' ? results.summary.averageTrade.toFixed(2) : results.summary.averageTrade} pips`}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Daily Statistics Bar Chart */}
-              <Card className="bg-card border-border shadow-card">
-                <CardHeader>
-                  <CardTitle className="text-card-foreground flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    Daily Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {results.dailyStats.map((day, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="font-medium text-foreground">{day.day}</span>
-                          <span className={cn(
-                            "font-semibold",
-                            day.profit >= 0 ? "text-green-500" : "text-red-500"
-                          )}>
-                            {backtestParams.useRealMoney 
-                              ? `$${typeof day.profit === 'number' ? day.profit.toFixed(2) : day.profit}` 
-                              : `${typeof day.profit === 'number' ? day.profit.toFixed(2) : day.profit} pips`} ({day.trades} trades)
-                          </span>
-                        </div>
-                        <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all",
-                              day.profit >= 0 ? "bg-green-500" : "bg-red-500"
-                            )}
-                            style={{ 
-                              width: `${Math.min(Math.abs(day.profit) / 3, 100)}%` 
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Symbol Statistics Pie Chart */}
-              <Card className="bg-card border-border shadow-card">
-                <CardHeader>
-                  <CardTitle className="text-card-foreground flex items-center gap-2">
-                    <PieChart className="w-5 h-5" />
-                    Symbol Distribution
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Pie Chart Representation */}
-                    <div className="flex items-center justify-center mb-6">
-                      <div className="relative w-48 h-48">
-                        {/* Simple pie chart visualization using gradients */}
-                        <svg viewBox="0 0 100 100" className="transform -rotate-90">
-                          {results.symbolStats.reduce((acc, symbol, index) => {
-                            const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
-                            const startAngle = acc.angle;
-                            const angle = (symbol.percentage / 100) * 360;
-                            const endAngle = startAngle + angle;
-                            
-                            const x1 = 50 + 45 * Math.cos((startAngle * Math.PI) / 180);
-                            const y1 = 50 + 45 * Math.sin((startAngle * Math.PI) / 180);
-                            const x2 = 50 + 45 * Math.cos((endAngle * Math.PI) / 180);
-                            const y2 = 50 + 45 * Math.sin((endAngle * Math.PI) / 180);
-                            
-                            const largeArc = angle > 180 ? 1 : 0;
-                            
-                            acc.paths.push(
-                              <path
-                                key={index}
-                                d={`M 50 50 L ${x1} ${y1} A 45 45 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                                fill={colors[index % colors.length]}
-                                opacity="0.8"
-                              />
-                            );
-                            
-                            acc.angle = endAngle;
-                            return acc;
-                          }, { angle: 0, paths: [] as JSX.Element[] }).paths}
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* Legend */}
-                    <div className="space-y-3">
-                      {results.symbolStats.map((symbol, index) => {
-                        const colors = ["bg-blue-500", "bg-green-500", "bg-orange-500", "bg-red-500"];
-                        return (
-                          <div key={index} className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={cn("w-3 h-3 rounded-full", colors[index % colors.length])} />
-                              <span className="text-sm font-medium text-foreground">{symbol.symbol}</span>
-                            </div>
-                            <div className="text-right">
-                              <p className={cn(
-                                "text-sm font-semibold",
-                                symbol.profit >= 0 ? "text-green-500" : "text-red-500"
-                              )}>
-                                {backtestParams.useRealMoney 
-                                  ? `$${typeof symbol.profit === 'number' ? symbol.profit.toFixed(2) : symbol.profit}` 
-                                  : `${typeof symbol.profit === 'number' ? symbol.profit.toFixed(2) : symbol.profit} pips`}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {symbol.trades} trades ({symbol.percentage}%)
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
         )}
       </div>
 
