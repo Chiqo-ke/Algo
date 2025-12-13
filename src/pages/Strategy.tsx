@@ -4,13 +4,29 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { strategyService, botPerformanceService } from "@/lib/services";
 import type { BotPerformance } from "@/lib/types";
@@ -38,6 +54,14 @@ export default function Strategy() {
   const [highlightedStrategyId, setHighlightedStrategyId] = useState<number | null>(null);
   const [botPerformances, setBotPerformances] = useState<Map<number, BotPerformance>>(new Map());
   const [_loadingPerformance, setLoadingPerformance] = useState(false);
+  
+  // Dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
+  const [newStrategyName, setNewStrategyName] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
 
   // Show success message if redirected from Dashboard after strategy creation
   useEffect(() => {
@@ -203,6 +227,98 @@ export default function Strategy() {
     });
   };
 
+  // Handle delete strategy
+  const handleDeleteStrategy = async () => {
+    if (!selectedStrategy) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await strategyService.delete(selectedStrategy.id);
+      if (error) {
+        toast({
+          title: "Error deleting strategy",
+          description: error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Strategy deleted",
+          description: `${selectedStrategy.name} has been deleted successfully`,
+        });
+        // Remove from local state
+        setStrategies(strategies.filter(s => s.id !== selectedStrategy.id));
+        // Remove from performance data
+        const newPerformances = new Map(botPerformances);
+        newPerformances.delete(selectedStrategy.id);
+        setBotPerformances(newPerformances);
+      }
+    } catch (error) {
+      toast({
+        title: "Error deleting strategy",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setSelectedStrategy(null);
+    }
+  };
+
+  // Handle rename strategy
+  const handleRenameStrategy = async () => {
+    if (!selectedStrategy || !newStrategyName.trim()) return;
+    
+    setIsRenaming(true);
+    try {
+      const { data, error } = await strategyService.update(selectedStrategy.id, {
+        name: newStrategyName.trim(),
+      });
+      if (error) {
+        toast({
+          title: "Error renaming strategy",
+          description: error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Strategy renamed",
+          description: `Strategy renamed to "${newStrategyName.trim()}" successfully`,
+        });
+        // Update local state
+        setStrategies(strategies.map(s => 
+          s.id === selectedStrategy.id 
+            ? { ...s, name: data?.name || newStrategyName.trim() }
+            : s
+        ));
+      }
+    } catch (error) {
+      toast({
+        title: "Error renaming strategy",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRenaming(false);
+      setRenameDialogOpen(false);
+      setSelectedStrategy(null);
+      setNewStrategyName("");
+    }
+  };
+
+  // Open delete dialog
+  const openDeleteDialog = (strategy: Strategy) => {
+    setSelectedStrategy(strategy);
+    setDeleteDialogOpen(true);
+  };
+
+  // Open rename dialog
+  const openRenameDialog = (strategy: Strategy) => {
+    setSelectedStrategy(strategy);
+    setNewStrategyName(strategy.name);
+    setRenameDialogOpen(true);
+  };
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -284,23 +400,56 @@ export default function Strategy() {
                         return null;
                       })()}
                     </div>
-                    <Badge 
-                      variant={
-                        strategy.status === "live" 
-                          ? "default" 
-                          : strategy.status === "testing"
-                          ? "secondary"
-                          : "outline"
-                      }
-                      className={cn(
-                        "flex-shrink-0",
-                        strategy.status === "live" && "bg-green-500 hover:bg-green-600",
-                        strategy.status === "testing" && "bg-blue-500 hover:bg-blue-600",
-                        strategy.status === "paused" && "bg-gray-500 hover:bg-gray-600"
-                      )}
-                    >
-                      {strategy.status === "live" ? "Live" : strategy.status === "testing" ? "Testing" : "Paused"}
-                    </Badge>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge 
+                        variant={
+                          strategy.status === "live" 
+                            ? "default" 
+                            : strategy.status === "testing"
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className={cn(
+                          "flex-shrink-0",
+                          strategy.status === "live" && "bg-green-500 hover:bg-green-600",
+                          strategy.status === "testing" && "bg-blue-500 hover:bg-blue-600",
+                          strategy.status === "paused" && "bg-gray-500 hover:bg-gray-600"
+                        )}
+                      >
+                        {strategy.status === "live" ? "Live" : strategy.status === "testing" ? "Testing" : "Paused"}
+                      </Badge>
+                      
+                      {/* Options Menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 p-0 flex-shrink-0 rounded-full bg-card/40 border-border text-card-foreground hover:bg-accent hover:text-accent-foreground"
+                            aria-label="Open options"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[160px]">
+                          <DropdownMenuItem
+                            onClick={() => openRenameDialog(strategy)}
+                            className="cursor-pointer"
+                          >
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            <span>Rename</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => openDeleteDialog(strategy)}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
                 
@@ -404,6 +553,89 @@ export default function Strategy() {
         )}
 
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Strategy</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete "{selectedStrategy?.name}"? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteStrategy}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Delete"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Rename Dialog */}
+    <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename Strategy</DialogTitle>
+          <DialogDescription>
+            Enter a new name for "{selectedStrategy?.name}"
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <Input
+            id="name"
+            value={newStrategyName}
+            onChange={(e) => setNewStrategyName(e.target.value)}
+            placeholder="Strategy name"
+            disabled={isRenaming}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newStrategyName.trim()) {
+                handleRenameStrategy();
+              }
+            }}
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setRenameDialogOpen(false)}
+            disabled={isRenaming}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleRenameStrategy}
+            disabled={isRenaming || !newStrategyName.trim()}
+          >
+            {isRenaming ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Renaming...
+              </>
+            ) : (
+              "Rename"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </DashboardLayout>
   );
 }

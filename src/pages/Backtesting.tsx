@@ -536,7 +536,7 @@ export default function Backtesting() {
         slippage: parseFloat(backtestParams.slippage) || 0.0005,
       };
 
-      logger.backtest.info("Sending backtest request to API", { 
+      logger.backtest.info("Starting WebSocket stream backtest", { 
         strategyId,
         symbol: backtestConfig.symbol,
         startDate: backtestConfig.start_date,
@@ -544,60 +544,25 @@ export default function Backtesting() {
         hasStrategyCode: !!backtestConfig.strategy_code
       });
 
-      // Run backtest using the API
-      const { data, error } = await backtestService.quickRun(backtestConfig);
-
-      if (error) {
-        throw new Error(error);
-      }
-
-      if (data) {
-        logger.backtest.info("Backtest API response received", { 
-          hasDailyStats: !!data.daily_stats,
-          totalTrades: data.total_trades,
-          totalReturn: data.total_return
-        });
-        
-        // Transform API response to match UI expectations
-        const transformedResults: BacktestResults = {
-          dailyStats: data.daily_stats || [],
-          symbolStats: data.symbol_stats || [],
-          summary: {
-            totalTrades: data.summary?.totalTrades || data.total_trades || 0,
-            winRate: data.summary?.winRate || data.win_rate || 0,
-            totalProfit: data.summary?.totalProfit || data.total_return || 0,
-            averageTrade: data.summary?.averageTrade || 
-              (data.total_trades ? (data.total_return || 0) / data.total_trades : 0),
-          }
-        };
-
-        setResults(transformedResults);
-        setHasResults(true);
-        
-        logger.backtest.info("Backtest completed successfully", {
-          totalTrades: transformedResults.summary.totalTrades,
-          winRate: transformedResults.summary.winRate,
-          totalProfit: transformedResults.summary.totalProfit
-        });
-        
-        toast({
-          title: "Backtest completed",
-          description: `Successfully ran backtest with ${transformedResults.summary.totalTrades} trades`,
-        });
-      }
+      // WebSocket will handle the backtest execution via RealtimeBacktestChart
+      // The chart component will call onComplete when finished
+      logger.backtest.info("Backtest will run via WebSocket stream - waiting for completion...");
     } catch (error) {
-      logger.backtest.error("Backtest execution failed", error as Error, { 
+      logger.backtest.error("Backtest setup failed", error as Error, { 
         strategyId,
         symbol: backtestParams.symbol,
         timeframe: backtestParams.timeframe
       });
+      
+      // Only stop streaming if setup failed
+      setIsRunning(false);
+      setIsStreaming(false);
+      
       toast({
-        title: "Backtest failed",
+        title: "Backtest setup failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
-    } finally {
-      setIsRunning(false);
     }
   };
 

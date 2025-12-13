@@ -182,6 +182,14 @@ export async function apiCall<T>(
       throw new Error(errorMessage);
     }
 
+    // Handle 204 No Content responses (DELETE operations typically return this)
+    if (response.status === 204) {
+      if (DEBUG_API) {
+        logger.api.debug('API request successful (204 No Content)', { url, method, duration });
+      }
+      return { data: undefined as T };
+    }
+
     const data = await response.json();
     if (DEBUG_API) {
       logger.api.debug('API request successful', { url, method, duration, dataKeys: Object.keys(data) });
