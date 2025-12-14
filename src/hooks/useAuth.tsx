@@ -125,9 +125,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     const currentUser = user?.username;
     logger.auth.info("User logging out", { username: currentUser });
+    const refreshToken = localStorage.getItem("refresh_token");
+
+    // Attempt backend logout with refresh token so server can revoke it
+    if (refreshToken) {
+      try {
+        await apiPost(API_ENDPOINTS.auth.logout, { refresh: refreshToken });
+      } catch (err) {
+        // Non-blocking: proceed to clear tokens even if server errors
+        logger.auth.warn("Backend logout failed, proceeding to clear tokens", err as Error);
+      }
+    } else {
+      logger.auth.debug("No refresh token found during logout");
+    }
+
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     setUser(null);
