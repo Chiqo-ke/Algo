@@ -498,6 +498,7 @@ export default function Backtesting() {
     setIsRunning(true);
     setIsStreaming(true);
     setHasResults(false);
+    setResults(null); // Clear previous results to avoid showing stale data
 
     try {
       // Calculate date range based on period
