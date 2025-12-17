@@ -46,7 +46,7 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
     <TooltipProvider delayDuration={200}>
       <aside 
         className={cn(
-          "relative flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
+          "hidden md:flex relative flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
           collapsed ? "w-20" : "w-64"
         )}
       >
@@ -103,36 +103,37 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
               )}
             </Tooltip>
           ))}
-            {/* Logout button */}
-            <Tooltip>
-              <button
-                onClick={handleLogout}
-                className={cn(
-                  "w-full flex items-center px-4 py-3 rounded-lg transition-all",
-                  "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  collapsed && "justify-center"
-                )}
-              >
-                <TooltipTrigger asChild>
-                  <span className={cn("inline-flex items-center gap-3")}> 
-                    <LogOut className="w-5 h-5 flex-shrink-0" />
-                    {!collapsed && <span className="text-sm">Logout</span>}
-                  </span>
-                </TooltipTrigger>
-              </button>
-              {collapsed && (
-                <TooltipContent 
-                  side="right" 
-                  className="luminous-tooltip bg-sidebar-accent/95 border-primary/30 text-sidebar-accent-foreground shadow-[0_0_30px_rgba(56,189,248,0.3)] backdrop-blur-sm"
-                >
-                  <p className="font-medium">Logout</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </nav>
+        </nav>
 
-          {/* Bottom Section removed per request */}
-        </aside>
-      </TooltipProvider>
-    );
-  };
+        {/* Bottom: Logout separated */}
+        <div className="mt-auto p-4 border-t border-sidebar-border">
+          <Tooltip>
+            <button
+              onClick={handleLogout}
+              className={cn(
+                "w-full flex items-center px-4 py-3 rounded-lg transition-all",
+                "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                collapsed && "justify-center"
+              )}
+            >
+              <TooltipTrigger asChild>
+                <span className={cn("inline-flex items-center gap-3")}>
+                  <LogOut className="w-5 h-5 flex-shrink-0" />
+                  {!collapsed && <span className="text-sm">Logout</span>}
+                </span>
+              </TooltipTrigger>
+            </button>
+            {collapsed && (
+              <TooltipContent 
+                side="right" 
+                className="luminous-tooltip bg-sidebar-accent/95 border-primary/30 text-sidebar-accent-foreground shadow-[0_0_30px_rgba(56,189,248,0.3)] backdrop-blur-sm"
+              >
+                <p className="font-medium">Logout</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </div>
+      </aside>
+    </TooltipProvider>
+  );
+};

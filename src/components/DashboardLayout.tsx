@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { CommandPalette } from "./CommandPalette";
 
@@ -28,13 +29,16 @@ export const DashboardLayout = ({ children, hideAssistant = false }: DashboardLa
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      {/* Left Sidebar */}
+      {/* Left Sidebar (Desktop Only) */}
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pb-24 md:pb-0">
         {children}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
 
       {/* Right AI Assistant Panel */}
       {!hideAssistant && assistantOpen && (

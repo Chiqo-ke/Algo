@@ -1121,7 +1121,7 @@ export default function Dashboard() {
         </div>
 
         {/* Chat Area - Fills available space */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {!hasStartedChat && (
             <div className="text-center mb-6 space-y-3">
               <div className="w-10 h-10 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
@@ -1136,19 +1136,21 @@ export default function Dashboard() {
                   : "Get insights about your portfolio performance, optimize your bots, or analyze market conditions. Ask about strategy adjustments, risk management, or any trading questions you have."}
               </p>
               
-              {/* Example Questions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 max-w-xl mx-auto">
-                {exampleQuestions.map((question, i) => (
-                  <Button
-                    key={i}
-                    variant="outline"
-                    className="h-auto p-2.5 text-left justify-start hover:bg-secondary text-[11px]"
-                    onClick={() => setInput(question)}
-                  >
-                    <span>{question}</span>
-                  </Button>
-                ))}
-              </div>
+              {/* Example Questions - Hide when user starts typing */}
+              {!input && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 max-w-xl mx-auto">
+                  {exampleQuestions.map((question, i) => (
+                    <Button
+                      key={i}
+                      variant="outline"
+                      className="h-auto p-2 text-left justify-start hover:bg-secondary text-[10px]"
+                      onClick={() => setInput(question)}
+                    >
+                      <span>{question}</span>
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

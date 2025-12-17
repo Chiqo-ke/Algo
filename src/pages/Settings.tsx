@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,10 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Lock, Sliders, CreditCard, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { User, Lock, Sliders, CreditCard, Loader2, CheckCircle2, AlertCircle, LogOut, BarChart3, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiGet, apiPut, apiPost, API_ENDPOINTS } from "@/lib/api";
 import { logger } from "@/lib/logger";
+import { cn } from "@/lib/utils";
 
 interface UserProfile {
   id: number;
@@ -43,6 +47,8 @@ interface PremiumStatus {
 
 export default function Settings() {
   const { toast } = useToast();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -232,11 +238,12 @@ export default function Settings() {
 
           {/* Tabs */}
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="mb-8 grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3 md:grid-cols-4">
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="account">Account</TabsTrigger>
               <TabsTrigger value="security">Security</TabsTrigger>
-              <TabsTrigger value="premium">Premium</TabsTrigger>
+              <TabsTrigger value="premium" className="hidden md:flex">Premium</TabsTrigger>
+              <TabsTrigger value="links">More</TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
@@ -724,6 +731,88 @@ export default function Settings() {
                   </Card>
                 </>
               )}
+            </TabsContent>
+
+            {/* More Tab - Combined Premium and Quick Links */}
+            <TabsContent value="links" className="space-y-4">
+              {/* Premium section for mobile */}
+              <div className="md:hidden space-y-4">
+                {loading ? (
+                  <Card className="border border-border bg-card">
+                    <CardContent className="py-8 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                    </CardContent>
+                  </Card>
+                ) : premium ? (
+                  <>
+                    <Card className="border border-border bg-card">
+                      <CardHeader>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-5 w-5 text-primary" />
+                          <div>
+                            <CardTitle>Premium Status</CardTitle>
+                            <CardDescription>Your subscription details</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Current Plan</p>
+                            <p className="text-lg font-bold text-foreground capitalize">{premium.tier}</p>
+                          </div>
+                          <div className={cn(
+                            "px-3 py-1 rounded-full text-xs font-semibold",
+                            premium.status === "active" && "bg-green-500/20 text-green-600",
+                            premium.status === "inactive" && "bg-gray-500/20 text-gray-600",
+                            premium.status === "expired" && "bg-red-500/20 text-red-600"
+                          )}>
+                            {premium.status.toUpperCase()}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : null}
+              </div>
+              
+              {/* Quick Links */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Navigation</CardTitle>
+                  <CardDescription>Access other sections of the app</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start h-12"
+                    onClick={() => navigate("/analytics")}
+                  >
+                    <BarChart3 className="w-5 h-5 mr-3" />
+                    Analytics
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start h-12"
+                    onClick={() => navigate("/learning")}
+                  >
+                    <GraduationCap className="w-5 h-5 mr-3" />
+                    Learning Hub
+                  </Button>
+                  <Separator className="my-4" />
+                  <Button
+                    variant="destructive"
+                    className="w-full justify-start h-12"
+                    onClick={() => {
+                      logout();
+                      navigate("/login");
+                    }}
+                  >
+                    <LogOut className="w-5 h-5 mr-3" />
+                    Logout
+                  </Button>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

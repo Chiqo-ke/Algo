@@ -133,4 +133,21 @@ All colors MUST be HSL.
       transform: scale(1) translateX(0);
     }
   }
+
+  /* Mobile-friendly touch targets */
+  @media (max-width: 768px) {
+    button, a {
+      min-height: 44px; /* iOS/Android recommended touch target size */
+    }
+
+    /* Ensure content is not hidden behind mobile bottom nav */
+    .mobile-safe-area {
+      padding-bottom: 5rem;
+    }
+
+    /* Improve mobile scrolling performance */
+    .mobile-scroll {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
 }
