@@ -1,4 +1,4 @@
-import { MessageSquare, Shield, LineChart, UserCheck, Lock } from "lucide-react";
+import { MessageSquare, Shield, LineChart, UserCheck } from "lucide-react";
 
 export const LandingFeatures = () => {
   const features = [
@@ -21,11 +21,6 @@ export const LandingFeatures = () => {
       icon: UserCheck,
       title: "Human Oversight by Default",
       description: "You remain involved at every step. Strategies can be reviewed, adjusted, versioned, and re-tested before any further action."
-    },
-    {
-      icon: Lock,
-      title: "Safety-Oriented Design",
-      description: "Testing is sandboxed to prevent unintended behavior. Future live execution will include additional safeguards and explicit approvals."
     }
   ];
 

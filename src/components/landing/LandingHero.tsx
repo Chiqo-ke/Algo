@@ -20,15 +20,15 @@ export const LandingHero = ({ onDemoClick }: LandingHeroProps) => {
       
       <div className="container relative z-10 mx-auto px-4 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center space-y-8">
-          {/* Badge */}
+          {/* Tagline */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm font-medium backdrop-blur-sm">
             <Sparkles className="w-4 h-4" />
-            <span>AI-Powered Trading Bot Builder</span>
+            <span>Build your own bot</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white">
-            Build your own trading bot —<br />in plain English.
+            Algo AI
           </h1>
 
           {/* Subheadline */}
