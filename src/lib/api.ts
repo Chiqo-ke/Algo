@@ -1,7 +1,7 @@
 // API Configuration and Base URL
 import { logger } from './logger';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://ps283t0p-8000.uks1.devtunnels.ms/';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://ps283t0p-8000.uks1.devtunnels.ms/api';
 
 // Enable detailed logging for debugging
 const DEBUG_API = true;
