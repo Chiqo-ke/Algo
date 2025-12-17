@@ -27,8 +27,8 @@ export default function Login() {
 
     try {
       await login(username, password);
-      logger.ui.info("Login form successful, navigating to home", { username });
-      navigate("/");
+      logger.ui.info("Login form successful, navigating to dashboard", { username });
+      navigate("/dashboard");
     } catch (err: any) {
       logger.ui.error("Login form error", err, { username });
       setError(err.message || "Failed to login. Please check your credentials.");
