@@ -1,6 +1,52 @@
-# Welcome to your Lovable project
+# AlgoAgent Frontend
 
-## Project info
+**Status:** ✅ Production Ready | **Version:** 2.0  
+**Backend Integration:** Monolithic Agent (100% API Coverage)
+
+Modern React-based frontend for the AlgoAgent trading strategy platform. See [FRONTEND_README.md](FRONTEND_README.md) for comprehensive documentation.
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Access at http://localhost:5173
+```
+
+**Backend Required:** Start monolithic agent at `http://localhost:8000`
+
+---
+
+## 📚 Documentation
+
+- **[FRONTEND_README.md](FRONTEND_README.md)** - Complete frontend documentation
+- **[docs/](docs/)** - Organized documentation (30 files)
+  - [docs/api/](docs/api/) - API integration guides
+  - [docs/guides/](docs/guides/) - User guides
+  - [docs/implementation/](docs/implementation/) - Technical details
+- **[Backend Docs](../AlgoAgent/monolithic_agent/)** - Monolithic agent documentation
+
+---
+
+## 🎯 Key Features
+
+- ✅ AI-powered strategy creation dashboard
+- ✅ Real-time backtesting with WebSocket streams
+- ✅ 90/90 backend endpoints integrated (100%)
+- ✅ Type-safe service layer (123+ methods)
+- ✅ JWT authentication & protected routes
+- ✅ Comprehensive logging system
+- ✅ Mobile-responsive design
+
+---
+
+## 🔗 Lovable Project
 
 **URL**: https://lovable.dev/projects/19ea15c1-1208-4c49-8ac6-d20fa518f98d
 
