@@ -60,9 +60,9 @@ export default function Register() {
 
     try {
       await register(formData.username, formData.email, formData.password, formData.firstName, formData.lastName);
-      // Auto-login after registration, navigate to home
-      logger.ui.info("Registration form successful, navigating to home", { username: formData.username });
-      navigate("/");
+      // Auto-login after registration, navigate to dashboard
+      logger.ui.info("Registration form successful, navigating to dashboard", { username: formData.username });
+      navigate("/dashboard");
     } catch (err: any) {
       logger.ui.error("Registration form error", err, { 
         username: formData.username,

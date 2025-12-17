@@ -1,0 +1,128 @@
+{
+  "hero": {
+    "headline": "Trade smarter, not emotionally.",
+    "subheadline": "Build your own trading bot — in plain English. Describe a strategy and Algo will build, test, and iterate a bot ready for robust backtesting. Live trading is coming soon.",
+    "valueBullets": [
+      "Remove emotion and inconsistency from trading.",
+      "Turn ideas into testable bots in minutes — no coding required.",
+      "Get clear, honest backtest reports and human-in-the-loop control."
+    ],
+    "ctas": {
+      "primary": "Try the Demo",
+      "secondary": "Join Live-Execution Waitlist",
+      "tertiary": "Book a Walkthrough"
+    }
+  },
+  "problem": {
+    "title": "The Problem",
+    "description": "Most trading losses aren't bad luck — they're human. Fear, greed, inconsistency, and biased backtests turn good ideas into losing trades. Algo removes those human errors by converting your strategy into repeatable rules and rigorous backtests."
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "steps": [
+      {
+        "number": 1,
+        "title": "Tell Algo your idea",
+        "description": "Type or speak the strategy in plain English."
+      },
+      {
+        "number": 2,
+        "title": "Algo builds the bot",
+        "description": "It converts your description into executable strategy code ready for backtesting."
+      },
+      {
+        "number": 3,
+        "title": "Backtest & review",
+        "description": "Run historical tests, inspect clear reports, and refine. (Future: deploy live with one-click approval.)"
+      }
+    ]
+  },
+  "features": {
+    "title": "Key Features",
+    "items": [
+      {
+        "title": "Describe in plain English",
+        "description": "No coding required — just tell Algo what you want."
+      },
+      {
+        "title": "Ready-for-backtest bots",
+        "description": "Sandboxed & auditable code you can trust."
+      },
+      {
+        "title": "Clear reports",
+        "description": "Drawdown, Sharpe, win rate, trade logs — everything you need."
+      },
+      {
+        "title": "Human-in-the-loop",
+        "description": "Review and approve before any action is taken."
+      },
+      {
+        "title": "Safety-first",
+        "description": "Prevents runaway logic and overfitting."
+      }
+    ]
+  },
+  "benefits": {
+    "title": "Why Choose Algo",
+    "items": [
+      "Consistent execution — repeatable rules, no emotional trades.",
+      "Fewer costly mistakes — reduce losses from revenge trading and overtrading.",
+      "Save time — turn ideas into bots within minutes.",
+      "Learn faster — compare variants and find what truly works.",
+      "You own your strategies — full version history and exports."
+    ]
+  },
+  "personas": {
+    "title": "Who It's For",
+    "items": [
+      "Retail traders looking to automate their strategies",
+      "Part-time traders who want consistent execution",
+      "DIY quants testing trading ideas",
+      "Investors reducing emotional decision-making"
+    ]
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "items": [
+      {
+        "question": "Do I need to know how to code?",
+        "answer": "No. Describe your strategy and Algo builds the bot."
+      },
+      {
+        "question": "Will Algo guarantee profits?",
+        "answer": "No. Algo automates creation and testing — no guarantees. Past performance is not indicative of future results. This is not financial advice."
+      },
+      {
+        "question": "Can I change the bot after it's built?",
+        "answer": "Yes. Edit rules, rerun backtests, and version before deployment."
+      },
+      {
+        "question": "Is live trading available now?",
+        "answer": "Not yet. Algo currently builds and backtests bots. Live execution is coming soon; join the waitlist."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "tiers": [
+      {
+        "name": "Free Trial",
+        "description": "Try Algo with limited features",
+        "features": ["3 bot generations", "Basic backtesting", "7-day access"]
+      },
+      {
+        "name": "Builder",
+        "description": "For serious strategy developers",
+        "features": ["Unlimited bots", "Advanced backtesting", "Export strategies", "Email support"]
+      },
+      {
+        "name": "Pro",
+        "description": "For professional traders",
+        "features": ["Everything in Builder", "Priority support", "Early access to live trading", "Advanced analytics"]
+      }
+    ]
+  },
+  "legal": {
+    "disclaimer": "Algo Agent provides strategy automation and backtesting tools. Not financial advice. Trading carries risk; users are responsible for their trading decisions."
+  }
+}

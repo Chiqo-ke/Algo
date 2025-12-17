@@ -1073,7 +1073,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout hideAssistant={true}>
-      <div className="flex flex-col h-full p-4 gap-4">
+      <div className="flex flex-col h-full p-4 gap-4 overflow-y-auto">
         {/* Header */}
         <div className="text-center flex-shrink-0">
           <h1 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
@@ -1121,7 +1121,7 @@ export default function Dashboard() {
         </div>
 
         {/* Chat Area - Fills available space */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0">
           {!hasStartedChat && (
             <div className="text-center mb-6 space-y-3">
               <div className="w-10 h-10 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
