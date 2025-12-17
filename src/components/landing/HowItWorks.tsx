@@ -1,6 +1,8 @@
-import { MessageSquare, Code2, BarChart4, ArrowRight } from "lucide-react";
+import { MessageSquare, Code2, BarChart4, ArrowRight, X } from "lucide-react";
+import { useState } from "react";
 
 export const HowItWorks = () => {
+  const [showExample, setShowExample] = useState(false);
   const steps = [
     {
       number: 1,
@@ -88,15 +90,13 @@ Only one trade should be open at a time.`
                     </p>
                     
                     {step.example && (
-                      <div className="mt-4 p-4 rounded-lg bg-gray-950/50 border border-gray-700/30">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-                          <span className="text-sm font-medium text-teal-400">Example</span>
-                        </div>
-                        <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-line font-mono">
-                          {step.example}
-                        </p>
-                      </div>
+                      <button
+                        onClick={() => setShowExample(true)}
+                        className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20 hover:border-teal-500/50 transition-all duration-300 text-sm font-medium"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        See Example
+                      </button>
                     )}
                   </div>
                 </div>
@@ -105,6 +105,51 @@ Only one trade should be open at a time.`
           </div>
         </div>
       </div>
+
+      {/* Example Modal */}
+      {showExample && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowExample(false)}
+        >
+          <div 
+            className="relative max-w-2xl w-full bg-gray-900 rounded-2xl border border-gray-700/50 shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowExample(false)}
+              className="absolute top-4 right-4 p-2 rounded-lg bg-gray-800/50 border border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-800 hover:border-gray-600 transition-all duration-200"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal content */}
+            <div className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center">
+                  <MessageSquare className="w-6 h-6 text-teal-400" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">Strategy Example</h3>
+                  <p className="text-sm text-gray-400">EMA Crossover Strategy</p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-gray-950/50 border border-gray-700/30">
+                <p className="text-gray-300 leading-relaxed whitespace-pre-line font-mono text-sm">
+                  {steps[0].example}
+                </p>
+              </div>
+
+              <div className="mt-6 flex items-center gap-2 text-sm text-gray-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                <span>Click anywhere outside to close</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
