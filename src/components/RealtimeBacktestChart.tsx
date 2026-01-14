@@ -397,7 +397,8 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
     );
   };
 
-  // Custom Trade Zones renderer - shows entry→exit rectangles with TP (green) and SL (red) zones
+  // Custom Trade Lines renderer - shows horizontal lines at entry and exit prices
+  // Blue lines for profitable trades, red lines for losing trades
   const TradeZonesRenderer = (props: any) => {
     const { xAxisMap, yAxisMap, width: chartWidth } = props;
     
@@ -433,7 +434,7 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
     }
     
     return (
-      <g className="trade-zones">
+      <g className="trade-lines">
         {completedTrades.map((trade, index) => {
           // Find entry and exit candle indices
           const entryTimestamp = new Date(trade.entryTime).toLocaleTimeString();
@@ -488,10 +489,6 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
             exitX = 20 + (exitIndex / chartData.length) * chartArea;
           }
           
-          // Rectangle spans from entry to exit on X-axis
-          const rectX = entryX;
-          const rectWidth = Math.max(exitX - entryX + bandwidth, bandwidth);
-          
           // Y positions based on entry and exit prices
           const entryY = yScale(trade.entryPrice);
           const exitY = yScale(trade.exitPrice);
@@ -499,54 +496,46 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
           if (isNaN(entryY) || isNaN(exitY)) return null;
           
           const isWinningTrade = trade.pnl > 0;
-          const isLong = trade.size > 0;
           
-          // For a long trade:
-          //   - If winning: price went up, so green zone from entry to exit (above entry)
-          //   - If losing: price went down, so red zone from entry to exit (below entry)
-          // For a short trade:
-          //   - If winning: price went down, so green zone from entry to exit (below entry)
-          //   - If losing: price went up, so red zone from entry to exit (above entry)
+          // Blue for profitable trades, red for losing trades
+          const tradeColor = isWinningTrade ? "#3b82f6" : "#ef4444";
           
-          const topY = Math.min(entryY, exitY);
-          const height = Math.abs(exitY - entryY);
-          
-          // Determine colors based on trade outcome
-          const fillColor = isWinningTrade ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)";
-          const strokeColor = isWinningTrade ? "#10b981" : "#ef4444";
+          // Line spans from entry to exit on X-axis
+          const lineStartX = entryX + bandwidth / 2;
+          const lineEndX = exitX + bandwidth / 2;
           
           return (
-            <g key={`trade-zone-${index}`}>
-              {/* Trade zone rectangle */}
-              <rect
-                x={rectX}
-                y={topY}
-                width={rectWidth}
-                height={Math.max(height, 2)}
-                fill={fillColor}
-                stroke={strokeColor}
-                strokeWidth={1}
-                strokeDasharray="4 2"
-                opacity={0.7}
-              />
-              {/* Entry line */}
+            <g key={`trade-line-${index}`}>
+              {/* Entry price horizontal line */}
               <line
-                x1={rectX}
+                x1={lineStartX}
                 y1={entryY}
-                x2={rectX + rectWidth}
+                x2={lineEndX}
                 y2={entryY}
-                stroke="#3b82f6"
+                stroke={tradeColor}
                 strokeWidth={2}
-                strokeDasharray="4 2"
+                strokeOpacity={0.8}
               />
-              {/* Exit line */}
+              {/* Exit price horizontal line */}
               <line
-                x1={rectX}
+                x1={lineStartX}
                 y1={exitY}
-                x2={rectX + rectWidth}
+                x2={lineEndX}
                 y2={exitY}
-                stroke={strokeColor}
+                stroke={tradeColor}
                 strokeWidth={2}
+                strokeOpacity={0.8}
+              />
+              {/* Vertical line connecting entry and exit */}
+              <line
+                x1={lineEndX}
+                y1={entryY}
+                x2={lineEndX}
+                y2={exitY}
+                stroke={tradeColor}
+                strokeWidth={1.5}
+                strokeOpacity={0.6}
+                strokeDasharray="3 3"
               />
               {/* Entry marker */}
               <circle
@@ -775,12 +764,12 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
                 {completedTrades.length > 0 && (
                   <>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-green-500 bg-green-500/20 rounded" />
-                      <span>Win Zone</span>
+                      <div className="w-6 h-0.5 bg-blue-500 rounded" />
+                      <span>Profit Trade</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-red-500 bg-red-500/20 rounded" />
-                      <span>Loss Zone</span>
+                      <div className="w-6 h-0.5 bg-red-500 rounded" />
+                      <span>Loss Trade</span>
                     </div>
                   </>
                 )}
@@ -849,7 +838,7 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
                 />
                 <Tooltip content={<CustomTooltip />} />
                 
-                {/* Trade zones - entry to exit rectangles */}
+                {/* Trade execution lines - horizontal lines showing entry and exit prices */}
                 <Customized component={TradeZonesRenderer} />
                 
                 {/* Candlesticks using Customized component */}

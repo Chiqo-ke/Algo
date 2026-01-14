@@ -1,13 +1,13 @@
 // API Configuration and Base URL
 import { logger } from './logger';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://Chiqoke254.pythonanywhere.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // Enable detailed logging for debugging
 const DEBUG_API = true;
 
 export const API_ENDPOINTS = {
-  // Auth API
+  // Auth API 
   auth: {
     login: `${API_BASE_URL}/auth/login/`,
     register: `${API_BASE_URL}/auth/register/`,

@@ -8,7 +8,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Video
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -26,9 +27,10 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Bot, label: "Strategy", path: "/strategy" },
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
+  { icon: Video, label: "Demo Mode", path: "/demo" },
   { icon: GraduationCap, label: "Learning Hub", path: "/learning" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

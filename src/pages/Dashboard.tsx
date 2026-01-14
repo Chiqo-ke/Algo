@@ -150,15 +150,6 @@ export default function Dashboard() {
       readable += `📝 **Description:** ${canonicalJson.description}\n\n`;
     }
 
-    // Classification
-    if (canonicalJson.classification) {
-      const cls = canonicalJson.classification;
-      readable += `🏷️ **Classification:**\n`;
-      readable += `   • Type: ${cls.type || 'N/A'}\n`;
-      readable += `   • Risk Tier: ${cls.risk_tier || 'N/A'}\n`;
-      readable += `   • Market Condition: ${cls.market_condition || 'N/A'}\n\n`;
-    }
-
     // Entry Rules
     if (canonicalJson.entry_rules && canonicalJson.entry_rules.length > 0) {
       readable += `🎯 **Entry Rules:**\n`;

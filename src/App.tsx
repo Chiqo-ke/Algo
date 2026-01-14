@@ -15,6 +15,7 @@ import Register from "./pages/Register";
 import ConnectionTest from "./pages/ConnectionTest";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import { DemoPage } from "./pages/Demo";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/demo"
+              element={
+                <ProtectedRoute>
+                  <DemoPage />
                 </ProtectedRoute>
               }
             />

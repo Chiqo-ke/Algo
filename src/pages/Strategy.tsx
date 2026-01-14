@@ -456,49 +456,69 @@ export default function Strategy() {
                 <CardContent className="space-y-4 overflow-hidden">
                   {/* Performance Metrics */}
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Performance</span>
-                      <div className="flex items-center gap-1">
-                        {strategy.performance >= 0 ? (
-                          <TrendingUp className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4 text-red-500" />
-                        )}
-                        <span 
-                          className={cn(
-                            "font-semibold text-sm",
-                            strategy.performance >= 0 ? "text-green-500" : "text-red-500"
+                    {(() => {
+                      const botPerf = botPerformances.get(strategy.id);
+                      const performance = botPerf?.total_return ?? strategy.performance;
+                      const winRate = botPerf?.win_rate ?? parseFloat(strategy.winRate);
+                      const trades = botPerf?.total_trades ?? strategy.trades;
+                      const sharpeRatio = botPerf?.sharpe_ratio;
+                      
+                      return (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Total Return</span>
+                            <div className="flex items-center gap-1">
+                              {performance >= 0 ? (
+                                <TrendingUp className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4 text-red-500" />
+                              )}
+                              <span 
+                                className={cn(
+                                  "font-semibold text-sm",
+                                  performance >= 0 ? "text-green-500" : "text-red-500"
+                                )}
+                              >
+                                {performance >= 0 ? "+" : ""}{performance.toFixed(2)}%
+                              </span>
+                            </div>
+                          </div>
+
+                          {sharpeRatio !== null && sharpeRatio !== undefined && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
+                              <span className="font-semibold text-sm">
+                                {sharpeRatio.toFixed(2)}
+                              </span>
+                            </div>
                           )}
-                        >
-                          {strategy.performance >= 0 ? "+" : ""}{strategy.performance}%
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">P&L</span>
-                      <span 
-                        className={cn(
-                          "font-semibold text-sm",
-                          strategy.profitLoss.startsWith("+") ? "text-green-500" : "text-red-500"
-                        )}
-                      >
-                        {strategy.profitLoss}
-                      </span>
-                    </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Win Rate</span>
+                            <span className="font-semibold text-sm">
+                              {winRate.toFixed(1)}%
+                            </span>
+                          </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Win Rate</span>
-                      <span className="font-semibold text-sm">{strategy.winRate}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Trades</span>
-                      <div className="flex items-center gap-1">
-                        <Activity className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-semibold text-sm">{strategy.trades}</span>
-                      </div>
-                    </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Total Trades</span>
+                            <div className="flex items-center gap-1">
+                              <Activity className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-semibold text-sm">{trades}</span>
+                            </div>
+                          </div>
+                          
+                          {botPerf && botPerf.max_drawdown !== null && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Max Drawdown</span>
+                              <span className="font-semibold text-sm text-red-500">
+                                {botPerf.max_drawdown.toFixed(2)}%
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Action Buttons */}

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LandingHeroProps {
   onDemoClick: () => void;
@@ -8,6 +9,15 @@ interface LandingHeroProps {
 
 export const LandingHero = ({ onDemoClick }: LandingHeroProps) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleDemoClick = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
@@ -64,7 +74,7 @@ export const LandingHero = ({ onDemoClick }: LandingHeroProps) => {
             <Button 
               size="lg" 
               className="w-full sm:w-auto text-base px-8 py-6 bg-teal-500 hover:bg-teal-600 text-gray-900 font-semibold"
-              onClick={() => navigate('/register')}
+              onClick={handleDemoClick}
             >
               Try the Demo
               <ArrowRight className="ml-2 w-5 h-5" />
