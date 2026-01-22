@@ -8,7 +8,7 @@ export const MobileBottomNav = () => {
       <div className="flex items-center justify-around h-16 px-2">
         {/* Dashboard Button - Left */}
         <NavLink
-          to="/"
+          to="/dashboard"
           className={({ isActive }) =>
             cn(
               "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg transition-all",

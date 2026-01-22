@@ -540,7 +540,7 @@ export default function Strategy() {
                       )}
                       onClick={() => handleGoLive(strategy.id)}
                     >
-                      <span className="truncate">{strategy.status === "live" ? "Pause" : "Go Live"}</span>
+                      <span className="truncate">{strategy.status === "live" ? "Pause" : "Join Live Waitlist"}</span>
                     </Button>
                   </div>
                 </CardContent>

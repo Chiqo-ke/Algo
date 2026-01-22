@@ -217,13 +217,9 @@ export default function Backtesting() {
 
     // Function to fetch saved backtest results from database
     const fetchSavedResults = async (stratId: number) => {
-      logger.backtest.info("Fetching saved backtest results", { strategyId: stratId });
-      const { data: savedResults, error: savedError } = await backtestService.getLatestResult(stratId);
+      const { data: savedResults } = await backtestService.getLatestResult(stratId);
       
-      if (savedError) {
-        // No saved results is not an error - just means no previous backtest
-        logger.backtest.debug("No saved backtest results found", { strategyId: stratId, error: savedError });
-      } else if (savedResults) {
+      if (savedResults) {
         logger.backtest.info("Loaded saved backtest results", { 
           strategyId: stratId,
           totalTrades: savedResults.total_trades,

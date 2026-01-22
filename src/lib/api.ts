@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
     // Code generation endpoints
     generateExecutableCode: `${API_BASE_URL}/strategies/api/generate_executable_code/`,
     generateWithFixing: `${API_BASE_URL}/strategies/api/generate_with_auto_fix/`,
+    generateStrategyUnified: `${API_BASE_URL}/strategies/api/generate_strategy_unified/`,  // NEW: Unified endpoint with Copilot support
     // Bot performance endpoints
     botPerformance: `${API_BASE_URL}/strategies/bot-performance/`,
     botPerformanceDetail: (id: number) => `${API_BASE_URL}/strategies/bot-performance/${id}/`,
@@ -154,6 +155,14 @@ export async function apiCall<T>(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Handle 404 Not Found - treat as no data rather than an error for GET requests
+      if (response.status === 404 && method === 'GET') {
+        if (DEBUG_API) {
+          logger.api.debug('Resource not found (404) - returning empty result', { url, method, duration });
+        }
+        return { data: undefined as T };
+      }
       
       if (DEBUG_API) {
         logger.api.error(`HTTP ${response.status} error`, new Error(response.statusText), {

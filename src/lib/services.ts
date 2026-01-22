@@ -367,6 +367,53 @@ export const strategyService = {
     return apiPut<Types.Strategy>(API_ENDPOINTS.strategies.updateWithAI(id), request);
   },
 
+  // Unified strategy generation (Copilot + Gemini support with execution and auto-fix)
+  async generateStrategyUnified(request: {
+    canonical_json: any;
+    strategy_name: string;
+    strategy_id?: number;
+    ai_provider?: 'copilot' | 'gemini';
+    test_config?: {
+      symbol?: string;
+      period?: string;
+      interval?: string;
+    };
+    auto_execute?: boolean;
+    auto_fix?: boolean;
+    max_fix_attempts?: number;
+  }): Promise<{ 
+    data?: {
+      success: boolean;
+      strategy_code: string;
+      file_path: string;
+      file_name: string;
+      strategy_id?: number;
+      ai_provider: string;
+      execution: {
+        attempted: boolean;
+        success: boolean;
+        validation_status: string;
+        metrics?: any;
+        error_message?: string;
+      };
+      error_fixing: {
+        attempted: boolean;
+        attempts: number;
+        history: any[];
+        final_status: string;
+      };
+    }; 
+    error?: string 
+  }> {
+    return apiPost(API_ENDPOINTS.strategies.generateStrategyUnified, {
+      ...request,
+      ai_provider: request.ai_provider || 'copilot',  // Default to Copilot
+      auto_execute: request.auto_execute ?? true,
+      auto_fix: request.auto_fix ?? true,
+      max_fix_attempts: request.max_fix_attempts || 3,
+    });
+  },
+
   // Health check
   async health(): Promise<{ data?: Types.HealthStatus; error?: string }> {
     return apiGet<Types.HealthStatus>(API_ENDPOINTS.strategies.health);
