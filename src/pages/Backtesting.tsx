@@ -15,7 +15,6 @@ import { format } from "date-fns";
 import { symbolService, strategyService, backtestService, type Symbol, type Strategy, type LatestBacktestResult } from "@/lib/services";
 import { API_ENDPOINTS, apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { RealtimeBacktestChart } from "@/components/RealtimeBacktestChart";
 import { logger } from "@/lib/logger";
 
 interface BacktestParams {
@@ -90,7 +89,6 @@ export default function Backtesting() {
   });
 
   const [isRunning, setIsRunning] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [results, setResults] = useState<BacktestResults | null>(null);
   const [showCustomDateDialog, setShowCustomDateDialog] = useState(false);
@@ -109,6 +107,38 @@ export default function Backtesting() {
     errors: string[];
     warnings: string[];
   } | null>(null);
+  
+  // Track if this is the first backtest run after bot generation
+  const [hasRunFirstBacktest, setHasRunFirstBacktest] = useState(false);
+
+  // Helper function to display backtest results (moved to component level for accessibility)
+  const displayResults = (savedResults: LatestBacktestResult) => {
+    // Convert string values to numbers (Django returns DecimalField as strings)
+    const totalTrades = Number(savedResults.total_trades) || 0;
+    const winRate = Number(savedResults.win_rate) || 0;
+    const netProfit = Number(savedResults.net_profit) || 0;
+    
+    const transformedResults: BacktestResults = {
+      dailyStats: [],
+      symbolStats: [{
+        symbol: savedResults.symbol || backtestParams.symbol || "N/A",
+        trades: totalTrades,
+        profit: netProfit,
+        percentage: 100,
+      }],
+      summary: {
+        totalTrades: totalTrades,
+        winRate: winRate,
+        totalProfit: netProfit,
+        averageTrade: totalTrades > 0 
+          ? netProfit / totalTrades 
+          : 0,
+      },
+    };
+    
+    setResults(transformedResults);
+    setHasResults(true);
+  };
 
   // Handler for when streaming backtest completes
   const handleStreamingComplete = (streamResults?: {
@@ -123,6 +153,9 @@ export default function Backtesting() {
   }) => {
     setIsStreaming(false);
     setIsRunning(false);
+    
+    // Mark that we've completed the first backtest run
+    setHasRunFirstBacktest(true);
     
     // If we got results from the stream, update the results state
     if (streamResults && streamResults.totalTrades > 0) {
@@ -227,27 +260,8 @@ export default function Backtesting() {
           netProfit: savedResults.net_profit
         });
         
-        // Transform saved results to match BacktestResults interface
-        const transformedResults: BacktestResults = {
-          dailyStats: [],
-          symbolStats: [{
-            symbol: savedResults.symbol || backtestParams.symbol || "N/A",
-            trades: savedResults.total_trades,
-            profit: savedResults.net_profit,
-            percentage: 100,
-          }],
-          summary: {
-            totalTrades: savedResults.total_trades,
-            winRate: savedResults.win_rate,
-            totalProfit: savedResults.net_profit,
-            averageTrade: savedResults.total_trades > 0 
-              ? savedResults.net_profit / savedResults.total_trades 
-              : 0,
-          },
-        };
-        
-        setResults(transformedResults);
-        setHasResults(true);
+        // Use the helper function to display results
+        displayResults(savedResults);
         
         // Also set the backtest params from saved data if available
         if (savedResults.symbol && !backtestParams.symbol) {
@@ -499,12 +513,17 @@ export default function Backtesting() {
     }
 
     setIsRunning(true);
-    setIsStreaming(true);
     setHasResults(false);
-    setResults(null); // Clear previous results to avoid showing stale data
+    setResults(null);
 
     try {
-      // Calculate date range based on period
+      logger.backtest.info("Starting direct backtest execution", { 
+        strategyId,
+        symbol: backtestParams.symbol,
+        period: backtestParams.period
+      });
+
+      // Calculate date range for execution
       const endDate = backtestParams.customDateTo || new Date();
       let startDate = backtestParams.customDateFrom;
 
@@ -526,47 +545,64 @@ export default function Backtesting() {
         throw new Error("Start date is required");
       }
 
-      // Prepare backtest configuration
-      const backtestConfig = {
-        strategy_code: strategy?.strategy_code,
-        strategy_id: strategyId,
-        symbol: backtestParams.symbol,
+      // Execute backtest with user's selected parameters
+      const executePayload = {
+        test_symbol: backtestParams.symbol,
         start_date: format(startDate, "yyyy-MM-dd"),
         end_date: format(endDate, "yyyy-MM-dd"),
-        timeframe: backtestParams.timeframe,
-        initial_balance: parseFloat(backtestParams.initialBalance) || 10000,
-        lot_size: parseFloat(backtestParams.lotSize) || 1.0,
-        commission: parseFloat(backtestParams.commission) || 0.001,
-        slippage: parseFloat(backtestParams.slippage) || 0.0005,
       };
 
-      logger.backtest.info("Starting WebSocket stream backtest", { 
-        strategyId,
-        symbol: backtestConfig.symbol,
-        startDate: backtestConfig.start_date,
-        endDate: backtestConfig.end_date,
-        hasStrategyCode: !!backtestConfig.strategy_code
+      logger.backtest.info("Executing backtest with params", executePayload);
+
+      const { data: executeResponse, error: executeError } = await apiPost<any>(
+        `${API_ENDPOINTS.strategies.detail(strategyId)}execute/`,
+        executePayload
+      );
+
+      if (executeError) {
+        throw new Error(executeError);
+      }
+
+      if (!executeResponse) {
+        throw new Error("No response from backtest execution");
+      }
+
+      logger.backtest.info("Backtest execution completed", {
+        success: executeResponse.success,
+        trades: executeResponse.trades
       });
 
-      // WebSocket will handle the backtest execution via RealtimeBacktestChart
-      // The chart component will call onComplete when finished
-      logger.backtest.info("Backtest will run via WebSocket stream - waiting for completion...");
+      // Now fetch the updated results
+      const { data: savedResults } = await backtestService.getLatestResult(strategyId);
+      
+      if (savedResults) {
+        displayResults(savedResults);
+        
+        toast({
+          title: "Backtest Completed",
+          description: `${savedResults.total_trades} trades executed on ${backtestParams.symbol}`,
+        });
+        
+        logger.backtest.info("Backtest results loaded", {
+          totalTrades: savedResults.total_trades,
+          winRate: savedResults.win_rate,
+          netProfit: savedResults.net_profit
+        });
+      } else {
+        throw new Error("No backtest results found after execution");
+      }
     } catch (error) {
-      logger.backtest.error("Backtest setup failed", error as Error, { 
-        strategyId,
-        symbol: backtestParams.symbol,
-        timeframe: backtestParams.timeframe
+      logger.backtest.error("Failed to execute backtest", error as Error, { 
+        strategyId
       });
       
-      // Only stop streaming if setup failed
-      setIsRunning(false);
-      setIsStreaming(false);
-      
       toast({
-        title: "Backtest setup failed",
+        title: "Failed to execute backtest",
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -621,22 +657,6 @@ export default function Backtesting() {
                   <p className="text-sm text-red-700">
                     This strategy did not pass validation (no trades executed in 1-year test).
                     The generated code may have issues. Please review or regenerate the strategy.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {strategy && strategy.status === 'valid' && (
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <div>
-                  <h3 className="font-semibold text-green-900">Strategy Validated</h3>
-                  <p className="text-sm text-green-700">
-                    Strategy passed validation and is ready for backtesting.
                   </p>
                 </div>
               </div>
@@ -834,24 +854,58 @@ export default function Backtesting() {
           </CardContent>
         </Card>
 
-        {/* Real-time Chart - Shows during and after backtest */}
-        {(isStreaming || hasResults) && backtestParams.symbol && (
-          <RealtimeBacktestChart
-            symbol={backtestParams.symbol}
-            isStreaming={isStreaming}
-            config={{
-              symbol: backtestParams.symbol,
-              period: backtestParams.period,
-              interval: backtestParams.timeframe, // Use timeframe as interval
-              initial_balance: parseFloat(backtestParams.initialBalance),
-              lot_size: parseFloat(backtestParams.lotSize),
-              commission: parseFloat(backtestParams.commission),
-              slippage: parseFloat(backtestParams.slippage),
-              indicators: backtestParams.indicators || {},
-              strategy_code: strategy?.strategy_code, // Pass strategy code for execution
-            }}
-            onComplete={handleStreamingComplete}
-          />
+        {/* Backtest Results Display */}
+        {hasResults && results && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Backtest Results</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-muted/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Total Trades</p>
+                  <p className="text-2xl font-bold">{results.summary.totalTrades}</p>
+                </div>
+                <div className="p-4 bg-muted/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Win Rate</p>
+                  <p className="text-2xl font-bold">{results.summary.winRate.toFixed(2)}%</p>
+                </div>
+                <div className="p-4 bg-muted/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Total Profit</p>
+                  <p className={`text-2xl font-bold ${results.summary.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    ${results.summary.totalProfit.toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-4 bg-muted/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Avg Trade</p>
+                  <p className={`text-2xl font-bold ${results.summary.averageTrade >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    ${results.summary.averageTrade.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Symbol Stats */}
+              {results.symbolStats && results.symbolStats.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Performance by Symbol</h3>
+                  <div className="space-y-2">
+                    {results.symbolStats.map((stat, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted/10 rounded-lg">
+                        <span className="font-medium">{stat.symbol}</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-muted-foreground">{stat.trades} trades</span>
+                          <span className={`font-semibold ${stat.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            ${stat.profit.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
 
