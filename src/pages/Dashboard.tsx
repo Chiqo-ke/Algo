@@ -720,7 +720,7 @@ export default function Dashboard() {
                 },
                 auto_execute: true,
                 auto_fix: true,
-                max_fix_attempts: 3,
+                max_fix_attempts: 8,
               }),
             }
           );
@@ -941,7 +941,7 @@ export default function Dashboard() {
                 ai_provider: "copilot",  // Use Copilot for generation
                 auto_execute: true,   // Enable auto-execution with trade validation
                 auto_fix: true,        // Enable auto-fix for debugging
-                max_fix_attempts: 3,   // Max 3 debugging attempts
+                max_fix_attempts: 8,   // Max 8 debugging attempts
               }),
             }
           );

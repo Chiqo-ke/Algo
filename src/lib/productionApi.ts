@@ -16,13 +16,45 @@ import { logger } from './logger';
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PRODUCTION_API = `${API_BASE_URL}/api/production`;
 
+// Handle session expiration - redirect to login and clear tokens
+const handleSessionExpired = () => {
+  logger.auth.warn('Session expired in production API - redirecting to login');
+  
+  // Dispatch custom event for UI components
+  window.dispatchEvent(new CustomEvent('session-expired', {
+    detail: { message: 'Your session has expired. Please log in again.' }
+  }));
+  
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('token');
+  
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 100);
+};
+
 // Helper to get auth token
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("access_token") || localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+};
+
+// Wrapper for fetch that handles 401 session expiration
+const fetchWithAuth = async (url: string, options: RequestInit): Promise<Response> => {
+  const response = await fetch(url, options);
+  
+  // Handle 401 Unauthorized - session expired
+  if (response.status === 401) {
+    logger.auth.warn('Session expired in production API call - redirecting to login', { url });
+    handleSessionExpired();
+    throw new Error('Session expired. Please log in again.');
+  }
+  
+  return response;
 };
 
 // ============================================================================
@@ -49,7 +81,7 @@ export const validateStrategySchema = async (
   const startTime = performance.now();
   
   try {
-    const response = await fetch(`${PRODUCTION_API}/strategies/validate-schema/`, {
+    const response = await fetchWithAuth(`${PRODUCTION_API}/strategies/validate-schema/`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(strategyData),
@@ -108,7 +140,7 @@ export const validateCodeSafety = async (
   const startTime = performance.now();
   
   try {
-    const response = await fetch(`${PRODUCTION_API}/strategies/validate-code/`, {
+    const response = await fetchWithAuth(`${PRODUCTION_API}/strategies/validate-code/`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -173,7 +205,7 @@ export const runSandboxTest = async (
   }
 ): Promise<SandboxTestResponse> => {
   try {
-    const response = await fetch(`${PRODUCTION_API}/strategies/sandbox-test/`, {
+    const response = await fetchWithAuth(`${PRODUCTION_API}/strategies/sandbox-test/`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -226,7 +258,7 @@ export const getStrategyLifecycle = async (
   strategyId: number
 ): Promise<LifecycleData> => {
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${PRODUCTION_API}/strategies/${strategyId}/lifecycle/`,
       {
         headers: getAuthHeaders(),
@@ -261,7 +293,7 @@ export const deployStrategy = async (
   tagVersion?: string
 ): Promise<DeploymentResponse> => {
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${PRODUCTION_API}/strategies/${strategyId}/deploy/`,
       {
         method: "POST",
@@ -301,7 +333,7 @@ export const rollbackStrategy = async (
   reason?: string
 ): Promise<RollbackResponse> => {
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${PRODUCTION_API}/strategies/${strategyId}/rollback/`,
       {
         method: "POST",
@@ -337,7 +369,7 @@ export const validateBacktestConfig = async (
   config: any
 ): Promise<BacktestConfigValidation> => {
   try {
-    const response = await fetch(`${PRODUCTION_API}/backtests/validate-config/`, {
+    const response = await fetchWithAuth(`${PRODUCTION_API}/backtests/validate-config/`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(config),
@@ -382,7 +414,7 @@ export const runBacktestSandbox = async (
   }
 ): Promise<BacktestResults> => {
   try {
-    const response = await fetch(`${PRODUCTION_API}/backtests/run-sandbox/`, {
+    const response = await fetchWithAuth(`${PRODUCTION_API}/backtests/run-sandbox/`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -423,7 +455,7 @@ export const getBacktestStatus = async (
   backtestId: number
 ): Promise<BacktestStatus> => {
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${PRODUCTION_API}/backtests/${backtestId}/status/`,
       {
         headers: getAuthHeaders(),
@@ -471,7 +503,7 @@ export interface HealthStatus {
 
 export const checkStrategyHealth = async (): Promise<HealthStatus> => {
   try {
-    const response = await fetch(`${PRODUCTION_API}/strategies/health/`, {
+    const response = await fetchWithAuth(`${PRODUCTION_API}/strategies/health/`, {
       headers: getAuthHeaders(),
     });
 
@@ -485,7 +517,7 @@ export const checkStrategyHealth = async (): Promise<HealthStatus> => {
 
 export const checkBacktestHealth = async (): Promise<HealthStatus> => {
   try {
-    const response = await fetch(`${PRODUCTION_API}/backtests/health/`, {
+    const response = await fetchWithAuth(`${PRODUCTION_API}/backtests/health/`, {
       headers: getAuthHeaders(),
     });
 

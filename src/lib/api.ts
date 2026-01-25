@@ -3,6 +3,26 @@ import { logger } from './logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
+// Handle session expiration - redirect to login and clear tokens
+function handleSessionExpired() {
+  logger.auth.warn('Session expired - redirecting to login');
+  
+  // Dispatch custom event for UI components to show notifications
+  window.dispatchEvent(new CustomEvent('session-expired', {
+    detail: { message: 'Your session has expired. Please log in again.' }
+  }));
+  
+  // Clear authentication tokens
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  
+  // Small delay to allow notifications to show
+  setTimeout(() => {
+    // Redirect to login page
+    window.location.href = '/login';
+  }, 100);
+}
+
 // Enable detailed logging for debugging
 const DEBUG_API = true;
 
@@ -155,6 +175,15 @@ export async function apiCall<T>(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Handle 401 Unauthorized - session expired or invalid token
+      if (response.status === 401) {
+        if (DEBUG_API) {
+          logger.api.warn('Unauthorized (401) - session expired, redirecting to login', { url, method, duration });
+        }
+        handleSessionExpired();
+        return { error: 'Session expired. Please log in again.' };
+      }
       
       // Handle 404 Not Found - treat as no data rather than an error for GET requests
       if (response.status === 404 && method === 'GET') {
