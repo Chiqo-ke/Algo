@@ -478,10 +478,17 @@ export default function Backtesting() {
       return;
     }
 
-    // Only validate if we have strategy_code
-    // If we only have strategy_id, backend will fetch the code
-    if (strategy?.strategy_code) {
-      logger.backtest.info("Validating strategy before backtest");
+    // Skip validation if strategy is already marked as valid
+    // This happens when strategy was generated and auto-executed successfully
+    if (strategy?.status === 'valid') {
+      logger.backtest.info("Strategy already validated, skipping re-validation", { 
+        status: strategy.status,
+        strategyId 
+      });
+    } else if (strategy?.strategy_code && strategy?.status !== 'valid') {
+      // Only validate if we have strategy_code and it's not already validated
+      // Note: strategy_code may contain canonical JSON, not Python code
+      logger.backtest.info("Validating strategy before backtest", { status: strategy.status });
       const isValid = await validateStrategy();
       if (!isValid) {
         logger.backtest.warn("Strategy validation failed, aborting backtest");
