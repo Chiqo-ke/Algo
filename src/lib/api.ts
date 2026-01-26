@@ -1,7 +1,7 @@
 // API Configuration and Base URL
 import { logger } from './logger';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://ps283t0p-8000.uks1.devtunnels.ms/api';
 
 // Handle session expiration - redirect to login and clear tokens
 function handleSessionExpired() {
