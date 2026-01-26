@@ -1,4 +1,4 @@
-import { Github, Twitter, Linkedin, Mail } from "lucide-react";
+import { Github, Twitter, Linkedin, Mail, Sparkles } from "lucide-react";
 
 export const LandingFooter = () => {
   const currentYear = new Date().getFullYear();
@@ -46,8 +46,10 @@ export const LandingFooter = () => {
             {/* Brand column */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-lg" />
-                <span className="text-white font-bold text-lg">Algo Agent</span>
+                <div className="relative w-8 h-8 bg-teal-500/10 rounded-lg border border-teal-500/30 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-teal-400" />
+                </div>
+                <span className="text-white font-display font-bold text-lg">Algo Agent</span>
               </div>
               <p className="text-sm mb-4 text-gray-400">
                 Build trading bots in plain English. No coding required.
