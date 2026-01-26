@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -34,31 +35,11 @@ interface BacktestConfigDialogProps {
 
 export interface BacktestConfig {
   symbol: string;
-  period: string;
-  interval: string;
-  initialCapital?: number;
-  commission?: number;
+  start_date: string;
+  end_date: string;
 }
 
-const PERIOD_OPTIONS = [
-  { value: "1mo", label: "1 Month" },
-  { value: "3mo", label: "3 Months" },
-  { value: "6mo", label: "6 Months" },
-  { value: "1y", label: "1 Year" },
-  { value: "2y", label: "2 Years" },
-  { value: "5y", label: "5 Years" },
-  { value: "max", label: "Max Available" },
-];
-
-const INTERVAL_OPTIONS = [
-  { value: "1m", label: "1 Minute" },
-  { value: "5m", label: "5 Minutes" },
-  { value: "15m", label: "15 Minutes" },
-  { value: "30m", label: "30 Minutes" },
-  { value: "1h", label: "1 Hour" },
-  { value: "1d", label: "1 Day" },
-  { value: "1wk", label: "1 Week" },
-];
+// Removed period and interval options - now using date pickers
 
 export function BacktestConfigDialog({
   open,
@@ -71,10 +52,8 @@ export function BacktestConfigDialog({
   const [symbols, setSymbols] = useState<Symbol[]>([]);
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState<string>("");
-  const [period, setPeriod] = useState<string>("1y");
-  const [interval, setInterval] = useState<string>("1d");
-  const [initialCapital, setInitialCapital] = useState<string>("10000");
-  const [commission, setCommission] = useState<string>("0.001");
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setFullYear(new Date().getFullYear() - 1)));
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [customSymbol, setCustomSymbol] = useState<string>("");
   const [useCustomSymbol, setUseCustomSymbol] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -84,20 +63,8 @@ export function BacktestConfigDialog({
   const applyTemplate = (template: BacktestTemplate) => {
     setSelectedTemplate(template);
     setSelectedSymbol(template.symbol);
-    setInterval(template.timeframe);
-    setInitialCapital(template.initial_cash.toString());
-    
-    // Calculate period from dates
-    const start = new Date(template.start_date);
-    const end = new Date(template.end_date);
-    const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    
-    if (diffMonths <= 1) setPeriod("1mo");
-    else if (diffMonths <= 3) setPeriod("3mo");
-    else if (diffMonths <= 6) setPeriod("6mo");
-    else if (diffMonths <= 12) setPeriod("1y");
-    else if (diffMonths <= 24) setPeriod("2y");
-    else setPeriod("5y");
+    setStartDate(new Date(template.start_date));
+    setEndDate(new Date(template.end_date));
     
     setShowTemplates(false);
     
@@ -152,10 +119,19 @@ export function BacktestConfigDialog({
       return;
     }
 
-    if (!period) {
+    if (!startDate || !endDate) {
       toast({
-        title: "Period Required",
-        description: "Please select a time period",
+        title: "Dates Required",
+        description: "Please select both start and end dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (startDate >= endDate) {
+      toast({
+        title: "Invalid Date Range",
+        description: "Start date must be before end date",
         variant: "destructive",
       });
       return;
@@ -163,10 +139,8 @@ export function BacktestConfigDialog({
 
     const config: BacktestConfig = {
       symbol: finalSymbol,
-      period,
-      interval,
-      initialCapital: parseFloat(initialCapital) || 10000,
-      commission: parseFloat(commission) || 0.001,
+      start_date: format(startDate, "yyyy-MM-dd"),
+      end_date: format(endDate, "yyyy-MM-dd"),
     };
 
     onConfirm(config);
@@ -333,65 +307,32 @@ export function BacktestConfigDialog({
               </div>
             </div>
 
-            {/* Period Selection */}
+            {/* Period - Start Date */}
             <div className="space-y-2">
-              <Label htmlFor="period">Time Period</Label>
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger id="period">
-                <SelectValue placeholder="Select period" />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIOD_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-            {/* Interval Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="interval">Data Interval</Label>
-            <Select value={interval} onValueChange={setInterval}>
-              <SelectTrigger id="interval">
-                <SelectValue placeholder="Select interval" />
-              </SelectTrigger>
-              <SelectContent>
-                {INTERVAL_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-            {/* Advanced Parameters */}
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="capital">Initial Capital ($)</Label>
+              <Label htmlFor="startDate">Start Date *</Label>
               <Input
-                id="capital"
-                type="number"
-                value={initialCapital}
-                onChange={(e) => setInitialCapital(e.target.value)}
-                placeholder="10000"
+                id="startDate"
+                type="date"
+                value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : undefined)}
+                max={endDate ? format(endDate, "yyyy-MM-dd") : undefined}
               />
+              <p className="text-xs text-muted-foreground">Beginning of backtest period</p>
             </div>
 
+            {/* Period - End Date */}
             <div className="space-y-2">
-              <Label htmlFor="commission">Commission (%)</Label>
+              <Label htmlFor="endDate">End Date *</Label>
               <Input
-                id="commission"
-                type="number"
-                step="0.001"
-                value={commission}
-                onChange={(e) => setCommission(e.target.value)}
-                placeholder="0.001"
+                id="endDate"
+                type="date"
+                value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : undefined)}
+                min={startDate ? format(startDate, "yyyy-MM-dd") : undefined}
+                max={format(new Date(), "yyyy-MM-dd")}
               />
+              <p className="text-xs text-muted-foreground">End of backtest period</p>
             </div>
-          </div>
           </>
         )}
 

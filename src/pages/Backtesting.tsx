@@ -5,10 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Play, Edit, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -19,12 +15,8 @@ import { logger } from "@/lib/logger";
 
 interface BacktestParams {
   symbol: string;
-  period: string;
-  timeframe: string;
-  lotSize: string;
-  initialBalance: string;
-  commission: string;
-  slippage: string;
+  start_date?: Date;
+  end_date?: Date;
   customDateFrom?: Date;
   customDateTo?: Date;
   indicators?: Record<string, any>; // For strategy indicators
@@ -80,23 +72,13 @@ export default function Backtesting() {
 
   const [backtestParams, setBacktestParams] = useState<BacktestParams>({
     symbol: backtestConfig?.symbol || "",
-    period: backtestConfig?.period || "",
-    timeframe: backtestConfig?.interval || "",
-    lotSize: "1.0",
-    initialBalance: backtestConfig?.initialCapital?.toString() || "10000",
-    commission: "0.001",
-    slippage: "0.0005"
+    start_date: backtestConfig?.start_date ? new Date(backtestConfig.start_date) : new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
+    end_date: backtestConfig?.end_date ? new Date(backtestConfig.end_date) : new Date(),
   });
 
   const [isRunning, setIsRunning] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [results, setResults] = useState<BacktestResults | null>(null);
-  const [showCustomDateDialog, setShowCustomDateDialog] = useState(false);
-  const [customDateStep, setCustomDateStep] = useState<"from" | "to">("from");
-  const [tempFromDate, setTempFromDate] = useState<Date | undefined>(undefined);
-  const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
-  const [tempYear, setTempYear] = useState<number>(new Date().getFullYear());
-  const [tempMonth, setTempMonth] = useState<number>(new Date().getMonth());
   const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(new Date());
 
   // Validation state
@@ -327,29 +309,6 @@ export default function Backtesting() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backtestConfig, loadingSymbols, loadingStrategy]);
 
-  const handlePeriodChange = (value: string) => {
-    if (value === "custom") {
-      setShowCustomDateDialog(true);
-      setCustomDateStep("from");
-      setTempFromDate(undefined);
-      setCurrentCalendarDate(new Date());
-    } else {
-      setBacktestParams({ ...backtestParams, period: value, customDateFrom: undefined, customDateTo: undefined });
-    }
-  };
-
-  const handleOpenMonthYearPicker = () => {
-    setTempYear(currentCalendarDate.getFullYear());
-    setTempMonth(currentCalendarDate.getMonth());
-    setShowMonthYearPicker(true);
-  };
-
-  const handleMonthYearConfirm = () => {
-    const newDate = new Date(tempYear, tempMonth, 1);
-    setCurrentCalendarDate(newDate);
-    setShowMonthYearPicker(false);
-  };
-
   const handleEditStrategy = () => {
     navigate("/", { state: { editMode: true, strategyName } });
   };
@@ -429,50 +388,44 @@ export default function Backtesting() {
     }
   };
 
-  const handleCustomDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-
-    if (customDateStep === "from") {
-      setTempFromDate(date);
-      setCustomDateStep("to");
-    } else {
-      // Step is "to"
-      setBacktestParams({ 
-        ...backtestParams, 
-        period: "custom",
-        customDateFrom: tempFromDate,
-        customDateTo: date
-      });
-      setShowCustomDateDialog(false);
-      setCustomDateStep("from");
-      setTempFromDate(undefined);
-    }
-  };
 
   const handleRunBacktest = async () => {
     logger.backtest.info("Starting backtest execution", { 
       strategyId,
       strategyName,
       symbol: backtestParams.symbol,
-      period: backtestParams.period,
-      timeframe: backtestParams.timeframe,
+      start_date: backtestParams.start_date,
+      end_date: backtestParams.end_date,
       hasStrategyCode: !!strategy?.strategy_code
     });
     
-    if (!backtestParams.symbol || !backtestParams.period || !backtestParams.timeframe) {
+    if (!backtestParams.symbol || !backtestParams.start_date || !backtestParams.end_date) {
       logger.backtest.warn("Missing required fields", { backtestParams });
       toast({
         title: "Missing fields",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Symbol, Start Date, End Date)",
         variant: "destructive",
       });
       return;
     }
 
-    if (!backtestParams.lotSize || !backtestParams.initialBalance) {
+    // Validate dates are valid Date objects
+    const startDate = backtestParams.start_date instanceof Date ? backtestParams.start_date : new Date(backtestParams.start_date);
+    const endDate = backtestParams.end_date instanceof Date ? backtestParams.end_date : new Date(backtestParams.end_date);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       toast({
-        title: "Missing fields",
-        description: "Please enter lot size and initial balance for simulation",
+        title: "Invalid Dates",
+        description: "Please select valid start and end dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (startDate >= endDate) {
+      toast({
+        title: "Invalid Date Range",
+        description: "Start date must be before end date",
         variant: "destructive",
       });
       return;
@@ -493,15 +446,12 @@ export default function Backtesting() {
     }
 
     // Skip validation if strategy is already marked as valid
-    // This happens when strategy was generated and auto-executed successfully
     if (strategy?.status === 'valid') {
       logger.backtest.info("Strategy already validated, skipping re-validation", { 
         status: strategy.status,
         strategyId 
       });
     } else if (strategy?.strategy_code && strategy?.status !== 'valid') {
-      // Only validate if we have strategy_code and it's not already validated
-      // Note: strategy_code may contain canonical JSON, not Python code
       logger.backtest.info("Validating strategy before backtest", { status: strategy.status });
       const isValid = await validateStrategy();
       if (!isValid) {
@@ -520,30 +470,9 @@ export default function Backtesting() {
       logger.backtest.info("Starting direct backtest execution", { 
         strategyId,
         symbol: backtestParams.symbol,
-        period: backtestParams.period
+        start_date: format(startDate, "yyyy-MM-dd"),
+        end_date: format(endDate, "yyyy-MM-dd")
       });
-
-      // Calculate date range for execution
-      const endDate = backtestParams.customDateTo || new Date();
-      let startDate = backtestParams.customDateFrom;
-
-      if (!startDate && backtestParams.period !== "custom") {
-        const daysMap: { [key: string]: number } = {
-          "1week": 7,
-          "1month": 30,
-          "3months": 90,
-          "6months": 180,
-          "1year": 365,
-          "2years": 730,
-        };
-        const days = daysMap[backtestParams.period] || 30;
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-      }
-
-      if (!startDate) {
-        throw new Error("Start date is required");
-      }
 
       // Execute backtest with user's selected parameters
       const executePayload = {
@@ -670,7 +599,7 @@ export default function Backtesting() {
             <CardTitle className="text-card-foreground">Backtest Parameters</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Symbol/Security */}
               <div className="space-y-2">
                 <Label htmlFor="symbol">Symbol / Security *</Label>
@@ -703,111 +632,39 @@ export default function Backtesting() {
                 )}
               </div>
 
-              {/* Period */}
+              {/* Start Date */}
               <div className="space-y-2">
-                <Label htmlFor="period">Period *</Label>
-                <Select value={backtestParams.period} onValueChange={handlePeriodChange}>
-                  <SelectTrigger id="period">
-                    <SelectValue placeholder="Select period">
-                      {backtestParams.period === "custom" && backtestParams.customDateFrom && backtestParams.customDateTo
-                        ? `${format(backtestParams.customDateFrom, "MMM dd, yyyy")} - ${format(backtestParams.customDateTo, "MMM dd, yyyy")}`
-                        : undefined}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1week">1 Week</SelectItem>
-                    <SelectItem value="1month">1 Month</SelectItem>
-                    <SelectItem value="3months">3 Months</SelectItem>
-                    <SelectItem value="6months">6 Months</SelectItem>
-                    <SelectItem value="1year">1 Year</SelectItem>
-                    <SelectItem value="2years">2 Years</SelectItem>
-                    <SelectItem value="5years">5 Years</SelectItem>
-                    <SelectItem value="custom">Custom Range</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={backtestParams.start_date && backtestParams.start_date instanceof Date && !isNaN(backtestParams.start_date.getTime()) 
+                    ? format(backtestParams.start_date, "yyyy-MM-dd") 
+                    : ""}
+                  onChange={(e) => setBacktestParams({ ...backtestParams, start_date: e.target.value ? new Date(e.target.value) : undefined })}
+                  max={backtestParams.end_date && backtestParams.end_date instanceof Date && !isNaN(backtestParams.end_date.getTime())
+                    ? format(backtestParams.end_date, "yyyy-MM-dd") 
+                    : format(new Date(), "yyyy-MM-dd")}
+                />
+                <p className="text-xs text-muted-foreground">Beginning of backtest period</p>
               </div>
 
-              {/* Timeframe */}
+              {/* End Date */}
               <div className="space-y-2">
-                <Label htmlFor="timeframe">Timeframe *</Label>
-                <Select value={backtestParams.timeframe} onValueChange={(value) => setBacktestParams({ ...backtestParams, timeframe: value })}>
-                  <SelectTrigger id="timeframe">
-                    <SelectValue placeholder="Select timeframe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1m">1 Minute</SelectItem>
-                    <SelectItem value="5m">5 Minutes</SelectItem>
-                    <SelectItem value="15m">15 Minutes</SelectItem>
-                    <SelectItem value="30m">30 Minutes</SelectItem>
-                    <SelectItem value="1h">1 Hour</SelectItem>
-                    <SelectItem value="4h">4 Hours</SelectItem>
-                    <SelectItem value="1d">1 Day</SelectItem>
-                    <SelectItem value="1w">1 Week</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Simulation Parameters */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Simulation Settings</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="initialBalance">Initial Balance ($) *</Label>
-                  <Input
-                    id="initialBalance"
-                    type="number"
-                    placeholder="e.g., 10000"
-                    value={backtestParams.initialBalance}
-                    onChange={(e) => setBacktestParams({ ...backtestParams, initialBalance: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">Starting capital for the simulation</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lotSize">Lot Size *</Label>
-                  <Input
-                    id="lotSize"
-                    type="number"
-                    step="0.01"
-                    placeholder="e.g., 0.1, 1.0"
-                    value={backtestParams.lotSize}
-                    onChange={(e) => setBacktestParams({ ...backtestParams, lotSize: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">Position size per trade (standard lot = 1.0)</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Advanced Parameters */}
-            <div className="space-y-4 pt-4 border-t border-border">
-              <h3 className="text-sm font-semibold text-foreground">Advanced Parameters</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="commission">Commission *</Label>
-                  <Input
-                    id="commission"
-                    type="number"
-                    step="0.0001"
-                    placeholder="e.g., 0.001"
-                    value={backtestParams.commission}
-                    onChange={(e) => setBacktestParams({ ...backtestParams, commission: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">Commission rate per trade (e.g., 0.001 = 0.1%)</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="slippage">Slippage *</Label>
-                  <Input
-                    id="slippage"
-                    type="number"
-                    step="0.0001"
-                    placeholder="e.g., 0.0005"
-                    value={backtestParams.slippage}
-                    onChange={(e) => setBacktestParams({ ...backtestParams, slippage: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">Expected slippage per trade (e.g., 0.0005 = 0.05%)</p>
-                </div>
+                <Label htmlFor="endDate">End Date *</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={backtestParams.end_date && backtestParams.end_date instanceof Date && !isNaN(backtestParams.end_date.getTime())
+                    ? format(backtestParams.end_date, "yyyy-MM-dd") 
+                    : ""}
+                  onChange={(e) => setBacktestParams({ ...backtestParams, end_date: e.target.value ? new Date(e.target.value) : undefined })}
+                  min={backtestParams.start_date && backtestParams.start_date instanceof Date && !isNaN(backtestParams.start_date.getTime())
+                    ? format(backtestParams.start_date, "yyyy-MM-dd") 
+                    : undefined}
+                  max={format(new Date(), "yyyy-MM-dd")}
+                />
+                <p className="text-xs text-muted-foreground">End of backtest period</p>
               </div>
             </div>
 
@@ -917,112 +774,6 @@ export default function Backtesting() {
       >
         <Edit className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
       </Button>
-
-      {/* Custom Date Range Dialog */}
-      <Dialog open={showCustomDateDialog} onOpenChange={setShowCustomDateDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              {customDateStep === "from" ? "Select Start Date" : "Select End Date"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center space-y-4 py-4">
-            <Calendar
-              mode="single"
-              selected={customDateStep === "from" ? tempFromDate : backtestParams.customDateTo}
-              onSelect={handleCustomDateSelect}
-              month={currentCalendarDate}
-              onMonthChange={setCurrentCalendarDate}
-              disabled={(date) => {
-                if (customDateStep === "to" && tempFromDate) {
-                  return date < tempFromDate;
-                }
-                return date > new Date();
-              }}
-              initialFocus
-              className="rounded-md border"
-              components={{
-                Caption: ({ displayMonth }) => (
-                  <div className="flex justify-center pt-1 relative items-center mb-2">
-                    <div 
-                      className="text-sm font-medium cursor-pointer hover:text-primary transition-colors"
-                      onClick={handleOpenMonthYearPicker}
-                    >
-                      {format(displayMonth, "MMMM yyyy")}
-                    </div>
-                  </div>
-                )
-              }}
-            />
-            {customDateStep === "to" && tempFromDate && (
-              <div className="text-sm text-muted-foreground">
-                From: {format(tempFromDate, "MMM dd, yyyy")}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Month/Year Picker Dialog */}
-      <Dialog open={showMonthYearPicker} onOpenChange={setShowMonthYearPicker}>
-        <DialogContent className="sm:max-w-[350px]">
-          <DialogHeader>
-            <DialogTitle>Select Month and Year</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Year Selector */}
-            <div className="space-y-2">
-              <Label>Year</Label>
-              <Select 
-                value={tempYear.toString()} 
-                onValueChange={(value) => setTempYear(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: new Date().getFullYear() - 2015 + 1 }, (_, i) => 2015 + i).reverse().map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Month Selector */}
-            <div className="space-y-2">
-              <Label>Month</Label>
-              <Select 
-                value={tempMonth.toString()} 
-                onValueChange={(value) => setTempMonth(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[
-                    "January", "February", "March", "April", "May", "June",
-                    "July", "August", "September", "October", "November", "December"
-                  ].map((month, index) => (
-                    <SelectItem key={index} value={index.toString()}>
-                      {month}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Confirm Button */}
-            <Button 
-              onClick={handleMonthYearConfirm}
-              className="w-full"
-            >
-              Confirm
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 }
