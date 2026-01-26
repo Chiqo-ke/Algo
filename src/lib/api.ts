@@ -238,7 +238,7 @@ export async function apiCall<T>(
     
     // Check if it's a network error (server not reachable)
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      const networkError = '🔌 Cannot connect to server. Make sure Django is running on http://127.0.0.1:8000';
+      const networkError = '🔌 Cannot connect to server';
       logger.api.error('Network error - server unreachable', error as Error, { url, method, duration });
       return { error: networkError };
     }
