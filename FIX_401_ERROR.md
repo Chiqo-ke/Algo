@@ -100,7 +100,7 @@ When you open the app, you'll see these console messages:
 
 ### Connection Error:
 ```
-❌ 🔌 Cannot connect to server. Make sure Django is running on http://127.0.0.1:8000
+❌ 🔌 Cannot connect to server
 ```
 ❌ Problem! Django server is not running.
 
