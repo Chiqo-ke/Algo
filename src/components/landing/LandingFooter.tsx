@@ -14,7 +14,7 @@ export const LandingFooter = () => {
       { label: "About", href: "#" },
       { label: "Blog", href: "#" },
       { label: "Careers", href: "#" },
-      { label: "Contact", href: "mailto:support@algoagent.com" }
+      { label: "Contact", href: "mailto:support@algoai.com" }
     ],
     legal: [
       { label: "Privacy Policy", href: "#" },
@@ -31,10 +31,10 @@ export const LandingFooter = () => {
   };
 
   const socialLinks = [
-    { icon: Twitter, href: "https://twitter.com/algoagent", label: "Twitter" },
-    { icon: Github, href: "https://github.com/algoagent", label: "GitHub" },
-    { icon: Linkedin, href: "https://linkedin.com/company/algoagent", label: "LinkedIn" },
-    { icon: Mail, href: "mailto:support@algoagent.com", label: "Email" }
+    { icon: Twitter, href: "https://twitter.com/algoai", label: "Twitter" },
+    { icon: Github, href: "https://github.com/algoai", label: "GitHub" },
+    { icon: Linkedin, href: "https://linkedin.com/company/algoai", label: "LinkedIn" },
+    { icon: Mail, href: "mailto:support@algoai.com", label: "Email" }
   ];
 
   return (
@@ -49,10 +49,10 @@ export const LandingFooter = () => {
                 <div className="relative w-8 h-8 bg-teal-500/10 rounded-lg border border-teal-500/30 flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-teal-400" />
                 </div>
-                <span className="text-white font-display font-bold text-lg">Algo Agent</span>
+                <span className="text-white font-display font-bold text-lg">AlgoAI</span>
               </div>
               <p className="text-sm mb-4 text-gray-400">
-                Build trading bots in plain English. No coding required.
+                Build AI trading agents in plain English. Agentic platform powered by artificial intelligence.
               </p>
               <div className="flex gap-3">
                 {socialLinks.map((social, index) => (
@@ -131,7 +131,7 @@ export const LandingFooter = () => {
           <div className="border-t border-gray-800 pt-8 mb-8">
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 backdrop-blur-sm">
               <p className="text-xs text-gray-400 leading-relaxed">
-                <strong className="text-gray-300">Important Note:</strong> Algo Agent provides tools for strategy automation and backtesting. 
+                <strong className="text-gray-300">Important Note:</strong> AlgoAI provides an agentic AI platform for automated trading strategy development and backtesting. 
                 It does not provide financial advice or profit guarantees. Trading involves risk, and users are responsible for their own decisions. 
                 Past performance is not indicative of future results. 
                 Always conduct your own research and consider consulting licensed financial professionals.
@@ -142,10 +142,10 @@ export const LandingFooter = () => {
           {/* Bottom bar */}
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
             <p>
-              © {currentYear} Algo Agent. All rights reserved.
+              © {currentYear} AlgoAI. All rights reserved.
             </p>
             <p className="text-center md:text-right">
-              Made with care for traders who value discipline and data.
+              Agentic AI platform for disciplined, automated trading.
             </p>
           </div>
         </div>

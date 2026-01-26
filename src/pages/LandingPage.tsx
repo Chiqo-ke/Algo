@@ -17,21 +17,75 @@ const LandingPage = () => {
   return (
     <>
       <Helmet>
-        <title>Algo Agent - Build Trading Bots in Plain English</title>
+        <title>AlgoAI - AI Trading Agents | Automated Trading Platform</title>
         <meta 
           name="description" 
-          content="Build your own trading bot in plain English. Algo automates strategy creation and backtesting - no coding required. Remove emotion from trading." 
+          content="Build autonomous AI trading agents in plain English. AlgoAI is an agentic platform powered by artificial intelligence for automated trading. No coding required." 
         />
-        <meta property="og:title" content="Algo Agent - Trade Smarter, Not Emotionally" />
+        
+        {/* Structured Data - Software Application */}
+        <script type="application/ld+json">
+          {`{
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "AlgoAI",
+            "applicationCategory": "FinanceApplication",
+            "operatingSystem": "Web",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Free trial - Build up to 3 AI trading agents"
+            },
+            "description": "AlgoAI is an agentic platform powered by artificial intelligence for automated trading. Build autonomous AI trading agents in plain English without coding. Advanced backtesting for Forex, Crypto, and Equities.",
+            "featureList": [
+              "AI-powered trading agents",
+              "Agentic autonomous trading",
+              "Plain language agent creation",
+              "Automated backtesting",
+              "No coding required",
+              "Forex, Crypto & Equities support",
+              "AI-driven strategy optimization",
+              "Autonomous decision-making agents"
+            ],
+            "keywords": "AI trading agents, agentic platform, automated trading, artificial intelligence, autonomous trading bots"
+          }`}
+        </script>
+
+        {/* Structured Data - Organization */}
+        <script type="application/ld+json">
+          {`{
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "AlgoAI",
+            "alternateName": "AlgoAI - AI Trading Agents Platform",
+            "url": "https://algoai.com",
+            "logo": "https://algoai.com/sparkles-icon.svg",
+            "description": "Agentic AI platform for automated trading. Build autonomous trading agents powered by artificial intelligence.",
+            "sameAs": [
+              "https://twitter.com/algoai",
+              "https://github.com/algoai",
+              "https://linkedin.com/company/algoai"
+            ],
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "email": "support@algoai.com",
+              "contactType": "Customer Support"
+            }
+          }`}
+        </script>
+        
+        <meta property="og:title" content="AlgoAI - Build AI Trading Agents in Plain English" />
         <meta 
           property="og:description" 
-          content="Turn trading ideas into tested bots in minutes. AI-powered strategy builder with rigorous backtesting. Live trading coming soon." 
+          content="Agentic AI platform for automated trading. Create autonomous trading agents powered by artificial intelligence. No coding required." 
         />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="/og-image.png" />
+        <meta property="og:url" content="https://algoai.com/" />
+        <meta property="og:image" content="https://algoai.com/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Algo Agent - Build Trading Bots in Plain English" />
-        <meta name="twitter:description" content="Remove emotion from trading. Build, test, and iterate trading strategies without coding." />
+        <meta name="twitter:title" content="AlgoAI - AI Trading Agents Platform" />
+        <meta name="twitter:description" content="Build autonomous AI trading agents without coding. Agentic platform powered by artificial intelligence for automated trading." />
         
         {/* Analytics placeholder - Replace with actual IDs */}
         {/* <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script> */}

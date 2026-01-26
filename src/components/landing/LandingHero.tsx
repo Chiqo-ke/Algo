@@ -54,21 +54,21 @@ export const LandingHero = ({ onDemoClick }: LandingHeroProps) => {
           {/* Animated tagline */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm font-medium backdrop-blur-sm animate-pulse-glow">
             <Sparkles className="w-4 h-4 animate-spin" style={{ animationDuration: '3s' }} />
-            <span className="font-display">Build your own bot</span>
+            <span className="font-display">AI-Powered Trading Agents</span>
           </div>
 
           {/* Futuristic headline with glow */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight text-white relative">
             <span className="relative inline-block">
-              Algo AI
+              AlgoAI
               <div className="absolute inset-0 blur-2xl bg-teal-500/20 animate-glow -z-10" />
             </span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Trading is difficult largely because humans are inconsistent. Algo Agent helps you turn your trading ideas into clearly defined, testable systems so you can trade with structure, discipline, and evidence rather than emotion.{" "}
-            <span className="text-teal-400 font-medium">Live trading support is planned for the future.</span>
+            Build <span className="text-teal-400 font-semibold">autonomous AI trading agents</span> in plain English. Our agentic platform powered by artificial intelligence transforms your trading ideas into intelligent, self-executing systems that trade with discipline and precision.{" "}
+            <span className="text-teal-400 font-medium">Automated trading without the complexity.</span>
           </p>
 
           {/* Enhanced value bullets with icons */}
