@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,17 +9,28 @@ import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SessionExpirationHandler from "@/components/SessionExpirationHandler";
-import Dashboard from "./pages/Dashboard";
-import StrategyBuilder from "./pages/StrategyBuilder";
-import Strategy from "./pages/Strategy";
-import Backtesting from "./pages/Backtesting";
-import Settings from "./pages/Settings";
+
+// Eager load critical pages
+import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import ConnectionTest from "./pages/ConnectionTest";
-import LandingPage from "./pages/LandingPage";
-import NotFound from "./pages/NotFound";
-import { DemoPage } from "./pages/Demo";
+
+// Lazy load non-critical pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const StrategyBuilder = lazy(() => import("./pages/StrategyBuilder"));
+const Strategy = lazy(() => import("./pages/Strategy"));
+const Backtesting = lazy(() => import("./pages/Backtesting"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ConnectionTest = lazy(() => import("./pages/ConnectionTest"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const DemoPage = lazy(() => import("./pages/Demo").then(module => ({ default: module.DemoPage })));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -32,62 +44,64 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <SessionExpirationHandler />
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/test-connection" element={<ConnectionTest />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/strategy-builder"
-              element={
-                <ProtectedRoute>
-                  <StrategyBuilder />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/strategy"
-              element={
-                <ProtectedRoute>
-                  <Strategy />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/backtesting/:strategyId"
-              element={
-                <ProtectedRoute>
-                  <Backtesting />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/demo"
-              element={
-                <ProtectedRoute>
-                  <DemoPage />
-                </ProtectedRoute>
-              }
-            />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/test-connection" element={<ConnectionTest />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/strategy-builder"
+                element={
+                  <ProtectedRoute>
+                    <StrategyBuilder />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/strategy"
+                element={
+                  <ProtectedRoute>
+                    <Strategy />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/backtesting/:strategyId"
+                element={
+                  <ProtectedRoute>
+                    <Backtesting />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/demo"
+                element={
+                  <ProtectedRoute>
+                    <DemoPage />
+                  </ProtectedRoute>
+                }
+              />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
