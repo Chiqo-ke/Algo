@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://algoai.com/</loc>
+    <loc>https://algoai.biz/</loc>
     <lastmod>2026-01-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://algoai.com/#features</loc>
+    <loc>https://algoai.biz/#features</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://algoai.com/#pricing</loc>
+    <loc>https://algoai.biz/#pricing</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://algoai.com/#how-it-works</loc>
+    <loc>https://algoai.biz/#how-it-works</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://algoai.com/#faq</loc>
+    <loc>https://algoai.biz/#faq</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

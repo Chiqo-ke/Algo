@@ -59,8 +59,8 @@ const LandingPage = () => {
             "@type": "Organization",
             "name": "AlgoAI",
             "alternateName": "AlgoAI - AI Trading Agents Platform",
-            "url": "https://algoai.com",
-            "logo": "https://algoai.com/sparkles-icon.svg",
+            "url": "https://algoai.biz",
+            "logo": "https://algoai.biz/sparkles-icon.svg",
             "description": "Agentic AI platform for automated trading. Build autonomous trading agents powered by artificial intelligence.",
             "sameAs": [
               "https://twitter.com/algoai",
@@ -81,8 +81,8 @@ const LandingPage = () => {
           content="Agentic AI platform for automated trading. Create autonomous trading agents powered by artificial intelligence. No coding required." 
         />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://algoai.com/" />
-        <meta property="og:image" content="https://algoai.com/og-image.png" />
+        <meta property="og:url" content="https://algoai.biz/" />
+        <meta property="og:image" content="https://algoai.biz/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="AlgoAI - AI Trading Agents Platform" />
         <meta name="twitter:description" content="Build autonomous AI trading agents without coding. Agentic platform powered by artificial intelligence for automated trading." />
