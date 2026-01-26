@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { X, Send, Sparkles } from "lucide-react";
+import { X, Send, Sparkles, Lightbulb, Zap } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { STRATEGY_PROMPT_TEMPLATES, demoMode, type StrategyPromptTemplate } from "@/lib/demoTemplates";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Badge } from "./ui/badge";
 
 interface AIAssistantPanelProps {
   onClose: () => void;
@@ -26,6 +35,28 @@ export const AIAssistantPanel = ({ onClose }: AIAssistantPanelProps) => {
     },
   ]);
   const [input, setInput] = useState("");
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<StrategyPromptTemplate | null>(null);
+
+  const handleTemplateSelect = (template: StrategyPromptTemplate) => {
+    setSelectedTemplate(template);
+    setInput(template.prompt);
+    setShowTemplates(false);
+    
+    // Add assistant message about template
+    const templateMessage: Message = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content: `I've loaded the "${template.name}" template for you. This is a ${template.category}-level strategy that ${template.description.toLowerCase()}. Click send to generate this strategy!`,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, templateMessage]);
+  };
+
+  const handleClearTemplate = () => {
+    setSelectedTemplate(null);
+    setInput("");
+  };
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -117,19 +148,79 @@ export const AIAssistantPanel = ({ onClose }: AIAssistantPanelProps) => {
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-4 border-t border-border">
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Ask me anything..."
-            className="flex-1"
-          />
-          <Button onClick={handleSend} size="icon" className="bg-gradient-primary">
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="p-4 border-t border-border space-y-3">
+        {/* Template Selector */}
+        {showTemplates ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">Demo Templates</h4>
+              <Button variant="ghost" size="sm" onClick={() => setShowTemplates(false)}>
+                Cancel
+              </Button>
+            </div>
+            <ScrollArea className="h-64">
+              <div className="space-y-2 pr-4">
+                {STRATEGY_PROMPT_TEMPLATES.map((template) => (
+                  <div
+                    key={template.id}
+                    className="p-3 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => handleTemplateSelect(template)}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h5 className="text-sm font-medium">{template.name}</h5>
+                      <Badge variant={
+                        template.category === 'beginner' ? 'default' :
+                        template.category === 'intermediate' ? 'secondary' : 'destructive'
+                      }>
+                        {template.category}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{template.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">⏱️ {template.expectedDuration}</p>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        ) : (
+          <>
+            {/* Template Indicator */}
+            {selectedTemplate && (
+              <div className="flex items-center gap-2 p-2 bg-accent rounded-lg">
+                <Lightbulb className="w-4 h-4 text-yellow-500" />
+                <span className="text-xs flex-1">Using template: {selectedTemplate.name}</span>
+                <Button variant="ghost" size="sm" onClick={handleClearTemplate}>
+                  Clear
+                </Button>
+              </div>
+            )}
+            
+            {/* Quick Template Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTemplates(true)}
+              className="w-full"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Load Demo Template
+            </Button>
+
+            {/* Input Area */}
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Ask me anything or use a template..."
+                className="flex-1"
+              />
+              <Button onClick={handleSend} size="icon" className="bg-gradient-primary">
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );

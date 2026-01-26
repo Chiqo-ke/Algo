@@ -82,15 +82,18 @@ export class CodeGenerationService {
         max_attempts: maxAttempts,
       });
       
-      logger.strategy.debug("Generating initial code", { strategyName: request.strategy_name });
+      logger.strategy.debug("Generating initial code with Copilot", { strategyName: request.strategy_name });
       const codeGenStartTime = performance.now();
       
       const { data: codeGenData, error: codeGenError } = await apiPost<CodeGenerationResponse>(
-        API_ENDPOINTS.strategies.generateExecutableCode,
+        API_ENDPOINTS.strategies.generateStrategyUnified,
         {
           canonical_json: request.canonical_json,
           strategy_name: request.strategy_name,
           strategy_id: request.strategy_id,
+          ai_provider: "copilot",  // Use Copilot for generation
+          auto_execute: false,  // Handled separately in this service
+          auto_fix: false,  // Handled separately in this service
         }
       );
       

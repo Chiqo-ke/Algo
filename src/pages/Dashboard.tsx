@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -15,16 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck, Lightbulb, Activity } from "lucide-react";
+import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { WorkflowProgress } from "@/components/WorkflowProgress";
-import { CodeGenerationStatus } from "@/components/CodeGenerationStatus";
 import * as ProductionAPI from "@/lib/productionApi";
 import { apiCall } from "@/lib/api";
-import { codeGenerationService, type CodeGenerationRequest } from "@/lib/codeGenerationService";
-import type { CodeGenerationProgress } from "@/lib/types";
 
 interface WorkflowStep {
   id: string;
@@ -110,11 +108,7 @@ export default function Dashboard() {
   // NEW: Conversation memory state
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
-  const [useContext, setUseContext] = useState(true);
-  
-  // NEW: Metadata display configuration
-  const [showFullWarnings, setShowFullWarnings] = useState<Record<string, boolean>>({});
-  const [showFullRecommendations, setShowFullRecommendations] = useState<Record<string, boolean>>({});
+  const useContext = true;
   
   // NEW: Workflow state
   const [currentWorkflow, setCurrentWorkflow] = useState<WorkflowState | null>(null);
@@ -128,10 +122,6 @@ export default function Dashboard() {
   // Lifecycle data will be used in Strategy.tsx
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [lifecycleData, setLifecycleData] = useState<ProductionAPI.LifecycleData | null>(null);
-  
-  // NEW: Code generation progress state
-  const [codeGenProgress, setCodeGenProgress] = useState<CodeGenerationProgress | null>(null);
-  const [showCodeGenProgress, setShowCodeGenProgress] = useState(false);
 
   // API base URL - adjust based on your environment
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -148,15 +138,6 @@ export default function Dashboard() {
     }
     if (canonicalJson.description) {
       readable += `📝 **Description:** ${canonicalJson.description}\n\n`;
-    }
-
-    // Classification
-    if (canonicalJson.classification) {
-      const cls = canonicalJson.classification;
-      readable += `🏷️ **Classification:**\n`;
-      readable += `   • Type: ${cls.type || 'N/A'}\n`;
-      readable += `   • Risk Tier: ${cls.risk_tier || 'N/A'}\n`;
-      readable += `   • Market Condition: ${cls.market_condition || 'N/A'}\n\n`;
     }
 
     // Entry Rules
@@ -205,6 +186,8 @@ export default function Dashboard() {
   };
 
   // NEW: Validate strategy schema with Pydantic
+  // Will be used when production features are fully enabled
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateStrategySchema = async (strategyData: any): Promise<boolean> => {
     try {
       const result = await ProductionAPI.validateStrategySchema(strategyData);
@@ -233,6 +216,8 @@ export default function Dashboard() {
   };
 
   // NEW: Validate generated code for safety
+  // Will be used when production features are fully enabled
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateCodeSafety = async (code: string): Promise<boolean> => {
     try {
       const result = await ProductionAPI.validateCodeSafety(code, true);
@@ -399,7 +384,8 @@ export default function Dashboard() {
             body: JSON.stringify({
               strategy_text: userInput,
               input_type: "freetext",
-              use_gemini: true,
+              use_gemini: false,
+              ai_provider: "copilot",
               strict_mode: false,
               update_description: `User requested: ${userInput.substring(0, 100)}`,
               session_id: sessionId || undefined, // Use existing session
@@ -412,7 +398,7 @@ export default function Dashboard() {
           throw new Error(result.error);
         }
 
-        const data = result.data;
+        const data = result.data as any;
         
         console.log("📊 UPDATE STRATEGY RESPONSE:", JSON.stringify(data, null, 2));
         
@@ -480,7 +466,8 @@ export default function Dashboard() {
               name: strategyName,
               description: `Strategy created via chat on ${new Date().toLocaleDateString()}`,
               tags: ["ai-generated", "chat-created"],
-              use_gemini: true,
+              use_gemini: false,
+              ai_provider: "copilot",
               strict_mode: false,
               save_to_backtest: true,
               session_id: sessionId || undefined, // Use existing session or create new
@@ -489,7 +476,8 @@ export default function Dashboard() {
           : {
               strategy_text: userInput,
               input_type: "freetext",
-              use_gemini: true,
+              use_gemini: false,
+              ai_provider: "copilot",
               strict_mode: false,
               session_id: sessionId || undefined, // Use existing session or create new
               use_context: useContext,
@@ -505,7 +493,7 @@ export default function Dashboard() {
           throw new Error(result.error);
         }
 
-        const data = result.data;
+        const data = result.data as any;
         
         console.log("📊 VALIDATE/CREATE STRATEGY RESPONSE:", JSON.stringify(data, null, 2));
         
@@ -682,7 +670,7 @@ export default function Dashboard() {
                   name: editedStrategyName.trim(),
                 }),
               }
-            );
+            ) as { error?: string; data?: any };
 
             if (updateResult.error) {
               console.warn("Failed to update strategy name, continuing anyway");
@@ -715,26 +703,44 @@ export default function Dashboard() {
         });
         
         try {
-          // Use the new auto-fix endpoint that handles validation and fixing
+          // Use the new unified endpoint with Copilot support
           const codeGenResult = await apiCall(
-            `${API_BASE_URL}/api/strategies/api/generate_executable_code/`,
+            `${API_BASE_URL}/api/strategies/api/generate_strategy_unified/`,
             {
               method: "POST",
               body: JSON.stringify({
                 canonical_json: confirmationData.canonicalJson,
                 strategy_name: editedStrategyName.trim(),
                 strategy_id: confirmationData.strategyId,
+                ai_provider: "copilot",  // Use Copilot for generation
                 test_config: {
                   symbol: backtestSymbol,
                   period: backtestPeriod,
                   interval: backtestInterval,
                 },
+                auto_execute: true,
+                auto_fix: true,
+                max_fix_attempts: 8,
               }),
             }
           );
 
           if (!codeGenResult.error && codeGenResult.data) {
-            const codeGenData = codeGenResult.data;
+            const codeGenData = codeGenResult.data as {
+              success?: boolean;
+              file_name?: string;
+              file_path?: string;
+              execution?: {
+                success: boolean;
+                error_message?: string;
+                metrics?: any;
+              };
+              error_fixing?: {
+                attempted: boolean;
+                attempts?: number;
+                final_status?: string;
+              };
+            };
             console.log("✅ Strategy code generated:", codeGenData.file_name);
             
             // Check execution results if available
@@ -916,28 +922,46 @@ export default function Dashboard() {
           throw new Error(result.error);
         }
 
-        const data = result.data;
+        const data = result.data as any;
         
         console.log("✅ Strategy created successfully:", data);
         
-        // Generate executable code from canonical JSON
-        console.log("🔧 Generating executable strategy code...");
+        // Generate executable code from canonical JSON using Copilot
+        console.log("🔧 Generating executable strategy code with Copilot...");
         
         try {
           const codeGenResult = await apiCall(
-            `${API_BASE_URL}/api/strategies/api/generate_executable_code/`,
+            `${API_BASE_URL}/api/strategies/api/generate_strategy_unified/`,
             {
               method: "POST",
               body: JSON.stringify({
                 canonical_json: confirmationData.canonicalJson,
                 strategy_name: editedStrategyName.trim(),
                 strategy_id: data.id,
+                ai_provider: "copilot",  // Use Copilot for generation
+                auto_execute: true,   // Enable auto-execution with trade validation
+                auto_fix: true,        // Enable auto-fix for debugging
+                max_fix_attempts: 8,   // Max 8 debugging attempts
               }),
             }
           );
 
           if (!codeGenResult.error && codeGenResult.data) {
-            const codeGenData = codeGenResult.data;
+            const codeGenData = codeGenResult.data as {
+              success?: boolean;
+              file_name?: string;
+              file_path?: string;
+              execution?: {
+                success: boolean;
+                error_message?: string;
+                metrics?: any;
+              };
+              error_fixing?: {
+                attempted: boolean;
+                attempts?: number;
+                final_status?: string;
+              };
+            };
             console.log("✅ Strategy code generated:", codeGenData.file_name);
             
             // Check execution results if available
@@ -1248,15 +1272,30 @@ export default function Dashboard() {
 
           {/* Input Area - Fixed at bottom */}
           <div className="flex gap-2 pt-4 flex-shrink-0 max-w-xl mx-auto w-full">
-            <Input
+            <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && !isLoading && handleSendMessage()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !isLoading) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
               placeholder={editMode 
-                ? `Ask about editing ${strategyName}...`
-                : "Ask about your trading strategy, bots, or market analysis..."}
-              className="flex-1"
+                ? `Ask about editing ${strategyName}... (Shift+Enter for new line)`
+                : "Ask about your trading strategy, bots, or market analysis... (Shift+Enter for new line)"}
+              className="flex-1 min-h-[2.5rem] max-h-[12rem] resize-none overflow-y-auto"
               disabled={isLoading}
+              rows={1}
+              style={{
+                height: 'auto',
+                minHeight: '2.5rem'
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 192) + 'px';
+              }}
             />
             <Button 
               onClick={handleSendMessage} 

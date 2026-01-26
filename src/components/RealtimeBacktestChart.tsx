@@ -16,15 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Activity, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
-interface CandleData {
-  timestamp: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
 interface TradeSignal {
   timestamp: string;
   type: "entry" | "exit";
@@ -76,7 +67,6 @@ interface RealtimeChartProps {
 }
 
 export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete }: RealtimeChartProps) {
-  const [candleData, setCandleData] = useState<CandleData[]>([]);
   const [signals, setSignals] = useState<TradeSignal[]>([]);
   const [completedTrades, setCompletedTrades] = useState<CompletedTrade[]>([]);
   const [currentBar, setCurrentBar] = useState(0);
@@ -130,12 +120,7 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
     }
   }, []);
 
-  // Auto-scroll to keep the latest candle visible
-  useEffect(() => {
-    if (chartRef.current && candleData.length > 0) {
-      chartRef.current.scrollLeft = chartRef.current.scrollWidth;
-    }
-  }, [candleData.length]);
+
 
   // Connect to WebSocket for streaming data
   useEffect(() => {
@@ -145,7 +130,6 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
     }
     
     // Clear previous state when starting a new stream
-    setCandleData([]);
     setSignals([]);
     setCompletedTrades([]);
     setCurrentBar(0);
@@ -181,16 +165,7 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
         setTotalBars(data.total_bars);
         console.log(`📊 Backtest starting: ${data.total_bars} bars to process`);
       } else if (data.type === "candle") {
-        // New candle data
-        const newCandle: CandleData = {
-          timestamp: data.timestamp,
-          open: data.open,
-          high: data.high,
-          low: data.low,
-          close: data.close,
-          volume: data.volume,
-        };
-        setCandleData((prev) => [...prev, newCandle]);
+        // Candle data - ignoring for now
         setCurrentBar(data.bar_number);
       } else if (data.type === "signal") {
         // Trade signal
@@ -273,135 +248,28 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
     };
   }, [isStreaming]); // Only reconnect when isStreaming changes
 
-  // Transform candle data for Recharts - using OHLC bar representation
-  const chartData = candleData.map((candle, index) => {
-    const isGreen = candle.close >= candle.open;
-    const date = new Date(candle.timestamp);
-    // Format based on data density - for daily data show date, for intraday show time
-    const formattedTimestamp = candleData.length > 100 
-      ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      : date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    
-    return {
-      index: index,
-      timestamp: formattedTimestamp,
-      date: candle.timestamp,
-      // For candlestick body (from open to close)
-      open: candle.open,
-      close: candle.close,
-      high: candle.high,
-      low: candle.low,
-      // Body positioning - always draw from lower to higher
-      bodyBase: Math.min(candle.open, candle.close),
-      bodyHeight: Math.abs(candle.close - candle.open),
-      // Wick positioning
-      wickLow: candle.low,
-      wickHigh: candle.high,
-      volume: candle.volume,
-      // Color indicator
-      isGreen: isGreen,
-      fill: isGreen ? "#10b981" : "#ef4444",
-    };
-  });
+  // Transform signals into chart data for visualization
+  const chartData = signals.map((signal, index) => ({
+    index: index,
+    timestamp: new Date(signal.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    price: signal.price,
+    type: signal.type,
+    side: signal.side
+  }));
 
-  // Calculate Y-axis domain with padding
-  const priceValues = chartData.flatMap(d => [d.high, d.low]);
+  // Calculate Y-axis domain with padding based on signal prices
+  const priceValues = signals.map(s => s.price);
   const minPrice = priceValues.length > 0 ? Math.min(...priceValues) : 0;
   const maxPrice = priceValues.length > 0 ? Math.max(...priceValues) : 100;
   const pricePadding = (maxPrice - minPrice) * 0.1 || 1;
   const yDomain: [number, number] = [minPrice - pricePadding, maxPrice + pricePadding];
 
-  // Custom Candlestick renderer component for Recharts Customized
-  const CandlestickSeries = (props: any) => {
-    const { xAxisMap, yAxisMap, offset, width: chartWidth } = props;
-    
-    if (!xAxisMap || !yAxisMap || chartData.length === 0) {
-      return null;
-    }
-    
-    // Get the scales from Recharts
-    const xAxis = Object.values(xAxisMap)[0] as any;
-    const yAxis = yAxisMap?.price;
-    
-    if (!xAxis?.scale || !yAxis?.scale) {
-      return null;
-    }
-    
-    const xScale = xAxis.scale;
-    const yScale = yAxis.scale;
-    
-    // Calculate bandwidth - for band scales use bandwidth(), otherwise calculate from chart width
-    let bandwidth: number;
-    if (typeof xScale.bandwidth === 'function') {
-      bandwidth = xScale.bandwidth();
-    } else {
-      // For point/ordinal scales, calculate based on chart area
-      const chartArea = chartWidth - 50; // Approximate margin
-      bandwidth = Math.max(chartArea / chartData.length, 4);
-    }
-    
-    return (
-      <g className="candlestick-series">
-        {chartData.map((candle, index) => {
-          const color = candle.isGreen ? "#10b981" : "#ef4444";
-          let x = xScale(candle.timestamp);
-          
-          if (x === undefined || x === null || isNaN(x)) {
-            // Fallback: calculate x position manually
-            const chartArea = chartWidth - 50;
-            x = 20 + (index / chartData.length) * chartArea;
-          }
-          
-          const highY = yScale(candle.high);
-          const lowY = yScale(candle.low);
-          const openY = yScale(candle.open);
-          const closeY = yScale(candle.close);
-          
-          // Validate Y values
-          if (isNaN(highY) || isNaN(lowY) || isNaN(openY) || isNaN(closeY)) {
-            return null;
-          }
-          
-          const bodyTop = Math.min(openY, closeY);
-          const bodyBottom = Math.max(openY, closeY);
-          const bodyHeight = Math.max(bodyBottom - bodyTop, 1);
-          
-          const candleWidth = Math.max(bandwidth * 0.7, 4);
-          const centerX = x + bandwidth / 2;
-          
-          return (
-            <g key={`candle-${index}`}>
-              {/* Wick (high to low) */}
-              <line
-                x1={centerX}
-                y1={highY}
-                x2={centerX}
-                y2={lowY}
-                stroke={color}
-                strokeWidth={1}
-              />
-              {/* Body */}
-              <rect
-                x={centerX - candleWidth / 2}
-                y={bodyTop}
-                width={candleWidth}
-                height={bodyHeight}
-                fill={color}
-                stroke={color}
-                strokeWidth={1}
-              />
-            </g>
-          );
-        })}
-      </g>
-    );
-  };
-
-  // Custom Trade Zones renderer - shows entry→exit rectangles with TP (green) and SL (red) zones
+  // Custom Trade Lines renderer - shows horizontal lines at entry and exit prices
+  // Blue lines for profitable trades, red lines for losing trades
   const TradeZonesRenderer = (props: any) => {
     const { xAxisMap, yAxisMap, width: chartWidth } = props;
     
-    if (!xAxisMap || !yAxisMap || chartData.length === 0 || completedTrades.length === 0) {
+    if (!xAxisMap || !yAxisMap || completedTrades.length === 0) {
       return null;
     }
     
@@ -417,10 +285,8 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
     
     // Create a map of timestamps to chart indices for faster lookup
     const timestampToIndex = new Map<string, number>();
-    chartData.forEach((candle, index) => {
-      // Store both the display timestamp and the original date
-      timestampToIndex.set(candle.timestamp, index);
-      timestampToIndex.set(candle.date, index);
+    signals.forEach((signal, index) => {
+      timestampToIndex.set(signal.timestamp, index);
     });
     
     // Calculate bandwidth
@@ -429,11 +295,11 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
       bandwidth = xScale.bandwidth();
     } else {
       const chartArea = chartWidth - 50;
-      bandwidth = Math.max(chartArea / chartData.length, 4);
+      bandwidth = Math.max(chartArea / signals.length, 4);
     }
     
     return (
-      <g className="trade-zones">
+      <g className="trade-lines">
         {completedTrades.map((trade, index) => {
           // Find entry and exit candle indices
           const entryTimestamp = new Date(trade.entryTime).toLocaleTimeString();
@@ -488,10 +354,6 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
             exitX = 20 + (exitIndex / chartData.length) * chartArea;
           }
           
-          // Rectangle spans from entry to exit on X-axis
-          const rectX = entryX;
-          const rectWidth = Math.max(exitX - entryX + bandwidth, bandwidth);
-          
           // Y positions based on entry and exit prices
           const entryY = yScale(trade.entryPrice);
           const exitY = yScale(trade.exitPrice);
@@ -499,54 +361,46 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
           if (isNaN(entryY) || isNaN(exitY)) return null;
           
           const isWinningTrade = trade.pnl > 0;
-          const isLong = trade.size > 0;
           
-          // For a long trade:
-          //   - If winning: price went up, so green zone from entry to exit (above entry)
-          //   - If losing: price went down, so red zone from entry to exit (below entry)
-          // For a short trade:
-          //   - If winning: price went down, so green zone from entry to exit (below entry)
-          //   - If losing: price went up, so red zone from entry to exit (above entry)
+          // Blue for profitable trades, red for losing trades
+          const tradeColor = isWinningTrade ? "#3b82f6" : "#ef4444";
           
-          const topY = Math.min(entryY, exitY);
-          const height = Math.abs(exitY - entryY);
-          
-          // Determine colors based on trade outcome
-          const fillColor = isWinningTrade ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)";
-          const strokeColor = isWinningTrade ? "#10b981" : "#ef4444";
+          // Line spans from entry to exit on X-axis
+          const lineStartX = entryX + bandwidth / 2;
+          const lineEndX = exitX + bandwidth / 2;
           
           return (
-            <g key={`trade-zone-${index}`}>
-              {/* Trade zone rectangle */}
-              <rect
-                x={rectX}
-                y={topY}
-                width={rectWidth}
-                height={Math.max(height, 2)}
-                fill={fillColor}
-                stroke={strokeColor}
-                strokeWidth={1}
-                strokeDasharray="4 2"
-                opacity={0.7}
-              />
-              {/* Entry line */}
+            <g key={`trade-line-${index}`}>
+              {/* Entry price horizontal line */}
               <line
-                x1={rectX}
+                x1={lineStartX}
                 y1={entryY}
-                x2={rectX + rectWidth}
+                x2={lineEndX}
                 y2={entryY}
-                stroke="#3b82f6"
+                stroke={tradeColor}
                 strokeWidth={2}
-                strokeDasharray="4 2"
+                strokeOpacity={0.8}
               />
-              {/* Exit line */}
+              {/* Exit price horizontal line */}
               <line
-                x1={rectX}
+                x1={lineStartX}
                 y1={exitY}
-                x2={rectX + rectWidth}
+                x2={lineEndX}
                 y2={exitY}
-                stroke={strokeColor}
+                stroke={tradeColor}
                 strokeWidth={2}
+                strokeOpacity={0.8}
+              />
+              {/* Vertical line connecting entry and exit */}
+              <line
+                x1={lineEndX}
+                y1={entryY}
+                x2={lineEndX}
+                y2={exitY}
+                stroke={tradeColor}
+                strokeWidth={1.5}
+                strokeOpacity={0.6}
+                strokeDasharray="3 3"
               />
               {/* Entry marker */}
               <circle
@@ -577,40 +431,29 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const isGreen = data.close >= data.open;
-      const formattedDate = new Date(data.date).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      
+      // Check if we have signal data
+      if (!data.price) {
+        return null;
+      }
+      
+      const typeColor = data.type === 'entry' 
+        ? (data.side === 'buy' ? 'text-green-500' : 'text-red-500')
+        : 'text-blue-500';
       
       return (
         <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="text-xs text-muted-foreground mb-2">{formattedDate}</p>
+          <p className="text-xs text-muted-foreground mb-2">{data.timestamp}</p>
           <div className="space-y-1 text-xs">
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Open:</span>
-              <span className="font-mono">${data.open.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">High:</span>
-              <span className="font-mono text-green-500">${data.high.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Low:</span>
-              <span className="font-mono text-red-500">${data.low.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Close:</span>
-              <span className={`font-mono ${isGreen ? "text-green-500" : "text-red-500"}`}>
-                ${data.close.toFixed(2)}
+              <span className="text-muted-foreground">Type:</span>
+              <span className={`font-mono font-semibold ${typeColor}`}>
+                {data.type.toUpperCase()} {data.side.toUpperCase()}
               </span>
             </div>
-            <div className="flex justify-between gap-4 pt-1 border-t border-border">
-              <span className="text-muted-foreground">Volume:</span>
-              <span className="font-mono">{data.volume.toLocaleString()}</span>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Price:</span>
+              <span className="font-mono">${data.price.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -775,12 +618,12 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
                 {completedTrades.length > 0 && (
                   <>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-green-500 bg-green-500/20 rounded" />
-                      <span>Win Zone</span>
+                      <div className="w-6 h-0.5 bg-blue-500 rounded" />
+                      <span>Profit Trade</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-red-500 bg-red-500/20 rounded" />
-                      <span>Loss Zone</span>
+                      <div className="w-6 h-0.5 bg-red-500 rounded" />
+                      <span>Loss Trade</span>
                     </div>
                   </>
                 )}
@@ -789,23 +632,23 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
           </div>
         </CardHeader>
         <CardContent>
-          {chartData.length === 0 ? (
+          {signals.length === 0 ? (
             <div className="w-full h-[400px] flex items-center justify-center bg-muted/20 rounded-lg border border-dashed border-muted-foreground/30">
               <div className="text-center space-y-2">
                 <Activity className="w-12 h-12 mx-auto text-muted-foreground/50" />
                 <p className="text-muted-foreground">
-                  {isStreaming ? "Waiting for candle data..." : "No chart data available"}
+                  {isStreaming ? "Waiting for trade signals..." : "No chart data available"}
                 </p>
                 {isStreaming && (
                   <p className="text-sm text-muted-foreground/70">
-                    Candles will appear as the backtest streams data
+                    Trade signals will appear as the backtest runs
                   </p>
                 )}
               </div>
             </div>
           ) : (
           <div ref={chartRef} className="w-full overflow-x-auto">
-            <ResponsiveContainer width="100%" height={450} minWidth={Math.max(800, chartData.length * 10 * zoomLevel)}>
+            <ResponsiveContainer width="100%" height={450} minWidth={800}>
               <ComposedChart data={chartData} margin={{ top: 30, right: 30, left: 20, bottom: 30 }}>
                 <defs>
                   {/* Arrow markers for buy/sell signals */}
@@ -849,36 +692,29 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
                 />
                 <Tooltip content={<CustomTooltip />} />
                 
-                {/* Trade zones - entry to exit rectangles */}
+                {/* Trade execution lines - horizontal lines showing entry and exit prices */}
                 <Customized component={TradeZonesRenderer} />
                 
-                {/* Candlesticks using Customized component */}
-                <Customized component={CandlestickSeries} />
-                
-                {/* Fallback close price line (visible if candlesticks don't render) */}
+                {/* Price line showing signal prices */}
                 <Line
                   type="monotone"
-                  dataKey="close"
+                  dataKey="price"
                   yAxisId="price"
                   stroke="#6366f1"
-                  strokeWidth={1}
+                  strokeWidth={2}
                   dot={false}
                   isAnimationActive={false}
-                  opacity={0.3}
                 />
-
+                
                 {/* Trade signal arrows */}
                 {signals.map((signal, index) => {
-                  const matchingCandle = chartData.find((c) => c.date === signal.timestamp);
-                  if (!matchingCandle) return null;
-
-                  // Position arrows above (buy) or below (sell) the candle
+                  // Position arrows at the signal price
                   const isEntry = signal.type === "entry";
                   const isBuy = signal.side === "buy";
-                  const offset = matchingCandle.high * 0.005; // 0.5% offset
+                  const offset = signal.price * 0.005; // 0.5% offset
                   const arrowY = isBuy 
-                    ? matchingCandle.low - offset 
-                    : matchingCandle.high + offset;
+                    ? signal.price - offset 
+                    : signal.price + offset;
                   
                   let color = "#3b82f6"; // blue for exits
                   let label = "✕";
@@ -896,7 +732,7 @@ export function RealtimeBacktestChart({ symbol, isStreaming, config, onComplete 
                   return (
                     <ReferenceDot
                       key={`signal-${index}`}
-                      x={matchingCandle.timestamp}
+                      x={new Date(signal.timestamp).toLocaleTimeString()}
                       y={arrowY}
                       yAxisId="price"
                       r={8}

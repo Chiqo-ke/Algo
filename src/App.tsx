@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import SessionExpirationHandler from "@/components/SessionExpirationHandler";
 import Dashboard from "./pages/Dashboard";
 import StrategyBuilder from "./pages/StrategyBuilder";
 import Strategy from "./pages/Strategy";
@@ -15,6 +16,7 @@ import Register from "./pages/Register";
 import ConnectionTest from "./pages/ConnectionTest";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import { DemoPage } from "./pages/Demo";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <SessionExpirationHandler />
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
@@ -67,6 +70,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/demo"
+              element={
+                <ProtectedRoute>
+                  <DemoPage />
                 </ProtectedRoute>
               }
             />
