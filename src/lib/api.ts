@@ -7,7 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://ps283t0p-8000
 function handleSessionExpired() {
   logger.auth.warn('Session expired - redirecting to login');
   
-  // Dispatch custom event for UI components to show notifications
+  // Dispatch custom event for UI components to show notifications 
   window.dispatchEvent(new CustomEvent('session-expired', {
     detail: { message: 'Your session has expired. Please log in again.' }
   }));
@@ -35,6 +35,8 @@ export const API_ENDPOINTS = {
     refresh: `${API_BASE_URL}/auth/token/refresh/`,
     user: `${API_BASE_URL}/auth/user/me/`,
     changePassword: `${API_BASE_URL}/auth/change-password/`,
+    googleAuth: `${API_BASE_URL}/auth/google/`,
+    googleCallback: `${API_BASE_URL}/auth/google/callback/`,
     profile: `${API_BASE_URL}/auth/profiles/me/`,
     profiles: `${API_BASE_URL}/auth/profiles/`,
     profileDetail: (id: number) => `${API_BASE_URL}/auth/profiles/${id}/`,
