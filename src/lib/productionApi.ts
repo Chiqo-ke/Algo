@@ -13,7 +13,8 @@
 
 import { logger } from './logger';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Use environment variable, fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const PRODUCTION_API = `${API_BASE_URL}/api/production`;
 
 // Handle session expiration - redirect to login and clear tokens
@@ -97,7 +98,7 @@ export const validateStrategySchema = async (
         duration
       });
     } else {
-      logger.production.warn("Schema validation failed", undefined, { 
+      logger.production.warn("Schema validation failed", { 
         strategyName: strategyData.name,
         errors: data.errors,
         duration
@@ -159,7 +160,7 @@ export const validateCodeSafety = async (
         duration
       });
     } else {
-      logger.production.warn("Code safety validation failed", undefined, { 
+      logger.production.warn("Code safety validation failed", { 
         codeLength: code.length,
         issuesCount: data.issues?.length,
         severity: data.severity,
