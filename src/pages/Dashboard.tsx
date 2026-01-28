@@ -1088,11 +1088,7 @@ export default function Dashboard() {
         "Implement position sizing based on volatility"
       ]
     : [
-        "How is my Momentum Scalper performing?",
-        "What's the best time to run my bots?",
-        "Why did my RSI bot make that last trade?",
-        "Optimize my bot settings for better performance",
-        "Show me risk analysis for current positions"
+        "Create a simple ema crossover strategy that use 30 and 50 ema for entries. The take profit should be set 40 pips from entry and stop loss 10 pips from entry."
       ];
 
   return (
@@ -1116,30 +1112,6 @@ export default function Dashboard() {
               <span>
                 Conversation memory active • {messageCount} messages • Session: {sessionId.substring(0, 12)}...
               </span>
-            </div>
-          )}
-          
-          {/* Production Health Indicator */}
-          {productionHealth && (
-            <div className="mt-3 flex items-center justify-center gap-2">
-              <div className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border",
-                ProductionAPI.isProductionHealthy(productionHealth) 
-                  ? "bg-green-500/10 border-green-500/30 text-green-700"
-                  : productionHealth.overall === 'degraded'
-                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-700"
-                  : "bg-red-500/10 border-red-500/30 text-red-700"
-              )}>
-                <span className={cn(
-                  "w-2 h-2 rounded-full",
-                  ProductionAPI.isProductionHealthy(productionHealth) ? "bg-green-500" :
-                  productionHealth.overall === 'degraded' ? "bg-yellow-500" : "bg-red-500"
-                )} />
-                Production System: {productionHealth.overall.toUpperCase()}
-                {productionHealth.error && (
-                  <span className="ml-1 opacity-75">• {productionHealth.error}</span>
-                )}
-              </div>
             </div>
           )}
         </div>
