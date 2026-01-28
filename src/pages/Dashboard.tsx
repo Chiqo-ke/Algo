@@ -1096,18 +1096,18 @@ export default function Dashboard() {
       <div className="flex flex-col h-full p-4 gap-4 overflow-y-auto">
         {/* Header */}
         <div className="text-center flex-shrink-0">
-          <h1 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
-            <Sparkles className="w-6 h-6" />
+          <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+            <Sparkles className="w-7 h-7" />
             {strategyName}
           </h1>
           {editMode && (
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="text-muted-foreground mt-1 text-sm">
               Editing strategy - Ask AI to help improve and optimize
             </p>
           )}
           {/* Conversation Memory Indicator */}
           {sessionId && (
-            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <div className="mt-2 flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <span>
                 Conversation memory active • {messageCount} messages • Session: {sessionId.substring(0, 12)}...
@@ -1120,13 +1120,13 @@ export default function Dashboard() {
         <div className="flex-1 flex flex-col min-h-0">
           {!hasStartedChat && (
             <div className="text-center mb-6 space-y-3">
-              <div className="w-10 h-10 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
+              <div className="w-12 h-12 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-primary-foreground" />
               </div>
-              <h2 className="text-lg font-bold text-foreground">
+              <h2 className="text-xl font-bold text-foreground">
                 {editMode ? `Edit ${strategyName}` : "Ask AI about your trading"}
               </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-xs">
+              <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
                 {editMode 
                   ? "Describe the changes you want to make to your strategy. I can help optimize parameters, add new indicators, or improve risk management."
                   : "Get insights about your portfolio performance, optimize your bots, or analyze market conditions. Ask about strategy adjustments, risk management, or any trading questions you have."}
@@ -1134,17 +1134,19 @@ export default function Dashboard() {
               
               {/* Example Questions - Hide when user starts typing */}
               {!input && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 max-w-xl mx-auto">
-                  {exampleQuestions.map((question, i) => (
-                    <Button
-                      key={i}
-                      variant="outline"
-                      className="h-auto p-2 text-left justify-start hover:bg-secondary text-[10px]"
-                      onClick={() => setInput(question)}
-                    >
-                      <span>{question}</span>
-                    </Button>
-                  ))}
+                <div className="flex justify-center mt-6">
+                  <div className="grid grid-cols-1 gap-3 max-w-2xl w-full">
+                    {exampleQuestions.map((question, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        className="h-auto p-4 text-center justify-center hover:bg-primary/20 text-sm whitespace-normal bg-primary/10 border-primary/30 transition-all"
+                        onClick={() => setInput(question)}
+                      >
+                        <span className="break-words">{question}</span>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1170,21 +1172,21 @@ export default function Dashboard() {
                   >
                     <div
                       className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                        "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
                         message.role === "assistant"
                           ? "bg-gradient-primary text-primary-foreground"
                           : "bg-secondary text-secondary-foreground"
                       )}
                     >
                       {message.role === "assistant" ? (
-                        <Sparkles className="w-3.5 h-3.5" />
+                        <Sparkles className="w-4 h-4" />
                       ) : (
-                        <span className="text-[10px] font-bold">U</span>
+                        <span className="text-sm font-bold">U</span>
                       )}
                     </div>
                     <div
                       className={cn(
-                        "flex-1 px-3 py-2.5 rounded-lg space-y-2",
+                        "flex-1 px-4 py-3 rounded-lg space-y-2 text-sm",
                         message.role === "assistant"
                           ? "bg-secondary text-secondary-foreground"
                           : "bg-primary text-primary-foreground"
@@ -1217,7 +1219,7 @@ export default function Dashboard() {
                         </div>
                       )}
                       
-                      <p className="text-[10px] opacity-60 mt-2">
+                      <p className="text-xs opacity-60 mt-2">
                         {message.timestamp.toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -1230,11 +1232,11 @@ export default function Dashboard() {
                 {/* Loading Indicator */}
                 {isLoading && (
                   <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <div className="w-10 h-10 rounded-full bg-gradient-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     </div>
-                    <div className="flex-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground">
-                      <p className="text-xs">Analyzing your strategy with AI...</p>
+                    <div className="flex-1 px-4 py-3 rounded-lg bg-secondary text-secondary-foreground">
+                      <p className="text-sm">Analyzing your strategy with AI...</p>
                     </div>
                   </div>
                 )}
@@ -1243,7 +1245,7 @@ export default function Dashboard() {
           )}
 
           {/* Input Area - Fixed at bottom */}
-          <div className="flex gap-2 pt-4 flex-shrink-0 max-w-xl mx-auto w-full">
+          <div className="flex gap-2 pt-4 mt-6 flex-shrink-0 max-w-xl mx-auto w-full">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -1256,17 +1258,17 @@ export default function Dashboard() {
               placeholder={editMode 
                 ? `Ask about editing ${strategyName}... (Shift+Enter for new line)`
                 : "Ask about your trading strategy, bots, or market analysis... (Shift+Enter for new line)"}
-              className="flex-1 min-h-[2.5rem] max-h-[12rem] resize-none overflow-y-auto"
+              className="flex-1 min-h-[4rem] max-h-[16rem] resize-none overflow-y-auto border-2 border-primary/40 focus:border-primary/60 shadow-sm shadow-primary/10 focus:shadow-md focus:shadow-primary/20 transition-all"
               disabled={isLoading}
               rows={1}
               style={{
                 height: 'auto',
-                minHeight: '2.5rem'
+                minHeight: '4rem'
               }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
-                target.style.height = Math.min(target.scrollHeight, 192) + 'px';
+                target.style.height = Math.min(target.scrollHeight, 256) + 'px';
               }}
             />
             <Button 
