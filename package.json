@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite --mode development",
+    "dev:prod": "vite --mode production",
     "build": "vite build",
     "build:analyze": "vite build && vite-bundle-visualizer",
     "build:dev": "vite build --mode development",
+    "build:prod": "vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview"
   },
