@@ -57,10 +57,16 @@ export default function AuthCallback() {
         if (data.access && data.refresh) {
           localStorage.setItem('access_token', data.access);
           localStorage.setItem('refresh_token', data.refresh);
+          
+          // Store user data if present
+          if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+          }
+          
           logger.auth.info("Google OAuth successful, tokens stored");
           
           // Redirect to dashboard
-          navigate('/dashboard');
+          window.location.href = '/dashboard';
         } else {
           throw new Error('Invalid response from server');
         }
