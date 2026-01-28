@@ -15,6 +15,7 @@ import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
+import Legal from "./pages/Legal";
 
 // Lazy load non-critical pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/legal" element={<Legal />} />
               <Route path="/test-connection" element={<ConnectionTest />} />
               <Route
                 path="/dashboard"
