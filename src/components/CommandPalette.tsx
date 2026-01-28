@@ -12,7 +12,6 @@ import {
   Sparkles, 
   FlaskConical, 
   Bot, 
-  BarChart3, 
   GraduationCap, 
   Settings 
 } from "lucide-react";
@@ -27,7 +26,6 @@ const commands = [
   { icon: Sparkles, label: "AI Strategy Builder", path: "/strategy-builder", keywords: ["create", "build", "ai"] },
   { icon: FlaskConical, label: "Backtesting", path: "/backtesting", keywords: ["test", "backtest", "historical"] },
   { icon: Bot, label: "Live Bots", path: "/live-bots", keywords: ["bots", "automation", "live"] },
-  { icon: BarChart3, label: "Analytics", path: "/analytics", keywords: ["stats", "metrics", "data"] },
   { icon: GraduationCap, label: "Learning Hub", path: "/learning", keywords: ["learn", "education", "tutorial"] },
   { icon: Settings, label: "Settings", path: "/settings", keywords: ["config", "preferences"] },
 ];

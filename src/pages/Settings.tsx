@@ -238,7 +238,7 @@ export default function Settings() {
 
           {/* Tabs */}
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 md:grid-cols-4">
+            <TabsList className="grid w-full grid-cols-4 md:grid-cols-5">
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="account">Account</TabsTrigger>
               <TabsTrigger value="security">Security</TabsTrigger>
