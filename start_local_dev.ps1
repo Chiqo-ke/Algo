@@ -39,6 +39,10 @@ if (-not (Test-Path "node_modules")) {
 }
 
 Write-Host ""
+Write-Host "🔧 Setting up local environment..." -ForegroundColor Cyan
+Write-Host "   Loading .env.local for development..." -ForegroundColor Yellow
+
+Write-Host ""
 Write-Host "=" * 60 -ForegroundColor Cyan
 Write-Host "  🌐 Starting Vite Development Server" -ForegroundColor Cyan
 Write-Host "=" * 60 -ForegroundColor Cyan
@@ -46,8 +50,11 @@ Write-Host ""
 Write-Host "   Local:   http://localhost:8080" -ForegroundColor Green
 Write-Host "   Network: Use your local IP address" -ForegroundColor Green
 Write-Host ""
+Write-Host "   Backend API: http://localhost:8000/api" -ForegroundColor Yellow
+Write-Host "   Make sure backend is running!" -ForegroundColor Yellow
+Write-Host ""
 Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Gray
 Write-Host ""
 
-# Start Vite dev server with local environment
-npm run dev -- --mode development
+# Start Vite dev server (automatically uses .env.local in development)
+npm run dev
