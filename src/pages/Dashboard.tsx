@@ -1093,7 +1093,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout hideAssistant={true}>
-      <div className="flex flex-col h-full p-2 sm:p-4 md:p-6 gap-2 sm:gap-4 overflow-y-auto">
+      <div className="flex flex-col h-full p-2 sm:p-4 md:p-6 gap-1 sm:gap-4">
         {/* Header */}
         <div className="text-center flex-shrink-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
@@ -1117,9 +1117,9 @@ export default function Dashboard() {
         </div>
 
         {/* Chat Area - Fills available space */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {!hasStartedChat && (
-            <div className="text-center mb-4 sm:mb-6 space-y-2 sm:space-y-3 px-2">
+            <div className="flex flex-col justify-center flex-1 text-center space-y-2 sm:space-y-3 px-2 pb-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
                 <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
               </div>
@@ -1134,7 +1134,7 @@ export default function Dashboard() {
               
               {/* Example Questions - Hide when user starts typing */}
               {!input && (
-                <div className="flex justify-center mt-4 sm:mt-6 px-2">
+                <div className="flex justify-center mt-3 sm:mt-6 px-2">
                   <div className="grid grid-cols-1 gap-2 sm:gap-3 max-w-2xl w-full">
                     {exampleQuestions.map((question, i) => (
                       <Button
@@ -1186,7 +1186,7 @@ export default function Dashboard() {
                     </div>
                     <div
                       className={cn(
-                        "flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-lg space-y-2 text-xs sm:text-sm",
+                        "flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-lg space-y-2 text-xs sm:text-sm overflow-hidden break-words",
                         message.role === "assistant"
                           ? "bg-secondary text-secondary-foreground"
                           : "bg-primary text-primary-foreground"
@@ -1244,46 +1244,48 @@ export default function Dashboard() {
             </ScrollArea>
           )}
 
-          {/* Input Area - Fixed at bottom */}
-          <div className="flex gap-2 pt-3 sm:pt-4 mt-4 sm:mt-6 flex-shrink-0 max-w-xl mx-auto w-full px-2 sm:px-0">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !isLoading) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              placeholder={editMode 
-                ? `Ask about editing ${strategyName}... (Shift+Enter for new line)`
-                : "Ask about your trading strategy, bots, or market analysis... (Shift+Enter for new line)"}
-              className="flex-1 min-h-[4rem] max-h-[16rem] resize-none overflow-y-auto border-2 border-primary/40 focus:border-primary/60 shadow-sm shadow-primary/10 focus:shadow-md focus:shadow-primary/20 transition-all"
-              disabled={isLoading}
-              rows={1}
-              style={{
-                height: 'auto',
-                minHeight: '4rem'
-              }}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                target.style.height = Math.min(target.scrollHeight, 256) + 'px';
-              }}
-            />
-            <Button 
-              onClick={handleSendMessage} 
-              size="icon" 
-              className="bg-gradient-primary"
-              disabled={isLoading || !input.trim()}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
+          {/* Input Area - Fixed at bottom - Hide when loading */}
+          {!isLoading && (
+            <div className="flex gap-2 pt-2 sm:pt-4 mt-auto flex-shrink-0 max-w-xl mx-auto w-full px-2 sm:px-0 pb-2 sm:pb-0">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !isLoading) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder={editMode 
+                  ? `Ask about editing ${strategyName}... (Shift+Enter for new line)`
+                  : "Ask about your trading strategy, bots, or market analysis... (Shift+Enter for new line)"}
+                className="flex-1 min-h-[4rem] max-h-[16rem] resize-none overflow-y-auto border-2 border-primary/40 focus:border-primary/60 shadow-sm shadow-primary/10 focus:shadow-md focus:shadow-primary/20 transition-all scrollbar-hide"
+                disabled={isLoading}
+                rows={1}
+                style={{
+                  height: 'auto',
+                  minHeight: '4rem'
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = Math.min(target.scrollHeight, 256) + 'px';
+                }}
+              />
+              <Button 
+                onClick={handleSendMessage} 
+                size="icon" 
+                className="bg-gradient-primary"
+                disabled={isLoading || !input.trim()}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
