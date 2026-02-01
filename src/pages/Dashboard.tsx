@@ -1093,10 +1093,10 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout hideAssistant={true}>
-      <div className="flex flex-col h-full p-4 gap-4 overflow-y-auto">
+      <div className="flex flex-col h-full p-2 sm:p-4 md:p-6 gap-2 sm:gap-4 overflow-y-auto">
         {/* Header */}
         <div className="text-center flex-shrink-0">
-          <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
             <Sparkles className="w-7 h-7" />
             {strategyName}
           </h1>
@@ -1107,9 +1107,9 @@ export default function Dashboard() {
           )}
           {/* Conversation Memory Indicator */}
           {sessionId && (
-            <div className="mt-2 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div className="mt-2 flex items-center justify-center gap-2 text-xs sm:text-sm text-muted-foreground px-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span>
+              <span className="text-center">
                 Conversation memory active • {messageCount} messages • Session: {sessionId.substring(0, 12)}...
               </span>
             </div>
@@ -1119,14 +1119,14 @@ export default function Dashboard() {
         {/* Chat Area - Fills available space */}
         <div className="flex-1 flex flex-col min-h-0">
           {!hasStartedChat && (
-            <div className="text-center mb-6 space-y-3">
-              <div className="w-12 h-12 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-primary-foreground" />
+            <div className="text-center mb-4 sm:mb-6 space-y-2 sm:space-y-3 px-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
               </div>
-              <h2 className="text-xl font-bold text-foreground">
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">
                 {editMode ? `Edit ${strategyName}` : "Ask AI about your trading"}
               </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
+              <p className="text-muted-foreground max-w-2xl mx-auto text-xs sm:text-sm px-2">
                 {editMode 
                   ? "Describe the changes you want to make to your strategy. I can help optimize parameters, add new indicators, or improve risk management."
                   : "Get insights about your portfolio performance, optimize your bots, or analyze market conditions. Ask about strategy adjustments, risk management, or any trading questions you have."}
@@ -1134,13 +1134,13 @@ export default function Dashboard() {
               
               {/* Example Questions - Hide when user starts typing */}
               {!input && (
-                <div className="flex justify-center mt-6">
-                  <div className="grid grid-cols-1 gap-3 max-w-2xl w-full">
+                <div className="flex justify-center mt-4 sm:mt-6 px-2">
+                  <div className="grid grid-cols-1 gap-2 sm:gap-3 max-w-2xl w-full">
                     {exampleQuestions.map((question, i) => (
                       <Button
                         key={i}
                         variant="outline"
-                        className="h-auto p-4 text-center justify-center hover:bg-primary/20 text-sm whitespace-normal bg-primary/10 border-primary/30 transition-all"
+                        className="h-auto p-3 sm:p-4 text-center justify-center hover:bg-primary/20 text-xs sm:text-sm whitespace-normal bg-primary/10 border-primary/30 transition-all"
                         onClick={() => setInput(question)}
                       >
                         <span className="break-words">{question}</span>
@@ -1154,8 +1154,8 @@ export default function Dashboard() {
 
           {/* Messages Area - Scrollable */}
           {messages.length > 0 && (
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-4 pb-4 max-w-xl mx-auto">
+            <ScrollArea className="flex-1 pr-2 sm:pr-4">
+              <div className="space-y-3 sm:space-y-4 pb-4 max-w-xl mx-auto px-2 sm:px-0">
                 {/* Active Workflow Progress (shown while loading) */}
                 {isLoading && currentWorkflow && (
                   <div className="sticky top-0 z-10 mb-4">
@@ -1166,13 +1166,13 @@ export default function Dashboard() {
                   <div
                     key={message.id}
                     className={cn(
-                      "flex gap-3",
+                      "flex gap-2 sm:gap-3",
                       message.role === "user" ? "flex-row-reverse" : "flex-row"
                     )}
                   >
                     <div
                       className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0",
                         message.role === "assistant"
                           ? "bg-gradient-primary text-primary-foreground"
                           : "bg-secondary text-secondary-foreground"
@@ -1186,7 +1186,7 @@ export default function Dashboard() {
                     </div>
                     <div
                       className={cn(
-                        "flex-1 px-4 py-3 rounded-lg space-y-2 text-sm",
+                        "flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-lg space-y-2 text-xs sm:text-sm",
                         message.role === "assistant"
                           ? "bg-secondary text-secondary-foreground"
                           : "bg-primary text-primary-foreground"
@@ -1231,12 +1231,12 @@ export default function Dashboard() {
                 
                 {/* Loading Indicator */}
                 {isLoading && (
-                  <div className="flex gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="flex gap-2 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                     </div>
-                    <div className="flex-1 px-4 py-3 rounded-lg bg-secondary text-secondary-foreground">
-                      <p className="text-sm">Analyzing your strategy with AI...</p>
+                    <div className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-lg bg-secondary text-secondary-foreground">
+                      <p className="text-xs sm:text-sm">Analyzing your strategy with AI...</p>
                     </div>
                   </div>
                 )}
@@ -1245,7 +1245,7 @@ export default function Dashboard() {
           )}
 
           {/* Input Area - Fixed at bottom */}
-          <div className="flex gap-2 pt-4 mt-6 flex-shrink-0 max-w-xl mx-auto w-full">
+          <div className="flex gap-2 pt-3 sm:pt-4 mt-4 sm:mt-6 flex-shrink-0 max-w-xl mx-auto w-full px-2 sm:px-0">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -1289,18 +1289,18 @@ export default function Dashboard() {
 
       {/* Strategy Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-2xl">
               <FileCheck className="w-6 h-6 text-primary" />
               Review & Name Your Strategy
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Give your strategy a name and review how it will be saved. Make sure all the details look correct before proceeding.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto py-4">
+          <div className="flex-1 overflow-y-auto py-2 sm:py-4">
             {confirmationData && (
               <div className="space-y-4">
                 {/* Editable Strategy Name */}
@@ -1332,13 +1332,13 @@ export default function Dashboard() {
                 </div>
 
                 {/* Backtest Configuration Section */}
-                <div className="space-y-3 p-4 bg-secondary/50 rounded-lg border border-border">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-primary" />
+                <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-secondary/50 rounded-lg border border-border">
+                  <h3 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                     Backtest Configuration
                   </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                     {/* Symbol */}
                     <div className="space-y-1.5">
                       <Label htmlFor="backtest-symbol" className="text-xs">Symbol/Ticker</Label>
@@ -1400,18 +1400,19 @@ export default function Dashboard() {
             )}
           </div>
 
-          <DialogFooter className="flex-shrink-0 gap-2">
+          <DialogFooter className="flex-shrink-0 gap-2 flex-col sm:flex-row">
             <Button
               variant="outline"
               onClick={() => setShowConfirmDialog(false)}
               disabled={isProceedingToNext}
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               Go Back & Edit
             </Button>
             <Button
               onClick={handleConfirmAndProceed}
               disabled={isProceedingToNext}
-              className="bg-gradient-primary shadow-glow group"
+              className="bg-gradient-primary shadow-glow group w-full sm:w-auto text-xs sm:text-sm"
             >
               {isProceedingToNext ? (
                 <>
@@ -1432,7 +1433,7 @@ export default function Dashboard() {
 
       {/* Sandbox Test Results Dialog */}
       <Dialog open={showSandboxTest} onOpenChange={setShowSandboxTest}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl md:max-w-4xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
@@ -1542,7 +1543,7 @@ export default function Dashboard() {
 
       {/* Backtest Results Dialog */}
       <Dialog open={showBacktestDialog} onOpenChange={setShowBacktestDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl md:max-w-4xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />

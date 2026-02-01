@@ -1,6 +1,13 @@
 import { Check, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const PricingSection = () => {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    // Navigate to dashboard - ProtectedRoute will redirect to login if not authenticated
+    navigate('/dashboard');
+  };
   const tiers = [
     {
       name: "Free Trial",
@@ -8,14 +15,15 @@ export const PricingSection = () => {
       price: "Free",
       period: "",
       features: [
-        "Up to 3 strategies",
-        "Limited to Forex & Crypto markets",
-        "Sample datasets",
-        "Basic backtesting",
-        "Performance reports"
+      "Up to 3 strategies",
+      "Limited to Forex & Crypto markets",
+      "Sample datasets",
+      "Basic backtesting",
+      "Performance reports"
       ],
       cta: "Start Free Trial",
-      highlighted: false
+      highlighted: false,
+      link: "/dashboard"
     },
     {
       name: "Builder",
@@ -23,18 +31,19 @@ export const PricingSection = () => {
       price: "$5",
       period: "per month",
       features: [
-        "Unlimited strategies",
-        "All markets (Forex, Crypto, Equities)",
-        "Full historical data access",
-        "Advanced backtesting",
-        "Strategy versioning",
-        "Export & collaboration",
-        "Email support"
+      "Unlimited strategies",
+      "All markets (Forex, Crypto, Equities)",
+      "Full historical data access",
+      "Advanced backtesting",
+      "Strategy versioning",
+      "Export & collaboration",
+      "Email support"
       ],
       cta: "Get Started",
-      highlighted: true
+      highlighted: true,
+      link: "/dashboard"
     }
-  ];
+    ];
 
   return (
     <section className="py-16 md:py-24 bg-gray-900 relative overflow-hidden">
@@ -162,6 +171,7 @@ export const PricingSection = () => {
                   </ul>
 
                   <button
+                    onClick={handleGetStarted}
                     className={`w-full py-3 px-6 rounded-lg font-display font-semibold transition-all duration-300 relative overflow-hidden group/btn ${
                       tier.highlighted
                         ? 'bg-white text-gray-900 hover:bg-gray-100 shadow-lg'

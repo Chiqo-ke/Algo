@@ -33,7 +33,7 @@ export const DashboardLayout = ({ children, hideAssistant = false }: DashboardLa
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-auto pb-24 md:pb-0">
+      <main className="flex-1 overflow-auto pb-20 sm:pb-24 md:pb-0">
         {children}
       </main>
 
