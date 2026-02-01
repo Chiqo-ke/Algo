@@ -78,8 +78,8 @@ export const PersonasSection = () => {
                 {/* Icon container with enhanced animation */}
                 <div className="relative mx-auto mb-4">
                   <div className={`absolute inset-0 bg-gradient-to-br ${persona.color} opacity-20 rounded-full blur-md group-hover:blur-lg transition-all`} />
-                  <div className="relative w-16 h-16 rounded-full bg-teal-500/10 border-2 border-teal-500/30 flex items-center justify-center text-teal-400 mx-auto group-hover:scale-110 group-hover:border-teal-500/50 transition-all duration-300">
-                    <persona.icon className="w-8 h-8 group-hover:rotate-6 transition-transform" />
+                  <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-teal-500/10 border-2 border-teal-500/30 flex items-center justify-center text-teal-400 mx-auto group-hover:scale-110 group-hover:border-teal-500/50 transition-all duration-300">
+                    <persona.icon className="w-6 h-6 md:w-8 md:h-8 group-hover:rotate-6 transition-transform" />
                   </div>
                 </div>
                 

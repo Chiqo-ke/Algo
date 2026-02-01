@@ -108,7 +108,7 @@ export const AIAssistantPanel = ({ onClose }: AIAssistantPanelProps) => {
             <div
               key={message.id}
               className={cn(
-                "flex gap-3",
+                "flex gap-3 max-w-full",
                 message.role === "user" ? "flex-row-reverse" : "flex-row"
               )}
             >
@@ -128,13 +128,13 @@ export const AIAssistantPanel = ({ onClose }: AIAssistantPanelProps) => {
               </div>
               <div
                 className={cn(
-                  "flex-1 px-4 py-2 rounded-lg",
+                  "flex-1 px-4 py-2 rounded-lg max-w-full overflow-hidden",
                   message.role === "assistant"
                     ? "bg-secondary text-secondary-foreground"
                     : "bg-primary text-primary-foreground"
                 )}
               >
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
                 <p className="text-xs opacity-60 mt-1">
                   {message.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",

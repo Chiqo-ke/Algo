@@ -107,10 +107,10 @@ export const LandingFeatures = () => {
                   <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-teal-500/20 rounded-bl-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                   
                   {/* Icon container with enhanced animation */}
-                  <div className="relative w-14 h-14 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-4 group-hover:scale-110 group-hover:border-teal-500/40 transition-all duration-300 overflow-hidden">
+                  <div className="relative w-10 h-10 md:w-14 md:h-14 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-4 group-hover:scale-110 group-hover:border-teal-500/40 transition-all duration-300 overflow-hidden">
                     {/* Shimmer effect on hover */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-teal-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    <feature.icon className="w-7 h-7 relative z-10 group-hover:rotate-6 transition-transform" />
+                    <feature.icon className="w-5 h-5 md:w-7 md:h-7 relative z-10 group-hover:rotate-6 transition-transform" />
                   </div>
                   
                   <h3 className="text-lg font-display font-bold text-white mb-2 relative z-10">

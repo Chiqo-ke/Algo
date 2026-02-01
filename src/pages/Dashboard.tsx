@@ -1126,7 +1126,7 @@ export default function Dashboard() {
               <h2 className="text-lg sm:text-xl font-bold text-foreground">
                 {editMode ? `Edit ${strategyName}` : "Ask AI about your trading"}
               </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-xs sm:text-sm px-2">
+              <p className="text-muted-foreground w-full text-xs sm:text-sm px-2">
                 {editMode 
                   ? "Describe the changes you want to make to your strategy. I can help optimize parameters, add new indicators, or improve risk management."
                   : "Get insights about your portfolio performance, optimize your bots, or analyze market conditions. Ask about strategy adjustments, risk management, or any trading questions you have."}
@@ -1135,7 +1135,7 @@ export default function Dashboard() {
               {/* Example Questions - Hide when user starts typing */}
               {!input && (
                 <div className="flex justify-center mt-3 sm:mt-6 px-2">
-                  <div className="grid grid-cols-1 gap-2 sm:gap-3 max-w-2xl w-full">
+                  <div className="grid grid-cols-1 gap-2 sm:gap-3 w-full">
                     {exampleQuestions.map((question, i) => (
                       <Button
                         key={i}
@@ -1154,8 +1154,8 @@ export default function Dashboard() {
 
           {/* Messages Area - Scrollable */}
           {messages.length > 0 && (
-            <ScrollArea className="flex-1 pr-2 sm:pr-4">
-              <div className="space-y-3 sm:space-y-4 pb-4 max-w-xl mx-auto px-2 sm:px-0">
+            <ScrollArea className="flex-1 pr-2 sm:pr-4 [&>[data-radix-scroll-area-viewport]>div]:!block">
+              <div className="space-y-3 sm:space-y-4 pb-4 w-full px-2 sm:px-4 md:px-6 lg:px-8">
                 {/* Active Workflow Progress (shown while loading) */}
                 {isLoading && currentWorkflow && (
                   <div className="sticky top-0 z-10 mb-4">
@@ -1166,7 +1166,7 @@ export default function Dashboard() {
                   <div
                     key={message.id}
                     className={cn(
-                      "flex gap-2 sm:gap-3",
+                      "flex gap-2 sm:gap-3 min-w-0",
                       message.role === "user" ? "flex-row-reverse" : "flex-row"
                     )}
                   >
@@ -1186,11 +1186,12 @@ export default function Dashboard() {
                     </div>
                     <div
                       className={cn(
-                        "flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-lg space-y-2 text-xs sm:text-sm overflow-hidden break-words",
+                        "flex-1 min-w-0 max-w-full px-3 py-2 sm:px-4 sm:py-3 rounded-lg space-y-2 text-xs sm:text-sm overflow-hidden break-words message-content",
                         message.role === "assistant"
                           ? "bg-secondary text-secondary-foreground"
                           : "bg-primary text-primary-foreground"
                       )}
+                      style={{ wordBreak: 'normal', overflowWrap: 'break-word' }}
                     >
                       {/* Render markdown content */}
                       <MarkdownRenderer content={message.content} />
@@ -1231,12 +1232,12 @@ export default function Dashboard() {
                 
                 {/* Loading Indicator */}
                 {isLoading && (
-                  <div className="flex gap-2 sm:gap-3">
+                  <div className="flex gap-2 sm:gap-3 min-w-0">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
                       <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                     </div>
-                    <div className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-lg bg-secondary text-secondary-foreground">
-                      <p className="text-xs sm:text-sm">Analyzing your strategy with AI...</p>
+                    <div className="flex-1 min-w-0 max-w-full px-3 py-2 sm:px-4 sm:py-3 rounded-lg bg-secondary text-secondary-foreground">
+                      <p className="text-xs sm:text-sm break-words">Analyzing your strategy with AI...</p>
                     </div>
                   </div>
                 )}
@@ -1246,7 +1247,7 @@ export default function Dashboard() {
 
           {/* Input Area - Fixed at bottom - Hide when loading */}
           {!isLoading && (
-            <div className="flex gap-2 pt-2 sm:pt-4 mt-auto flex-shrink-0 max-w-xl mx-auto w-full px-2 sm:px-0 pb-2 sm:pb-0">
+            <div className="flex gap-2 pt-2 sm:pt-4 mt-auto flex-shrink-0 w-full px-2 sm:px-4 md:px-6 lg:px-8 pb-2 sm:pb-0">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

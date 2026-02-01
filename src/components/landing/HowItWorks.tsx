@@ -134,16 +134,19 @@ Only one trade should be open at a time.`
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-teal-500/30 rounded-tl-2xl" />
                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-teal-500/30 rounded-br-2xl" />
                     
-                    {/* Step number with enhanced styling */}
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-teal-500/20 border-2 border-teal-500/40 text-teal-400 font-display font-bold text-xl mb-6 relative group-hover:scale-110 transition-transform duration-300">
-                      {step.number}
-                      <div className="absolute inset-0 rounded-full bg-teal-500/20 animate-ping opacity-0 group-hover:opacity-75" />
-                    </div>
+                    {/* Step number and Icon - Horizontally aligned */}
+                    <div className="flex items-center gap-4 mb-6">
+                      {/* Step number with enhanced styling */}
+                      <div className="inline-flex items-center justify-center w-10 h-10 md:w-14 md:h-14 rounded-full bg-teal-500/20 border-2 border-teal-500/40 text-teal-400 font-display font-bold text-lg md:text-xl relative group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+                        {step.number}
+                        <div className="absolute inset-0 rounded-full bg-teal-500/20 animate-ping opacity-0 group-hover:opacity-75" />
+                      </div>
 
-                    {/* Icon with animated container */}
-                    <div className="w-16 h-16 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center mb-6 group-hover:border-teal-500/50 transition-all duration-300 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <step.icon className="w-8 h-8 text-teal-400 relative z-10 group-hover:scale-110 transition-transform" />
+                      {/* Icon with animated container */}
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center group-hover:border-teal-500/50 transition-all duration-300 relative overflow-hidden flex-shrink-0">
+                        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <step.icon className="w-6 h-6 md:w-8 md:h-8 text-teal-400 relative z-10 group-hover:scale-110 transition-transform" />
+                      </div>
                     </div>
 
                     {/* Content */}
@@ -196,14 +199,14 @@ Only one trade should be open at a time.`
             </button>
 
             {/* Modal content */}
-            <div className="p-8">
+            <div className="p-4 md:p-8">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-14 h-14 rounded-xl bg-teal-500/20 border-2 border-teal-500/40 flex items-center justify-center relative">
-                  <MessageSquare className="w-7 h-7 text-teal-400 relative z-10" />
+                <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl bg-teal-500/20 border-2 border-teal-500/40 flex items-center justify-center relative">
+                  <MessageSquare className="w-5 h-5 md:w-7 md:h-7 text-teal-400 relative z-10" />
                   <div className="absolute inset-0 rounded-xl bg-teal-500/10 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-display font-bold text-white">Strategy Example</h3>
+                  <h3 className="text-xl md:text-2xl font-display font-bold text-white">Strategy Example</h3>
                   <p className="text-sm text-teal-400 font-display">EMA Crossover Strategy</p>
                 </div>
               </div>

@@ -205,4 +205,19 @@ All colors MUST be HSL.
       -webkit-overflow-scrolling: touch;
     }
   }
+
+  /* Responsive word breaking for chat messages */
+  .message-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
+    max-width: 100%;
+  }
+
+  .message-content * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+  }
 }

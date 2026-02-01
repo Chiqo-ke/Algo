@@ -78,7 +78,7 @@ export const BenefitsSection = () => {
                 {/* Icon with animated container */}
                 <div className="relative">
                   <div className="absolute inset-0 bg-teal-400/20 rounded-full blur-md group-hover:blur-lg transition-all" />
-                  <CheckCircle2 className="w-6 h-6 text-teal-400 flex-shrink-0 mt-0.5 relative z-10 group-hover:scale-110 transition-transform" />
+                  <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 text-teal-400 flex-shrink-0 mt-0.5 relative z-10 group-hover:scale-110 transition-transform" />
                 </div>
                 
                 <p className="text-lg text-gray-300 group-hover:text-gray-200 transition-colors relative z-10">
