@@ -1,22 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, TrendingUp, Zap, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
 
-interface LandingHeroProps {
-  onDemoClick: () => void;
-}
-
-export const LandingHero = ({ onDemoClick }: LandingHeroProps) => {
+export const LandingHero = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
 
-  const handleDemoClick = () => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    } else {
-      navigate('/login');
-    }
+  const handleGetStarted = () => {
+    // Navigate to dashboard - ProtectedRoute will redirect to login if not authenticated
+    navigate('/dashboard');
   };
 
   return (
@@ -99,7 +90,7 @@ export const LandingHero = ({ onDemoClick }: LandingHeroProps) => {
               size="lg" 
               variant="outline" 
               className="w-full sm:w-auto text-base px-8 py-6 border-teal-500/50 text-teal-400 hover:bg-teal-500/10 hover:text-accent-foreground h-11 rounded-md font-display"
-              onClick={handleDemoClick}
+              onClick={handleGetStarted}
             >
               Get Started for Free
               <ArrowRight className="ml-2 w-5 h-5" />
