@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { API_ENDPOINTS } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function AuthCallback() {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({
             code,
             state,
@@ -46,12 +49,18 @@ export default function AuthCallback() {
           }),
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Authentication failed');
+          logger.auth.error("Google callback failed", new Error(data.detail || 'Authentication failed'));
+          throw new Error(data.detail || 'Authentication failed');
         }
 
-        const data = await response.json();
+        logger.auth.info("Google OAuth callback response received", { 
+          hasAccess: !!data.access, 
+          hasRefresh: !!data.refresh,
+          hasUser: !!data.user 
+        });
         
         // Store the tokens
         if (data.access && data.refresh) {
@@ -63,16 +72,20 @@ export default function AuthCallback() {
             localStorage.setItem('user', JSON.stringify(data.user));
           }
           
-          logger.auth.info("Google OAuth successful, tokens stored");
+          logger.auth.info("Google OAuth successful, tokens stored, redirecting to dashboard");
           
-          // Redirect to dashboard
-          window.location.href = '/dashboard';
+          // Force a reload to ensure auth context is updated
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 100);
         } else {
-          throw new Error('Invalid response from server');
+          logger.auth.error("Invalid response - missing tokens", new Error('Invalid response from server'));
+          throw new Error('Invalid response from server - missing authentication tokens');
         }
 
       } catch (err: any) {
         logger.auth.error("OAuth callback error", err);
+        console.error("Detailed OAuth error:", err);
         setError(err.message || "Authentication failed. Please try again.");
         setTimeout(() => navigate('/login'), 3000);
       }
