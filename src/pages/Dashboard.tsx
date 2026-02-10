@@ -378,7 +378,7 @@ export default function Dashboard() {
       if (editMode && strategyId) {
         // Update existing strategy with AI + conversation memory
         const result = await apiCall(
-          `${API_BASE_URL}/api/strategies/api/${strategyId}/update_strategy_with_ai/`,
+          `${API_BASE_URL}/strategies/api/${strategyId}/update_strategy_with_ai/`,
           {
             method: "PUT",
             body: JSON.stringify({
@@ -456,8 +456,8 @@ export default function Dashboard() {
       } else {
         // Create new strategy or validate with conversation memory
         const endpoint = editMode
-          ? `${API_BASE_URL}/api/strategies/api/create_strategy_with_ai/`
-          : `${API_BASE_URL}/api/strategies/api/validate_strategy_with_ai/`;
+          ? `${API_BASE_URL}/strategies/api/create_strategy_with_ai/`
+          : `${API_BASE_URL}/strategies/api/validate_strategy_with_ai/`;
 
         const payload = editMode
           ? {
@@ -705,7 +705,7 @@ export default function Dashboard() {
         try {
           // Use the new unified endpoint with Copilot support
           const codeGenResult = await apiCall(
-            `${API_BASE_URL}/api/strategies/api/generate_strategy_unified/`,
+            `${API_BASE_URL}/strategies/api/generate_strategy_unified/`,
             {
               method: "POST",
               body: JSON.stringify({
@@ -931,7 +931,7 @@ export default function Dashboard() {
         
         try {
           const codeGenResult = await apiCall(
-            `${API_BASE_URL}/api/strategies/api/generate_strategy_unified/`,
+            `${API_BASE_URL}/strategies/api/generate_strategy_unified/`,
             {
               method: "POST",
               body: JSON.stringify({
