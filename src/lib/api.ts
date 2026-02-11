@@ -13,7 +13,7 @@ function handleSessionExpired() {
     detail: { message: 'Your session has expired. Please log in again.' }
   }));
   
-  // Clear authentication tokens
+  // Clear authentication tokens part
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   
