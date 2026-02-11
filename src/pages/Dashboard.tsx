@@ -124,7 +124,7 @@ export default function Dashboard() {
   const [lifecycleData, setLifecycleData] = useState<ProductionAPI.LifecycleData | null>(null);
 
   // API base URL - adjust based on your environment
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
   // Convert canonical JSON to human-readable format
   const formatStrategyForConfirmation = (canonicalJson: any): string => {
@@ -663,7 +663,7 @@ export default function Dashboard() {
         if (editedStrategyName.trim() !== confirmationData.strategyName) {
           try {
             const updateResult = await apiCall(
-              `${API_BASE_URL}/api/strategies/api/strategies/${confirmationData.strategyId}/`,
+              `${API_BASE_URL}/strategies/strategies/${confirmationData.strategyId}/`,
               {
                 method: "PATCH",
                 body: JSON.stringify({
@@ -902,7 +902,7 @@ export default function Dashboard() {
         
         // If only validated, create the strategy now using the create_strategy endpoint
         const result = await apiCall(
-          `${API_BASE_URL}/api/strategies/api/create_strategy/`,
+          `${API_BASE_URL}/strategies/strategies/`,
           {
             method: "POST",
             body: JSON.stringify(payload),
