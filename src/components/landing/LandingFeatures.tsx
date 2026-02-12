@@ -27,7 +27,7 @@ export const LandingFeatures = () => {
     {
       icon: LineChart,
       title: "Transparent Performance Analysis",
-      description: "Review detailed reports including trade-by-trade history, drawdown, risk metrics, win rate, and expectancy. Understand why a strategy performs the way it does.",
+      description: "Review detailed reports including trade-by-trade history, drawdown, risk metrics, and win rate so you can understand why a strategy performs the way it does.",
       svgPattern: (
         <svg className="absolute top-0 right-0 w-32 h-32 opacity-5" viewBox="0 0 100 100">
           <path d="M10 80 L25 60 L40 70 L55 40 L70 50 L85 30" fill="none" stroke="currentColor" strokeWidth="2" className="text-teal-400" />

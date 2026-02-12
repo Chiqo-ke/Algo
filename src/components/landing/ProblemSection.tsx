@@ -61,12 +61,12 @@ export const ProblemSection = () => {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-8 bg-gradient-to-b from-transparent to-teal-500/50" />
             
             <h2 className="text-3xl md:text-4xl font-display font-bold text-white relative inline-block">
-              Why Algo Exists
+              Why Good Ideas Fail Without Discipline
               <div className="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal-500 to-transparent" />
             </h2>
             
             <p className="text-lg md:text-xl text-gray-300 leading-relaxed max-w-3xl mx-auto">
-              Many traders struggle not because they lack ideas, but because execution is inconsistent. Common challenges include fear, overconfidence, overtrading, revenge trading, and biased backtesting. Algo addresses these challenges by enforcing structure — converting your trading rules into systematic, repeatable processes that can be tested objectively.
+              Many traders struggle not because they lack ideas, but because execution is inconsistent. Fear, overconfidence, overtrading, revenge trading, and biased backtests can erode good strategies. AlgoAI enforces structure by converting your rules into systematic, repeatable processes that can be tested objectively before you commit real risk.
             </p>
             
             {/* Decorative bottom element */}
