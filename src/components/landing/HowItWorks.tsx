@@ -1,24 +1,22 @@
 import { MessageSquare, Code2, BarChart4, ArrowRight, X } from "lucide-react";
 import { useState } from "react";
 
-export const HowItWorks = () => {
-  const [showExample, setShowExample] = useState(false);
-  const steps = [
-    {
-      number: 1,
-      icon: MessageSquare,
-      title: "Describe your idea",
-      description: "Explain your trading rules in plain English — the same way you'd explain it to another trader.",
-      color: "from-blue-500 to-cyan-500",
-      svgElement: (
-        <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
-          <path d="M20 30 Q50 10 80 30 T80 70 Q50 90 20 70 Z" fill="none" stroke="currentColor" strokeWidth="1" className="text-blue-400" />
-          <circle cx="30" cy="40" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" />
-          <circle cx="50" cy="35" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" style={{ animationDelay: '0.3s' }} />
-          <circle cx="70" cy="40" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" style={{ animationDelay: '0.6s' }} />
-        </svg>
-      ),
-      example: `I want to create a simple EMA crossover trading strategy.
+export const howItWorksSteps = [
+  {
+    number: 1,
+    icon: MessageSquare,
+    title: "Describe your idea",
+    description: "Explain your trading rules in plain English, the same way you'd explain them to another trader.",
+    color: "from-blue-500 to-cyan-500",
+    svgElement: (
+      <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
+        <path d="M20 30 Q50 10 80 30 T80 70 Q50 90 20 70 Z" fill="none" stroke="currentColor" strokeWidth="1" className="text-blue-400" />
+        <circle cx="30" cy="40" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" />
+        <circle cx="50" cy="35" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" style={{ animationDelay: '0.3s' }} />
+        <circle cx="70" cy="40" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" style={{ animationDelay: '0.6s' }} />
+      </svg>
+    ),
+    example: `I want to create a simple EMA crossover trading strategy.
 
 Use two exponential moving averages:
 • One EMA with a period of 30
@@ -33,39 +31,42 @@ Risk management:
 • Set a take profit at 70 pips away from the entry price
 
 Only one trade should be open at a time.`
-    },
-    {
-      number: 2,
-      icon: Code2,
-      title: "Strategy construction",
-      description: "Algo converts your description into structured logic and prepares it for testing.",
-      color: "from-purple-500 to-pink-500",
-      svgElement: (
-        <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
-          <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400" />
-          <line x1="30" y1="35" x2="50" y2="35" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
-          <line x1="30" y1="45" x2="60" y2="45" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
-          <line x1="30" y1="55" x2="45" y2="55" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
-          <circle cx="70" cy="70" r="8" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400 animate-spin" style={{ animationDuration: '4s' }} />
-        </svg>
-      )
-    },
-    {
-      number: 3,
-      icon: BarChart4,
-      title: "Backtest and refine",
-      description: "Analyze historical performance, adjust rules if needed, and repeat the process. (Live execution will be optional and introduced later.)",
-      color: "from-orange-500 to-red-500",
-      svgElement: (
-        <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
-          <path d="M20 80 L30 60 L40 70 L50 40 L60 50 L70 30 L80 45" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-400" />
-          <circle cx="50" cy="40" r="4" fill="currentColor" className="text-red-400 animate-pulse" />
-          <line x1="20" y1="80" x2="80" y2="80" stroke="currentColor" strokeWidth="1" className="text-orange-400" />
-          <line x1="20" y1="80" x2="20" y2="20" stroke="currentColor" strokeWidth="1" className="text-orange-400" />
-        </svg>
-      )
-    }
-  ];
+  },
+  {
+    number: 2,
+    icon: Code2,
+    title: "Strategy construction",
+    description: "Algo converts your description into structured logic and prepares it for testing.",
+    color: "from-purple-500 to-pink-500",
+    svgElement: (
+      <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
+        <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400" />
+        <line x1="30" y1="35" x2="50" y2="35" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
+        <line x1="30" y1="45" x2="60" y2="45" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
+        <line x1="30" y1="55" x2="45" y2="55" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
+        <circle cx="70" cy="70" r="8" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400 animate-spin" style={{ animationDuration: '4s' }} />
+      </svg>
+    )
+  },
+  {
+    number: 3,
+    icon: BarChart4,
+    title: "Backtest and refine",
+    description: "Analyze historical performance, adjust rules if needed, and repeat. (Live execution will be optional and introduced later.)",
+    color: "from-orange-500 to-red-500",
+    svgElement: (
+      <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
+        <path d="M20 80 L30 60 L40 70 L50 40 L60 50 L70 30 L80 45" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-400" />
+        <circle cx="50" cy="40" r="4" fill="currentColor" className="text-red-400 animate-pulse" />
+        <line x1="20" y1="80" x2="80" y2="80" stroke="currentColor" strokeWidth="1" className="text-orange-400" />
+        <line x1="20" y1="80" x2="20" y2="20" stroke="currentColor" strokeWidth="1" className="text-orange-400" />
+      </svg>
+    )
+  }
+];
+
+export const HowItWorks = () => {
+  const [showExample, setShowExample] = useState(false);
 
   return (
     <section className="py-16 md:py-24 bg-gray-800 relative overflow-hidden">
@@ -96,7 +97,7 @@ Only one trade should be open at a time.`
               <div className="absolute inset-0 blur-2xl bg-teal-500/10 animate-glow" />
             </div>
             <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              From idea to tested bot in three simple steps
+              From idea to tested strategy in three clear steps
             </p>
             
             {/* Decorative elements */}
@@ -109,10 +110,10 @@ Only one trade should be open at a time.`
 
           {/* Steps with enhanced design */}
           <div className="grid md:grid-cols-3 gap-8 relative">
-            {steps.map((step, index) => (
+            {howItWorksSteps.map((step, index) => (
               <div key={index} className="relative">
                 {/* Connector arrow (desktop only) */}
-                {index < steps.length - 1 && (
+                {index < howItWorksSteps.length - 1 && (
                   <div className="hidden md:block absolute top-20 left-full w-full -ml-4 -mr-4 z-0">
                     <div className="relative flex items-center justify-center">
                       <div className="h-px w-full bg-gradient-to-r from-teal-500/50 to-teal-500/20" />
@@ -218,7 +219,7 @@ Only one trade should be open at a time.`
                 </div>
                 
                 <p className="text-gray-300 leading-relaxed whitespace-pre-line font-mono text-sm relative z-10">
-                  {steps[0].example}
+                  {howItWorksSteps[0].example}
                 </p>
               </div>
 

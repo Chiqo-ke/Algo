@@ -48,7 +48,7 @@ export const PersonasSection = () => {
           <div className="text-center mb-12 relative">
             <div className="inline-block relative">
               <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4 relative z-10">
-                Who Algo Agent Is Designed For
+                Who AlgoAI Is Designed For
               </h2>
               <div className="absolute inset-0 blur-2xl bg-purple-500/10 animate-glow" style={{ animationDelay: '0.3s' }} />
             </div>

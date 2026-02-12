@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { LandingHero } from "@/components/landing/LandingHero";
 import { ProblemSection } from "@/components/landing/ProblemSection";
-import { HowItWorks } from "@/components/landing/HowItWorks";
+import { HowItWorks, howItWorksSteps } from "@/components/landing/HowItWorks";
 import { LandingFeatures } from "@/components/landing/LandingFeatures";
 import { BenefitsSection } from "@/components/landing/BenefitsSection";
 import { PersonasSection } from "@/components/landing/PersonasSection";
-import { FAQSection } from "@/components/landing/FAQSection";
+import { FAQSection, landingFaqs } from "@/components/landing/FAQSection";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { DemoForm } from "@/components/landing/DemoForm";
 import { LandingFooter } from "@/components/landing/LandingFooter";
@@ -13,6 +13,30 @@ import { Helmet } from "react-helmet";
 
 const LandingPage = () => {
   const [demoOpen, setDemoOpen] = useState(false);
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: landingFaqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer
+      }
+    }))
+  };
+
+  const howToSchema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: "How to create a trading strategy in AlgoAI",
+    description: "Create a testable trading strategy in AlgoAI using plain-English rules.",
+    step: howItWorksSteps.map((step) => ({
+      "@type": "HowToStep",
+      name: step.title,
+      text: step.description
+    }))
+  };
 
   return (
     <>
@@ -20,7 +44,7 @@ const LandingPage = () => {
         <title>AlgoAI - AI Trading Agents | Automated Trading Platform</title>
         <meta 
           name="description" 
-          content="Build autonomous AI trading agents in plain English. AlgoAI is an agentic platform powered by artificial intelligence for automated trading. No coding required." 
+          content="Learn how to build AI trading strategies without coding. AlgoAI converts plain-English rules into testable strategies with transparent backtest metrics for Forex, crypto, and equities." 
         />
         
         {/* Structured Data - Software Application */}
@@ -73,6 +97,16 @@ const LandingPage = () => {
               "contactType": "Customer Support"
             }
           }`}
+        </script>
+
+        {/* Structured Data - FAQPage */}
+        <script type="application/ld+json">
+          {JSON.stringify(faqSchema)}
+        </script>
+
+        {/* Structured Data - HowTo */}
+        <script type="application/ld+json">
+          {JSON.stringify(howToSchema)}
         </script>
         
         <meta property="og:title" content="AlgoAI - Build AI Trading Agents in Plain English" />

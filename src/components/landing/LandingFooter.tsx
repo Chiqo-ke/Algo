@@ -1,4 +1,4 @@
-import { Sparkles, BookOpen } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 // Custom X (Twitter) icon component
 const XIcon = ({ className }: { className?: string }) => (
@@ -79,7 +79,7 @@ export const LandingFooter = () => {
                 <span className="text-white font-display font-bold text-lg">AlgoAI</span>
               </div>
               <p className="text-sm mb-4 text-gray-400">
-                Build AI trading agents in plain English. Agentic platform powered by artificial intelligence.
+                Build AI trading strategies in plain English and verify them with transparent backtests.
               </p>
               <div className="flex gap-3">
                 {socialLinks.map((social, index) => (

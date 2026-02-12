@@ -1,31 +1,31 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
+export const landingFaqs = [
+  {
+    question: "How do I create an AI trading strategy if I cannot code?",
+    answer: "Describe your entry, exit, and risk rules in plain English. AlgoAI converts that description into structured logic you can backtest and refine."
+  },
+  {
+    question: "What markets can I backtest in AlgoAI?",
+    answer: "You can backtest strategies across supported Forex, crypto, and equities markets. Choose a symbol, timeframe, and rules, then review the report."
+  },
+  {
+    question: "What performance metrics are included in the backtest report?",
+    answer: "Reports include trade-by-trade history, drawdown, win rate, and risk metrics so you can understand how the strategy behaves over time."
+  },
+  {
+    question: "Can I edit a strategy after a backtest and keep versions?",
+    answer: "Yes. You can modify rules, rerun backtests, and keep versions to compare changes."
+  },
+  {
+    question: "Who owns the strategies?",
+    answer: "You do. All strategy logic and results belong to you."
+  }
+];
+
 export const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
-
-  const faqs = [
-    {
-      question: "Do I need to know how to code?",
-      answer: "No. Strategies are created using plain English descriptions."
-    },
-    {
-      question: "Does Algo guarantee profits?",
-      answer: "No. Algo helps you test and automate strategies, but trading always involves risk. Results depend on the strategy, market conditions, and risk management."
-    },
-    {
-      question: "Can I modify a strategy after testing?",
-      answer: "Yes. Strategies can be edited, versioned, and re-tested at any time."
-    },
-    {
-      question: "Is live trading available?",
-      answer: "Not yet. Currently, Algo focuses on strategy creation and backtesting. Live execution is planned for a future release."
-    },
-    {
-      question: "Who owns the strategies?",
-      answer: "You do. All strategy logic and results belong to you."
-    }
-  ];
 
   return (
     <section className="py-16 md:py-24 bg-gray-800">
@@ -43,7 +43,7 @@ export const FAQSection = () => {
 
           {/* FAQ accordion */}
           <div className="space-y-4">
-            {faqs.map((faq, index) => (
+            {landingFaqs.map((faq, index) => (
               <div 
                 key={index}
                 className="border border-gray-700/50 rounded-lg overflow-hidden backdrop-blur-sm"

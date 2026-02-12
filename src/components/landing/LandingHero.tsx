@@ -58,7 +58,7 @@ export const LandingHero = () => {
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Build <span className="text-teal-400 font-semibold">autonomous AI trading agents</span> in plain English. Our agentic platform powered by artificial intelligence transforms your trading ideas into intelligent, self-executing systems that trade with discipline and precision.{" "}
+            <span className="text-teal-400 font-semibold">How do you build an AI trading agent without coding?</span> Describe your entry, exit, and risk rules in plain English. AlgoAI turns those rules into a testable strategy with transparent metrics so you can decide what to run and what to refine.
             <span className="text-teal-400 font-medium">Automated trading without the complexity.</span>
           </p>
 
@@ -67,7 +67,7 @@ export const LandingHero = () => {
             <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-800/50 border border-gray-700/50 backdrop-blur-sm hover:border-teal-500/50 transition-all duration-300 group">
               <Shield className="w-5 h-5 text-teal-400 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
               <p className="text-sm text-gray-300">
-                Rules over emotions — strategies executed exactly as defined.
+                Rules over emotions — strategies execute exactly as defined.
               </p>
             </div>
             <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-800/50 border border-gray-700/50 backdrop-blur-sm hover:border-teal-500/50 transition-all duration-300 group">
