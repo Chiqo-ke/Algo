@@ -257,10 +257,9 @@ export async function apiCall<T>(
     
     // Check if it's a network error (server not reachable)
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      if (DEBUG_API) {
-        logger.api.error('Network error - server unreachable', error as Error, { url, method, duration });
-      }
-      return { error: 'Unable to connect to the server. Please check your connection and try again.' };
+      const networkError = '🔌 Cannot connect to server';
+      logger.api.error('Network error - server unreachable', error as Error, { url, method, duration });
+      return { error: networkError };
     }
 
     if (DEBUG_API) {
