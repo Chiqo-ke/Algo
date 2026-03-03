@@ -1,17 +1,15 @@
 /**
  * Frontend Logging Utility
  * ========================
- * 
+ *
  * Centralized logging system for better error detection and debugging.
- * Follows the same structured approach as the backend API logging.
- * 
- * Features:
- * - Categorized logging (Auth, API, Strategy, Backtest, UI)
- * - Different log levels (debug, info, warn, error)
- * - Contextual information
- * - Performance tracking
- * - Error aggregation
+ *
+ * Outputs:
+ * 1. Browser DevTools console  (all envs, errors/warns always visible)
+ * 2. Vercel Analytics          (track() custom events → Vercel dashboard)
+ * 3. Django backend API        (POST /api/logs/frontend-errors/ in production)
  */
+import { track } from '@vercel/analytics';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LogCategory = 
@@ -39,6 +37,23 @@ class Logger {
   private maxLogs = 1000; // Keep last 1000 logs in memory
   private isProduction = import.meta.env.PROD;
   private debugEnabled = import.meta.env.DEV || localStorage.getItem('debug_logging') === 'true';
+
+  constructor() {
+    // Catch ALL unhandled JS errors (e.g. crashes outside React tree)
+    window.addEventListener('error', (event) => {
+      this.log('error', 'general', `Unhandled error: ${event.message}`, {
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      }, event.error);
+    });
+
+    // Catch ALL unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      const error = event.reason instanceof Error ? event.reason : undefined;
+      this.log('error', 'general', `Unhandled promise rejection: ${event.reason}`, undefined, error);
+    });
+  }
 
   // Emoji icons for better visual distinction
   private icons = {
@@ -91,8 +106,22 @@ class Logger {
       this.consoleLog(entry);
     }
 
-    // Send critical errors to backend (if needed)
-    if (level === 'error' && this.isProduction) {
+    // Send errors & warns to Vercel Analytics (visible in Vercel dashboard → Analytics → Custom Events)
+    if (level === 'error' || level === 'warn') {
+      try {
+        track(`frontend_${level}`, {
+          category: entry.category,
+          message: entry.message.slice(0, 255), // Vercel has a 255 char limit on property values
+          url: window.location.pathname,
+          ...(entry.error ? { error_type: entry.error.name } : {}),
+        });
+      } catch {
+        // never let tracking break the app
+      }
+    }
+
+    // Send errors to Django backend in production
+    if (level === 'error') {
       this.sendErrorToBackend(entry);
     }
   }
@@ -133,36 +162,37 @@ class Logger {
   }
 
   /**
-   * Send critical errors to backend for monitoring
+   * Send errors to the Django backend for server-side log storage.
+   * Endpoint: POST /api/logs/frontend-errors/
+   * Visible in VPS logs / Django admin.
    */
-  private async sendErrorToBackend(_entry: LogEntry): Promise<void> {
+  private async sendErrorToBackend(entry: LogEntry): Promise<void> {
     try {
-      // Only send in production and if user is authenticated
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
       const token = localStorage.getItem('access_token');
-      if (!token) return;
 
-      // TODO: Create a dedicated error logging endpoint
-      // For now, we'll skip sending to avoid unnecessary requests
-      // await fetch('/api/logs/frontend-errors/', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify({
-      //     timestamp: entry.timestamp,
-      //     category: entry.category,
-      //     message: entry.message,
-      //     context: entry.context,
-      //     error_message: entry.error?.message,
-      //     error_stack: entry.error?.stack,
-      //     user_agent: navigator.userAgent,
-      //     url: window.location.href,
-      //   }),
-      // });
-    } catch (error) {
-      // Fail silently - don't want logging to break the app
-      console.error('Failed to send error to backend:', error);
+      await fetch(`${apiUrl}/logs/frontend-errors/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          timestamp: entry.timestamp,
+          level: entry.level,
+          category: entry.category,
+          message: entry.message,
+          context: entry.context ?? null,
+          error_message: entry.error?.message ?? null,
+          error_stack: entry.error?.stack ?? null,
+          user_agent: navigator.userAgent,
+          url: window.location.href,
+        }),
+        // Use keepalive so the request survives page unload
+        keepalive: true,
+      });
+    } catch {
+      // Fail silently — never let logging break the app
     }
   }
 
