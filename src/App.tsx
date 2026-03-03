@@ -9,6 +9,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SessionExpirationHandler from "@/components/SessionExpirationHandler";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Eager load critical pages
 import LandingPage from "./pages/LandingPage";
@@ -25,6 +26,7 @@ const Backtesting = lazy(() => import("./pages/Backtesting"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ConnectionTest = lazy(() => import("./pages/ConnectionTest"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ErrorPage = lazy(() => import("./pages/ErrorPage"));
 const DemoPage = lazy(() => import("./pages/Demo").then(module => ({ default: module.DemoPage })));
 
 // Loading fallback component
@@ -37,6 +39,7 @@ const PageLoader = () => (
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -102,6 +105,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/error/:code" element={<ErrorPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -110,6 +114,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
