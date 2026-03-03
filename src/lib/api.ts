@@ -24,8 +24,8 @@ function handleSessionExpired() {
   }, 100);
 }
 
-// Enable detailed logging for debugging
-const DEBUG_API = true;
+// Disable verbose API debug logging in production
+const DEBUG_API = import.meta.env.DEV === true;
 
 export const API_ENDPOINTS = {
   // Auth API 
@@ -201,26 +201,42 @@ export async function apiCall<T>(
           url,
           method,
           status: response.status,
-          errorData,
-          duration
+          duration,
         });
       }
-      
-      // Handle validation errors (field-specific errors)
-      if (errorData && typeof errorData === 'object' && !errorData.message && !errorData.detail && !errorData.error) {
-        // Format field errors: { "username": ["This field is required"], "email": ["Invalid email"] }
+
+      // Redirect 5xx server errors to the error page - do not expose internals
+      if (response.status >= 500) {
+        window.location.href = `/error/${response.status}`;
+        return { error: 'Server error. Please try again later.' };
+      }
+
+      // Handle validation errors (field-specific errors) - 400
+      if (
+        response.status === 400 &&
+        errorData &&
+        typeof errorData === 'object' &&
+        !errorData.message &&
+        !errorData.detail &&
+        !errorData.error
+      ) {
         const fieldErrors = Object.entries(errorData)
           .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
           .join('; ');
-        throw new Error(fieldErrors || `HTTP error! status: ${response.status}`);
+        throw new Error(fieldErrors || 'Invalid request. Please check your input.');
       }
-      
-      const errorMessage = errorData.message || 
-        errorData.detail || 
-        errorData.error ||
-        `HTTP error! status: ${response.status}`;
-      
-      throw new Error(errorMessage);
+
+      // Return a safe, generic user-facing message for all other errors
+      const safeMessage =
+        response.status === 403
+          ? 'You do not have permission to perform this action.'
+          : response.status === 404
+          ? 'The requested resource could not be found.'
+          : response.status === 429
+          ? 'Too many requests. Please slow down and try again.'
+          : errorData?.message || errorData?.detail || errorData?.error || 'An error occurred. Please try again.';
+
+      throw new Error(safeMessage);
     }
 
     // Handle 204 No Content responses (DELETE operations typically return this)
@@ -241,14 +257,17 @@ export async function apiCall<T>(
     
     // Check if it's a network error (server not reachable)
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      const networkError = '🔌 Cannot connect to server. Make sure Django is running on http://127.0.0.1:8000';
-      logger.api.error('Network error - server unreachable', error as Error, { url, method, duration });
-      return { error: networkError };
+      if (DEBUG_API) {
+        logger.api.error('Network error - server unreachable', error as Error, { url, method, duration });
+      }
+      return { error: 'Unable to connect to the server. Please check your connection and try again.' };
     }
-    
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    logger.api.error('API call failed', error as Error, { url, method, duration });
-    
+
+    if (DEBUG_API) {
+      logger.api.error('API call failed', error as Error, { url, method, duration });
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
     return { error: errorMessage };
   }
 }
