@@ -19,9 +19,9 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo) {
-    // Intentionally silent in production - do not log stack traces to console.
-    // Internal monitoring/telemetry can be wired here if needed.
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[ErrorBoundary] Uncaught React error:', error);
+    console.error('[ErrorBoundary] Component stack:', info.componentStack);
   }
 
   render() {

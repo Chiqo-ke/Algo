@@ -86,8 +86,8 @@ class Logger {
       this.logs.shift(); // Remove oldest log
     }
 
-    // Console output (if not production or debug enabled)
-    if (!this.isProduction || this.debugEnabled) {
+    // Always log errors & warnings; log everything else only in dev or when debug enabled
+    if (!this.isProduction || this.debugEnabled || level === 'error' || level === 'warn') {
       this.consoleLog(entry);
     }
 

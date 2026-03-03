@@ -20,7 +20,8 @@ export default defineConfig(({ mode }) => ({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: mode === 'production',
+        // Drop only verbose logs in production; keep console.error & console.warn visible in DevTools
+        pure_funcs: mode === 'production' ? ['console.log', 'console.debug', 'console.info'] : [],
         drop_debugger: mode === 'production',
       },
     },
@@ -42,7 +43,8 @@ export default defineConfig(({ mode }) => ({
       },
     },
     cssCodeSplit: true,
-    sourcemap: mode === 'development',
+    // true = sourcemaps served alongside bundle so DevTools shows real file/line in errors
+    sourcemap: true,
     chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
