@@ -357,6 +357,13 @@ export interface LatestBacktestResult {
     timestamp: string;
     equity: number;
   }>;
+  symbol_stats: Array<{
+    symbol: string;
+    trades: number;
+    win_rate: number;
+    net_profit: number;
+    return_pct: number;
+  }>;
   created_at: string;
   updated_at: string;
 }

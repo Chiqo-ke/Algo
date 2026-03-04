@@ -99,25 +99,35 @@ export default function Backtesting() {
     const totalTrades = Number(savedResults.total_trades) || 0;
     const winRate = Number(savedResults.win_rate) || 0;
     const netProfit = Number(savedResults.net_profit) || 0;
-    
+
+    // Build per-symbol stats from saved symbol_stats if available
+    const perSymbolStats = Array.isArray(savedResults.symbol_stats) && savedResults.symbol_stats.length > 0
+      ? savedResults.symbol_stats.map((s) => ({
+          symbol: s.symbol,
+          trades: Number(s.trades) || 0,
+          profit: Number(s.net_profit) || 0,
+          percentage: netProfit !== 0 ? Math.round((Number(s.net_profit) / netProfit) * 100) : 0,
+        }))
+      : [{
+          symbol: savedResults.symbol || backtestParams.symbol || "N/A",
+          trades: totalTrades,
+          profit: netProfit,
+          percentage: 100,
+        }];
+
     const transformedResults: BacktestResults = {
       dailyStats: [],
-      symbolStats: [{
-        symbol: savedResults.symbol || backtestParams.symbol || "N/A",
-        trades: totalTrades,
-        profit: netProfit,
-        percentage: 100,
-      }],
+      symbolStats: perSymbolStats,
       summary: {
         totalTrades: totalTrades,
         winRate: winRate,
         totalProfit: netProfit,
-        averageTrade: totalTrades > 0 
-          ? netProfit / totalTrades 
+        averageTrade: totalTrades > 0
+          ? netProfit / totalTrades
           : 0,
       },
     };
-    
+
     setResults(transformedResults);
     setHasResults(true);
   };

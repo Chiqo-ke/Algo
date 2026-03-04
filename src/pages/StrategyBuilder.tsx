@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,11 +6,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, TrendingUp, BarChart, Zap, Loader2 } from "lucide-react";
 import { strategyService } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
+import { pollJob, type JobProgress } from "@/lib/jobPoller";
+
+const GENERATE_URL =
+  (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api') +
+  '/strategies/strategies/generate_with_ai/';
 
 export default function StrategyBuilder() {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingStep, setGeneratingStep] = useState("");
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
   const handleGenerateStrategy = async () => {
@@ -23,15 +30,44 @@ export default function StrategyBuilder() {
       return;
     }
 
+    // Cancel any previous in-flight poll
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
     setIsGenerating(true);
-    
+    setGeneratingStep("Queuing strategy generation…");
+
     try {
-      // TODO: Integrate with AI strategy generation endpoint when available
+      // 1. Enqueue the task — returns within milliseconds
+      const res = await fetch(GENERATE_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: prompt }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error ?? `Request failed (${res.status})`);
+      }
+
+      const { job_id } = await res.json();
+
+      // 2. Poll until done, updating the step label in real time
+      await pollJob(
+        job_id,
+        (progress: JobProgress) => {
+          setGeneratingStep(progress.step ?? 'Processing…');
+        },
+        abortRef.current.signal,
+      );
+
       toast({
-        title: "Feature coming soon",
-        description: "AI strategy generation will be available in the next version",
+        title: "Strategy generated!",
+        description: "Your strategy has been created and saved.",
       });
     } catch (error) {
+      if (error instanceof Error && error.message === 'Polling cancelled') return;
       toast({
         title: "Generation failed",
         description: error instanceof Error ? error.message : "An error occurred",
@@ -39,6 +75,7 @@ export default function StrategyBuilder() {
       });
     } finally {
       setIsGenerating(false);
+      setGeneratingStep("");
     }
   };
 
@@ -110,7 +147,7 @@ export default function StrategyBuilder() {
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
+                    {generatingStep || 'Generating...'}
                   </>
                 ) : (
                   <>
