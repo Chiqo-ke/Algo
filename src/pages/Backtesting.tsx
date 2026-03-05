@@ -547,22 +547,22 @@ export default function Backtesting() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 md:p-8 space-y-6 md:space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <Button 
             variant="ghost" 
             size="icon"
             onClick={() => navigate("/strategy")}
-            className="hover:bg-secondary"
+            className="hover:bg-secondary shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-4xl font-bold text-foreground mb-1 md:mb-2 truncate">
               Backtest: {strategyName}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               Configure parameters and run historical testing
             </p>
           </div>
@@ -729,24 +729,24 @@ export default function Backtesting() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Summary Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Total Trades</p>
-                  <p className="text-2xl font-bold">{results.summary.totalTrades}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Total Trades</p>
+                  <p className="text-lg md:text-2xl font-bold break-all">{results.summary.totalTrades}</p>
                 </div>
-                <div className="p-4 bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Win Rate</p>
-                  <p className="text-2xl font-bold">{results.summary.winRate.toFixed(2)}%</p>
+                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Win Rate</p>
+                  <p className="text-lg md:text-2xl font-bold break-all">{results.summary.winRate.toFixed(2)}%</p>
                 </div>
-                <div className="p-4 bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Total Profit</p>
-                  <p className={`text-2xl font-bold ${results.summary.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Total Profit</p>
+                  <p className={`text-lg md:text-2xl font-bold break-all ${results.summary.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     ${results.summary.totalProfit.toFixed(2)}
                   </p>
                 </div>
-                <div className="p-4 bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Avg Trade</p>
-                  <p className={`text-2xl font-bold ${results.summary.averageTrade >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">Avg Trade</p>
+                  <p className={`text-lg md:text-2xl font-bold break-all ${results.summary.averageTrade >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     ${results.summary.averageTrade.toFixed(2)}
                   </p>
                 </div>
@@ -755,14 +755,14 @@ export default function Backtesting() {
               {/* Symbol Stats */}
               {results.symbolStats && results.symbolStats.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Performance by Symbol</h3>
+                  <h3 className="text-base md:text-lg font-semibold mb-3">Performance by Symbol</h3>
                   <div className="space-y-2">
                     {results.symbolStats.map((stat, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/10 rounded-lg">
-                        <span className="font-medium">{stat.symbol}</span>
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm text-muted-foreground">{stat.trades} trades</span>
-                          <span className={`font-semibold ${stat.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      <div key={index} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/10 rounded-lg">
+                        <span className="font-medium truncate max-w-[40%] sm:max-w-none">{stat.symbol}</span>
+                        <div className="flex items-center gap-3 md:gap-4 flex-wrap">
+                          <span className="text-sm text-muted-foreground whitespace-nowrap">{stat.trades} trades</span>
+                          <span className={`font-semibold whitespace-nowrap ${stat.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             ${stat.profit.toFixed(2)}
                           </span>
                         </div>
