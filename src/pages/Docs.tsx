@@ -46,7 +46,7 @@ const DocsPage = () => {
               <div className="space-y-6 text-gray-300 leading-relaxed">
                 <div>
                   <h3 className="text-lg font-semibold text-blue-400 mb-2">1. Plain-English Parsing</h3>
-                  <p>Our NLP engine parses your strategy rules (e.g., "Buy when RSI < 30"). We extract indicators, thresholds, sequence steps, and logical operators to generate internal configuration syntax.</p>
+                    <p>Our NLP engine parses your strategy rules (e.g., "Buy when RSI &lt; 30"). We extract indicators, thresholds, sequence steps, and logical operators to generate internal configuration syntax.</p>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-teal-400 mb-2">2. Backtesting Engine</h3>
