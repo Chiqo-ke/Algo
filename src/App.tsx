@@ -28,6 +28,7 @@ const ConnectionTest = lazy(() => import("./pages/ConnectionTest"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ErrorPage = lazy(() => import("./pages/ErrorPage"));
 const DemoPage = lazy(() => import("./pages/Demo").then(module => ({ default: module.DemoPage })));
+const Docs = lazy(() => import("./pages/Docs"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -106,6 +107,7 @@ const App = () => (
                 }
               />
               <Route path="/error/:code" element={<ErrorPage />} />
+              <Route path="/docs" element={<Docs />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
