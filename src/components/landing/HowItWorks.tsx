@@ -1,236 +1,97 @@
-import { MessageSquare, Code2, BarChart4, ArrowRight, X } from "lucide-react";
-import { useState } from "react";
+import { MessageSquare, Code2, Rocket, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 
+// Exported for schema.org data in LandingPage
 export const howItWorksSteps = [
   {
-    number: 1,
-    icon: MessageSquare,
-    title: "Describe your idea",
-    description: "Explain your trading rules in plain English, the same way you'd explain them to another trader.",
-    color: "from-blue-500 to-cyan-500",
-    svgElement: (
-      <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
-        <path d="M20 30 Q50 10 80 30 T80 70 Q50 90 20 70 Z" fill="none" stroke="currentColor" strokeWidth="1" className="text-blue-400" />
-        <circle cx="30" cy="40" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" />
-        <circle cx="50" cy="35" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" style={{ animationDelay: '0.3s' }} />
-        <circle cx="70" cy="40" r="3" fill="currentColor" className="text-cyan-400 animate-pulse" style={{ animationDelay: '0.6s' }} />
-      </svg>
-    ),
-    example: `I want to create a simple EMA crossover trading strategy.
-
-Use two exponential moving averages:
-• One EMA with a period of 30
-• One EMA with a period of 70
-
-Entry rules:
-• Open a buy (long) trade when the 30 EMA crosses above the 70 EMA
-• Open a sell (short) trade when the 30 EMA crosses below the 70 EMA
-
-Risk management:
-• Set a stop loss at 15 pips away from the entry price
-• Set a take profit at 70 pips away from the entry price
-
-Only one trade should be open at a time.`
+    title: "1. Plain English Rules",
+    description: "Describe your trading strategy naturally. No coding skills required."
   },
   {
-    number: 2,
-    icon: Code2,
-    title: "Strategy construction",
-    description: "Algo converts your description into structured logic and prepares it for testing.",
-    color: "from-purple-500 to-pink-500",
-    svgElement: (
-      <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
-        <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400" />
-        <line x1="30" y1="35" x2="50" y2="35" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
-        <line x1="30" y1="45" x2="60" y2="45" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
-        <line x1="30" y1="55" x2="45" y2="55" stroke="currentColor" strokeWidth="2" className="text-pink-400" />
-        <circle cx="70" cy="70" r="8" fill="none" stroke="currentColor" strokeWidth="1" className="text-purple-400 animate-spin" style={{ animationDuration: '4s' }} />
-      </svg>
-    )
+    title: "2. AI Evaluation Engine",
+    description: "Our engine immediately converts syntax to an executable bot."
   },
   {
-    number: 3,
-    icon: BarChart4,
-    title: "Backtest and refine",
-    description: "Analyze historical performance, adjust rules if needed, and repeat. (Live execution will be optional and introduced later.)",
-    color: "from-orange-500 to-red-500",
-    svgElement: (
-      <svg className="absolute -right-4 -top-4 w-24 h-24 opacity-10" viewBox="0 0 100 100">
-        <path d="M20 80 L30 60 L40 70 L50 40 L60 50 L70 30 L80 45" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-400" />
-        <circle cx="50" cy="40" r="4" fill="currentColor" className="text-red-400 animate-pulse" />
-        <line x1="20" y1="80" x2="80" y2="80" stroke="currentColor" strokeWidth="1" className="text-orange-400" />
-        <line x1="20" y1="80" x2="20" y2="20" stroke="currentColor" strokeWidth="1" className="text-orange-400" />
-      </svg>
-    )
+    title: "3. Backtest & Deploy",
+    description: "Test against historical data & deploy to live markets."
   }
 ];
 
 export const HowItWorks = () => {
-  const [showExample, setShowExample] = useState(false);
-
   return (
-    <section className="py-16 md:py-24 bg-gray-800 relative overflow-hidden">
-      {/* Futuristic background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="workflow-pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-              <circle cx="40" cy="40" r="1" fill="#14b8a6" />
-              <circle cx="0" cy="0" r="1" fill="#14b8a6" />
-              <circle cx="80" cy="0" r="1" fill="#14b8a6" />
-              <circle cx="0" cy="80" r="1" fill="#14b8a6" />
-              <circle cx="80" cy="80" r="1" fill="#14b8a6" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#workflow-pattern)" />
-        </svg>
-      </div>
+    <section className="py-24 bg-gray-900 overflow-hidden relative">
+      {/* Decorative Blur */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-teal-500/5 blur-[120px] rounded-full pointer-events-none" />
       
       <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          {/* Section header with futuristic styling */}
-          <div className="text-center mb-16 relative">
-            <div className="inline-block relative">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-white mb-4 relative z-10">
-                How It Works
-              </h2>
-              <div className="absolute inset-0 blur-2xl bg-teal-500/10 animate-glow" />
-            </div>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              From idea to tested strategy in three clear steps
-            </p>
+        <div className="text-center mb-16 space-y-4">
+          <h2 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tight">
+            From Idea to <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">Execution</span>
+          </h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Watch how our engine seamlessly converts your thoughts into powerful trading algorithms.
+          </p>
+        </div>
+
+        <div className="max-w-5xl mx-auto">
+          <div className="relative">
+            {/* Connecting line for desktop */}
+            <div className="hidden md:block absolute top-[120px] left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-transparent via-gray-700 to-transparent z-0" />
             
-            {/* Decorative elements */}
-            <div className="flex items-center justify-center gap-3 mt-6">
-              <div className="w-12 h-px bg-gradient-to-r from-transparent to-teal-500" />
-              <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-              <div className="w-12 h-px bg-gradient-to-l from-transparent to-teal-500" />
-            </div>
-          </div>
-
-          {/* Steps with enhanced design */}
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            {howItWorksSteps.map((step, index) => (
-              <div key={index} className="relative">
-                {/* Connector arrow (desktop only) */}
-                {index < howItWorksSteps.length - 1 && (
-                  <div className="hidden md:block absolute top-20 left-full w-full -ml-4 -mr-4 z-0">
-                    <div className="relative flex items-center justify-center">
-                      <div className="h-px w-full bg-gradient-to-r from-teal-500/50 to-teal-500/20" />
-                      <ArrowRight className="absolute w-8 h-8 text-teal-500/50 animate-pulse" style={{ animationDuration: '2s', animationDelay: `${index * 0.3}s` }} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Step card with futuristic design */}
-                <div className="relative group h-full">
-                  {/* Outer glow effect */}
-                  <div className="absolute -inset-1 bg-gradient-to-br from-teal-500/0 to-teal-500/0 group-hover:from-teal-500/20 group-hover:to-cyan-500/20 rounded-2xl blur-xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-                  
-                  <div className="relative bg-gray-900/50 p-8 rounded-2xl border border-gray-700/50 backdrop-blur-sm hover:border-teal-500/50 transition-all duration-300 h-full overflow-hidden">
-                    {/* Background SVG illustration */}
-                    {step.svgElement}
-                    
-                    {/* Corner decorations */}
-                    <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-teal-500/30 rounded-tl-2xl" />
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-teal-500/30 rounded-br-2xl" />
-                    
-                    {/* Step number and Icon - Horizontally aligned */}
-                    <div className="flex items-center gap-4 mb-6">
-                      {/* Step number with enhanced styling */}
-                      <div className="inline-flex items-center justify-center w-10 h-10 md:w-14 md:h-14 rounded-full bg-teal-500/20 border-2 border-teal-500/40 text-teal-400 font-display font-bold text-lg md:text-xl relative group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-                        {step.number}
-                        <div className="absolute inset-0 rounded-full bg-teal-500/20 animate-ping opacity-0 group-hover:opacity-75" />
-                      </div>
-
-                      {/* Icon with animated container */}
-                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center group-hover:border-teal-500/50 transition-all duration-300 relative overflow-hidden flex-shrink-0">
-                        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <step.icon className="w-6 h-6 md:w-8 md:h-8 text-teal-400 relative z-10 group-hover:scale-110 transition-transform" />
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <h3 className="text-xl font-display font-bold text-white mb-3 relative z-10">
-                      {step.title}
-                    </h3>
-                    <p className="text-gray-300 leading-relaxed relative z-10">
-                      {step.description}
-                    </p>
-                    
-                    {step.example && (
-                      <button
-                        onClick={() => setShowExample(true)}
-                        className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20 hover:border-teal-500/50 transition-all duration-300 text-sm font-display font-medium relative z-10 group/btn"
-                      >
-                        <MessageSquare className="w-4 h-4 group-hover/btn:rotate-12 transition-transform" />
-                        See Example
-                      </button>
-                    )}
-                  </div>
+            <div className="grid md:grid-cols-3 gap-8 relative z-10">
+              {/* Step 1 */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="flex flex-col items-center text-center space-y-6 bg-gray-800/20 p-8 rounded-3xl border border-gray-700/30 backdrop-blur-md"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-[0_0_30px_rgba(20,184,166,0.15)]">
+                  <MessageSquare className="w-10 h-10" />
                 </div>
-              </div>
-            ))}
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">1. Describe Idea</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">Tell the AI your exact conditions: "Buy ETH when the 50 SMA crosses above 200 SMA on the 1H chart".</p>
+                </div>
+              </motion.div>
+
+              {/* Step 2 */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 }}
+                className="flex flex-col items-center text-center space-y-6 bg-gray-800/20 p-8 rounded-3xl border border-gray-700/30 backdrop-blur-md"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-pink-500/30 flex items-center justify-center text-pink-400 shadow-[0_0_30px_rgba(236,72,153,0.15)]">
+                  <Code2 className="w-10 h-10" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">2. Instant Processing</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">The AlgoAI NLP engine parses the intent and generates flawless, optimized machine code in milliseconds.</p>
+                </div>
+              </motion.div>
+
+              {/* Step 3 */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4 }}
+                className="flex flex-col items-center text-center space-y-6 bg-gray-800/20 p-8 rounded-3xl border border-gray-700/30 backdrop-blur-md"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500/20 to-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.15)]">
+                  <Rocket className="w-10 h-10" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">3. Test & Deploy</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">Backtest against 10+ years of tick data instantly, then deploy the bot live directly onto your exchange.</p>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Example Modal with futuristic design */}
-      {showExample && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setShowExample(false)}
-        >
-          <div 
-            className="relative max-w-2xl w-full bg-gray-900 rounded-2xl border-2 border-teal-500/30 shadow-2xl shadow-teal-500/20 animate-in zoom-in-95 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Decorative corner accents */}
-            <div className="absolute -top-2 -left-2 w-8 h-8 border-t-4 border-l-4 border-teal-400 rounded-tl-xl" />
-            <div className="absolute -top-2 -right-2 w-8 h-8 border-t-4 border-r-4 border-teal-400 rounded-tr-xl" />
-            <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-4 border-l-4 border-teal-400 rounded-bl-xl" />
-            <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-4 border-r-4 border-teal-400 rounded-br-xl" />
-            
-            {/* Close button */}
-            <button
-              onClick={() => setShowExample(false)}
-              className="absolute top-4 right-4 p-2 rounded-lg bg-gray-800/80 border border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-800 hover:border-teal-500/50 transition-all duration-200 z-10 group"
-            >
-              <X className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-            </button>
-
-            {/* Modal content */}
-            <div className="p-4 md:p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl bg-teal-500/20 border-2 border-teal-500/40 flex items-center justify-center relative">
-                  <MessageSquare className="w-5 h-5 md:w-7 md:h-7 text-teal-400 relative z-10" />
-                  <div className="absolute inset-0 rounded-xl bg-teal-500/10 animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="text-xl md:text-2xl font-display font-bold text-white">Strategy Example</h3>
-                  <p className="text-sm text-teal-400 font-display">EMA Crossover Strategy</p>
-                </div>
-              </div>
-
-              <div className="p-6 rounded-xl bg-gray-950/80 border-2 border-teal-500/20 relative overflow-hidden">
-                {/* Scanning line effect */}
-                <div className="absolute inset-0 overflow-hidden opacity-10">
-                  <div className="h-px w-full bg-gradient-to-r from-transparent via-teal-400 to-transparent animate-scan" />
-                </div>
-                
-                <p className="text-gray-300 leading-relaxed whitespace-pre-line font-mono text-sm relative z-10">
-                  {howItWorksSteps[0].example}
-                </p>
-              </div>
-
-              <div className="mt-6 flex items-center gap-2 text-sm text-gray-400 font-display">
-                <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-                <span>Click anywhere outside to close</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };
