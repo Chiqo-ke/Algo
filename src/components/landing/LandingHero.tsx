@@ -32,7 +32,7 @@ export const LandingHero = () => {
             <span className="font-display tracking-wide uppercase">Generative AI Trading</span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight text-white leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight text-white leading-tight transition-all duration-300">
             Build your strategy <br/>
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-blue-500">in plain English.</span>
           </h1>
