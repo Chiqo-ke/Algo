@@ -239,11 +239,26 @@ export default function Settings() {
           {/* Tabs */}
           <Tabs defaultValue="profile" className="w-full">
             <TabsList className="grid w-full grid-cols-4 md:grid-cols-5">
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="account">Account</TabsTrigger>
-              <TabsTrigger value="security">Security</TabsTrigger>
-              <TabsTrigger value="premium" className="hidden md:flex">Premium</TabsTrigger>
-              <TabsTrigger value="links">More</TabsTrigger>
+              <TabsTrigger value="profile" className="gap-1.5">
+                <User className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Profile</span>
+              </TabsTrigger>
+              <TabsTrigger value="account" className="gap-1.5">
+                <Sliders className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Account</span>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="gap-1.5">
+                <Lock className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Security</span>
+              </TabsTrigger>
+              <TabsTrigger value="premium" className="hidden md:flex gap-1.5">
+                <CreditCard className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Premium</span>
+              </TabsTrigger>
+              <TabsTrigger value="links" className="gap-1.5">
+                <BarChart3 className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">More</span>
+              </TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
