@@ -23,7 +23,6 @@ import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { WorkflowProgress } from "@/components/WorkflowProgress";
 import * as ProductionAPI from "@/lib/productionApi";
 import { apiCall } from "@/lib/api";
-import { useTour } from "@/components/tour";
 
 interface WorkflowStep {
   id: string;
@@ -90,7 +89,6 @@ export default function Dashboard() {
   const editMode = location.state?.editMode || false;
   const strategyName = location.state?.strategyName || "Algo";
   const { toast } = useToast();
-  const { demoAction, clearDemoAction, isActive: tourIsActive, currentIndex: tourIndex } = useTour();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -127,57 +125,6 @@ export default function Dashboard() {
 
   // API base URL - adjust based on your environment
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-
-  // ─── Tour demo action handler ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!demoAction) return;
-
-    if (demoAction === "fill-input") {
-      setInput(
-        "Buy when RSI(14) drops below 30 (oversold), sell when RSI rises above 70 (overbought). Apply a 2% stop-loss per trade."
-      );
-      clearDemoAction();
-      return;
-    }
-
-    if (demoAction === "show-mock-response") {
-      const mockMessage: Message = {
-        id: "tour-demo-" + Date.now(),
-        role: "assistant",
-        content:
-          "**RSI Momentum Strategy Analysis** ✅\n\nYour strategy has been analysed successfully!\n\n- **Entry Signal**: Buy when RSI(14) drops below 30 (oversold)\n- **Exit Signal**: Sell when RSI(14) rises above 70 (overbought)\n- **Stop Loss**: 2% below entry price\n- **Timeframe**: Daily candles\n\nThis is a classic mean-reversion approach with a strong track record on liquid large-cap equities.",
-        timestamp: new Date(),
-        strategyData: {
-          strategyName: "RSI Momentum Strategy",
-          canonicalJson: null,
-          aiValidation: null,
-        },
-        workflow: null,
-      };
-      setMessages([mockMessage]);
-      setHasStartedChat(true);
-      setInput("");
-      clearDemoAction();
-      return;
-    }
-
-    if (demoAction === "open-confirm-dialog") {
-      setConfirmationData({
-        strategyName: "RSI Momentum Strategy",
-        humanReadable:
-          "**RSI Momentum Strategy**\n\n**Entry Rule**: Buy when the 14-period RSI falls below 30 (oversold condition)\n\n**Exit Rule**: Sell when the 14-period RSI rises above 70 (overbought condition)\n\n**Stop Loss**: 2% below the entry price per trade\n\n**Universe**: Any liquid equity — AAPL, TSLA, SPY, QQQ, etc.",
-      });
-      setEditedStrategyName("RSI Momentum Strategy");
-      setShowConfirmDialog(true);
-      clearDemoAction();
-      return;
-    }
-  }, [demoAction, clearDemoAction]);
-
-  // Close confirm dialog when tour ends (keeps it clean if user exits mid-tour)
-  useEffect(() => {
-    if (!tourIsActive) setShowConfirmDialog(false);
-  }, [tourIsActive]);
 
   // Convert canonical JSON to human-readable format
   const formatStrategyForConfirmation = (canonicalJson: any): string => {
@@ -1149,7 +1096,7 @@ export default function Dashboard() {
       <div className="flex flex-col h-full p-2 sm:p-4 md:p-6 gap-1 sm:gap-4">
         {/* Header */}
         <div className="text-center flex-shrink-0">
-          <h1 data-tour="dashboard-heading" className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
             <Sparkles className="w-7 h-7" />
             {strategyName}
           </h1>
@@ -1170,7 +1117,7 @@ export default function Dashboard() {
         </div>
 
         {/* Chat Area - Fills available space */}
-        <div data-tour="chat-area" className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {!hasStartedChat && (
             <div className="flex flex-col justify-center flex-1 text-center space-y-2 sm:space-y-3 px-2 pb-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full bg-gradient-primary flex items-center justify-center">
@@ -1262,7 +1209,6 @@ export default function Dashboard() {
                       {message.role === "assistant" && message.strategyData && (
                         <div className="mt-4 pt-3 border-t border-border/50">
                           <Button
-                            data-tour="review-proceed-btn"
                             onClick={() => handleOpenConfirmation(message)}
                             className="w-full bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow group"
                             size="sm"
@@ -1303,7 +1249,6 @@ export default function Dashboard() {
           {!isLoading && (
             <div className="flex gap-2 pt-2 sm:pt-4 mt-auto flex-shrink-0 w-full px-2 sm:px-4 md:px-6 lg:px-8 pb-2 sm:pb-0">
               <Textarea
-                data-tour="chat-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -1329,7 +1274,6 @@ export default function Dashboard() {
                 }}
               />
               <Button 
-                data-tour="send-button"
                 onClick={handleSendMessage} 
                 size="icon" 
                 className="bg-gradient-primary"
@@ -1347,23 +1291,8 @@ export default function Dashboard() {
       </div>
 
       {/* Strategy Confirmation Dialog */}
-      <Dialog
-        open={showConfirmDialog}
-        onOpenChange={(open) => {
-          // Keep dialog open while the tour is explaining confirm-dialog steps
-          if (!open && tourIsActive && tourIndex >= 4 && tourIndex <= 7) return;
-          setShowConfirmDialog(open);
-        }}
-      >
-        <DialogContent
-          className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col"
-          onEscapeKeyDown={(e) => {
-            if (tourIsActive && tourIndex >= 4 && tourIndex <= 7) e.preventDefault();
-          }}
-          onInteractOutside={(e) => {
-            if (tourIsActive && tourIndex >= 4 && tourIndex <= 7) e.preventDefault();
-          }}
-        >
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-2xl">
               <FileCheck className="w-6 h-6 text-primary" />
@@ -1387,7 +1316,6 @@ export default function Dashboard() {
                   </label>
                   <Input
                     id="strategy-name"
-                    data-tour="confirm-name"
                     value={editedStrategyName}
                     onChange={(e) => setEditedStrategyName(e.target.value.slice(0, 100))}
                     placeholder="e.g., RSI Mean Reversion Pro"
@@ -1407,7 +1335,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Backtest Configuration Section */}
-                <div data-tour="backtest-config" className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-secondary/50 rounded-lg border border-border">
+                <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-secondary/50 rounded-lg border border-border">
                   <h3 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-2">
                     <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                     Backtest Configuration
@@ -1419,7 +1347,6 @@ export default function Dashboard() {
                       <Label htmlFor="backtest-symbol" className="text-xs">Symbol/Ticker</Label>
                       <Input
                         id="backtest-symbol"
-                        data-tour="confirm-symbol"
                         value={backtestSymbol}
                         onChange={(e) => setBacktestSymbol(e.target.value.toUpperCase())}
                         placeholder="AAPL"
@@ -1432,7 +1359,7 @@ export default function Dashboard() {
                     <div className="space-y-1.5">
                       <Label htmlFor="backtest-period" className="text-xs">Period</Label>
                       <Select value={backtestPeriod} onValueChange={setBacktestPeriod} disabled={isProceedingToNext}>
-                        <SelectTrigger id="backtest-period" data-tour="confirm-period">
+                        <SelectTrigger id="backtest-period">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1486,7 +1413,6 @@ export default function Dashboard() {
               Go Back & Edit
             </Button>
             <Button
-              data-tour="confirm-btn"
               onClick={handleConfirmAndProceed}
               disabled={isProceedingToNext}
               className="bg-gradient-primary shadow-glow group w-full sm:w-auto text-xs sm:text-sm"
