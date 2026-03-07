@@ -342,10 +342,9 @@ export default function Strategy() {
           <div className="flex justify-center w-full px-2 sm:px-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 max-w-7xl w-full">
             {/* Strategy Cards */}
-            {strategies.map((strategy, index) => (
+            {strategies.map((strategy) => (
               <Card 
                 key={strategy.id}
-                data-tour={index === 0 ? "strategy-card" : undefined}
                 className={cn(
                   "bg-card border-border shadow-card hover:shadow-lg transition-all",
                   "w-full overflow-hidden",
@@ -424,7 +423,6 @@ export default function Strategy() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
-                            data-tour="strategy-options"
                             variant="outline"
                             size="icon"
                             className="h-8 w-8 p-0 flex-shrink-0 rounded-full bg-card/40 border-border text-card-foreground hover:bg-accent hover:text-accent-foreground"
@@ -526,7 +524,6 @@ export default function Strategy() {
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">
                     <Button 
-                      data-tour={index === 0 ? "strategy-run-backtest" : undefined}
                       variant="outline" 
                       className="flex-1 min-w-0 px-2 sm:px-4"
                       onClick={() => handleRunBacktest(strategy.id, strategy.name)}
@@ -552,7 +549,6 @@ export default function Strategy() {
 
             {/* Add Strategy Card */}
             <Card 
-              data-tour="strategy-new-btn"
               className={cn(
                 "bg-card border-border border-dashed shadow-card hover:shadow-lg transition-all cursor-pointer",
                 "hover:border-primary/50 w-full",
