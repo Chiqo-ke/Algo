@@ -133,7 +133,6 @@ export default function StrategyBuilder() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
-              data-tour="builder-prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Example: Create a momentum strategy that buys when RSI crosses above 30 and sells when it crosses below 70, with a 2% stop loss..."
@@ -141,7 +140,6 @@ export default function StrategyBuilder() {
             />
             <div className="flex gap-3">
               <Button 
-                data-tour="builder-generate"
                 className="bg-gradient-primary shadow-glow"
                 onClick={handleGenerateStrategy}
                 disabled={isGenerating || !prompt.trim()}
