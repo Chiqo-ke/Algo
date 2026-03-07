@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SessionExpirationHandler from "@/components/SessionExpirationHandler";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { TourProvider, TourOverlay } from "@/components/tour";
 
 // Eager load critical pages
 import LandingPage from "./pages/LandingPage";
@@ -56,9 +57,11 @@ const App = () => (
       <SpeedInsights />
       <Analytics />
       <BrowserRouter>
-        <AuthProvider>
-          <SessionExpirationHandler />
-          <Suspense fallback={<PageLoader />}>
+        <TourProvider>
+          <AuthProvider>
+            <SessionExpirationHandler />
+            <TourOverlay />
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<RootPage />} />
               <Route path="/login" element={<Login />} />
@@ -119,8 +122,9 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </Suspense>
-        </AuthProvider>
+            </Suspense>
+          </AuthProvider>
+        </TourProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
