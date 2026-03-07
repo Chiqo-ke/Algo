@@ -124,7 +124,7 @@ export const LandingHero = () => {
           <motion.div 
             animate={{ y: [-10, 10, -10] }}
             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-            className="absolute -right-8 top-1/4 bg-gray-800 border border-gray-700 p-4 rounded-xl shadow-xl flex items-center gap-3 backdrop-blur-md"
+            className="absolute right-0 sm:-right-8 top-1/4 bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl shadow-xl hidden sm:flex items-center gap-3 backdrop-blur-md"
           >
             <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
               <Zap className="w-5 h-5" />

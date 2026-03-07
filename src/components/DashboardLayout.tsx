@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { AIAssistantPanel } from "./AIAssistantPanel";
@@ -13,6 +14,8 @@ export const DashboardLayout = ({ children, hideAssistant = false }: DashboardLa
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const { pathname } = useLocation();
+  const isOnDashboard = pathname === "/dashboard";
 
   // Global keyboard shortcut for command palette
   useState(() => {
