@@ -25,10 +25,10 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Bot, label: "Strategy", path: "/strategy" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", dataTour: "sidebar-dashboard" },
+  { icon: Bot, label: "Strategy", path: "/strategy", dataTour: "sidebar-strategy" },
   { icon: GraduationCap, label: "Learning Hub", path: "/learning" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Settings, label: "Settings", path: "/settings", dataTour: "sidebar-settings" },
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
@@ -69,11 +69,12 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav data-tour="sidebar-nav" className="flex-1 p-4 space-y-2">
           {menuItems.map((item) => (
             <Tooltip key={item.path}>
               <NavLink
                 to={item.path}
+                data-tour={item.dataTour}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center px-4 py-3 rounded-lg transition-all",
