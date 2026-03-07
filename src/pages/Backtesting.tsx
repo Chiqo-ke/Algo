@@ -604,7 +604,7 @@ export default function Backtesting() {
         )}
 
         {/* Backtest Parameters - Upper Half */}
-        <Card className="bg-card border-border shadow-card">
+        <Card data-tour="backtest-symbol" className="bg-card border-border shadow-card">
           <CardHeader>
             <CardTitle className="text-card-foreground">Backtest Parameters</CardTitle>
           </CardHeader>
@@ -643,7 +643,7 @@ export default function Backtesting() {
               </div>
 
               {/* Start Date */}
-              <div className="space-y-2">
+              <div data-tour="backtest-dates" className="space-y-2">
                 <Label htmlFor="startDate">Start Date *</Label>
                 <Input
                   id="startDate"
@@ -681,6 +681,7 @@ export default function Backtesting() {
             {/* Run Button */}
             <div className="flex justify-end pt-4">
               <Button 
+                data-tour="backtest-run-btn"
                 onClick={handleRunBacktest}
                 disabled={isRunning || loadingStrategy || isValidating || strategy?.status === 'validating' || strategy?.status === 'invalid'}
                 className="bg-gradient-primary min-w-[200px]"
@@ -723,7 +724,7 @@ export default function Backtesting() {
 
         {/* Backtest Results Display */}
         {hasResults && results && (
-          <Card>
+          <Card data-tour="backtest-results">
             <CardHeader>
               <CardTitle>Backtest Results</CardTitle>
             </CardHeader>
