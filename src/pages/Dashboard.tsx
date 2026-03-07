@@ -1096,8 +1096,8 @@ export default function Dashboard() {
       <div className="flex flex-col h-full p-2 sm:p-4 md:p-6 gap-1 sm:gap-4">
         {/* Header */}
         <div className="text-center flex-shrink-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
-            <Sparkles className="w-7 h-7" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
             {strategyName}
           </h1>
           {editMode && (

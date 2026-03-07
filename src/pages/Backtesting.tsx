@@ -779,10 +779,10 @@ export default function Backtesting() {
       {/* Floating Edit Button */}
       <Button
         onClick={handleEditStrategy}
-        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg bg-transparent border-2 border-primary hover:bg-primary hover:scale-125 transition-all duration-300 group"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 md:bottom-8 md:right-8 h-11 w-11 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full shadow-lg bg-transparent border-2 border-primary hover:bg-primary hover:scale-125 transition-all duration-300 group"
         size="icon"
       >
-        <Edit className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+        <Edit className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
       </Button>
     </DashboardLayout>
   );

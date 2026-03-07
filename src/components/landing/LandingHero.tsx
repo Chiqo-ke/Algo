@@ -11,49 +11,49 @@ export const LandingHero = () => {
   };
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden pt-20">
+    <section className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden pt-10 sm:pt-14 md:pt-16">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-grid-slate-400/[0.02] bg-[size:32px_32px]" />
       
       {/* Animated glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-[100px] animate-pulse-glow" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-teal-500/10 rounded-full blur-[100px] animate-pulse-glow" />
+      <div className="absolute bottom-1/4 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-blue-500/10 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
       
-      <div className="container relative z-10 mx-auto px-4 py-8 md:py-16 grid lg:grid-cols-2 gap-12 items-center">
+      <div className="container relative z-10 mx-auto px-4 py-4 sm:py-8 md:py-12 grid lg:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
         {/* Left Side: Text and CTA */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-left space-y-8"
+          className="text-left space-y-4 sm:space-y-6 md:space-y-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm font-medium backdrop-blur-sm">
-            <Sparkles className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs sm:text-sm font-medium backdrop-blur-sm">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="font-display tracking-wide uppercase">Generative AI Trading</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight text-white leading-tight transition-all duration-300">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-display font-bold tracking-tight text-white leading-tight transition-all duration-300">
             Build your strategy <br/>
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-blue-500">in plain English.</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-gray-300 max-w-xl leading-relaxed">
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 max-w-xl leading-relaxed">
             Stop wrestling with syntax. Describe your entry, exit, and risk rules, and our AI engine instantly deploys them into autonomous, backtestable trading bots.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 pt-2 sm:pt-4">
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-400 hover:to-blue-500 text-white border-0 px-8 h-14 rounded-xl font-medium shadow-lg shadow-teal-500/25 transition-all hover:scale-105"
+              className="bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-400 hover:to-blue-500 text-white border-0 px-5 sm:px-8 h-10 sm:h-12 md:h-14 text-sm sm:text-base rounded-xl font-medium shadow-lg shadow-teal-500/25 transition-all hover:scale-105"
               onClick={handleGetStarted}
             >
               Start Building Free
-              <ArrowRight className="ml-2 w-5 h-5" />
+              <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="border-gray-700 bg-gray-800/50 hover:bg-gray-700 text-gray-200 px-8 h-14 rounded-xl backdrop-blur-sm transition-all"
+              className="border-gray-700 bg-gray-800/50 hover:bg-gray-700 text-gray-200 px-5 sm:px-8 h-10 sm:h-12 md:h-14 text-sm sm:text-base rounded-xl backdrop-blur-sm transition-all"
               onClick={() => navigate('/docs')}
             >
               Read Docs
@@ -66,18 +66,18 @@ export const LandingHero = () => {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1, delay: 0.2 }}
-          className="relative w-full aspect-square md:aspect-video lg:aspect-square max-w-lg mx-auto"
+          className="relative w-full aspect-video sm:aspect-square md:aspect-video lg:aspect-square max-w-sm sm:max-w-md lg:max-w-lg mx-auto"
         >
           {/* Glass pane terminal */}
           <div className="absolute inset-0 rounded-2xl bg-gray-900/60 border border-gray-700/50 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col">
-            <div className="h-10 bg-gray-800/80 border-b border-gray-700 flex items-center px-4 gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="ml-2 text-xs text-gray-500 font-mono">algo-bot.ui</span>
+            <div className="h-8 sm:h-10 bg-gray-800/80 border-b border-gray-700 flex items-center px-3 sm:px-4 gap-1.5 sm:gap-2">
+              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500"></div>
+              <span className="ml-1 sm:ml-2 text-xs text-gray-500 font-mono">algo-bot.ui</span>
             </div>
             
-            <div className="p-6 font-mono text-sm sm:text-base space-y-6 flex-1 flex flex-col justify-center">
+            <div className="p-3 sm:p-5 md:p-6 font-mono text-xs sm:text-sm md:text-base space-y-3 sm:space-y-5 md:space-y-6 flex-1 flex flex-col justify-center">
               {/* Fake typing effect for plain English */}
               <motion.div 
                 initial={{ opacity: 0, x: -20 }}
