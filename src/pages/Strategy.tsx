@@ -321,13 +321,13 @@ export default function Strategy() {
 
   return (
     <DashboardLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-6 md:p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-1 sm:mb-2">
             My Strategies
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage and monitor your trading strategies
           </p>
         </div>
@@ -556,14 +556,14 @@ export default function Strategy() {
               )}
               onClick={handleAddStrategy}
             >
-              <CardContent className="flex flex-col items-center justify-center p-8">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <Plus className="w-8 h-8 text-primary" />
+              <CardContent className="flex flex-col items-center justify-center p-4 sm:p-8">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3 sm:mb-4">
+                  <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 sm:mb-2">
                   Add New Strategy
                 </h3>
-                <p className="text-sm text-muted-foreground text-center">
+                <p className="text-xs sm:text-sm text-muted-foreground text-center">
                   Create a new trading strategy
                 </p>
               </CardContent>

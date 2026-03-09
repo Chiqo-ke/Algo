@@ -114,11 +114,11 @@ export default function StrategyBuilder() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">AI Strategy Builder</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-1 sm:mb-2">AI Strategy Builder</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Describe your trading strategy in plain English and let AI build it for you.
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function StrategyBuilder() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Example: Create a momentum strategy that buys when RSI crosses above 30 and sells when it crosses below 70, with a 2% stop loss..."
-              className="min-h-32 resize-none bg-background border-border"
+              className="min-h-[5rem] sm:min-h-32 resize-none bg-background border-border text-sm sm:text-base"
             />
             <div className="flex gap-3">
               <Button 

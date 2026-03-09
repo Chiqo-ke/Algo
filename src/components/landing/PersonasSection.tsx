@@ -29,7 +29,7 @@ export const PersonasSection = () => {
   ];
 
   return (
-    <section className="py-16 md:py-24 bg-gray-900 relative overflow-hidden">
+    <section className="py-10 sm:py-16 md:py-24 bg-gray-900 relative overflow-hidden">
       {/* Futuristic background */}
       <div className="absolute inset-0 opacity-5">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -45,48 +45,48 @@ export const PersonasSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
           {/* Section header with futuristic styling */}
-          <div className="text-center mb-12 relative">
+          <div className="text-center mb-8 sm:mb-10 md:mb-12 relative">
             <div className="inline-block relative">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4 relative z-10">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-display font-bold text-white mb-3 sm:mb-4 relative z-10">
                 Who AlgoAI Is Designed For
               </h2>
               <div className="absolute inset-0 blur-2xl bg-purple-500/10 animate-glow" style={{ animationDelay: '0.3s' }} />
             </div>
-            <p className="text-lg text-gray-300">
+            <p className="text-sm sm:text-base md:text-lg text-gray-300">
               Supporting traders focused on discipline, structure, and evidence-based decisions
             </p>
             
             {/* Decorative line */}
-            <div className="flex items-center justify-center gap-2 mt-6">
-              <div className="w-20 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+            <div className="flex items-center justify-center gap-2 mt-4 sm:mt-6">
+              <div className="w-16 sm:w-20 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
               <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-              <div className="w-20 h-px bg-gradient-to-l from-transparent via-purple-500 to-transparent" />
+              <div className="w-16 sm:w-20 h-px bg-gradient-to-l from-transparent via-purple-500 to-transparent" />
             </div>
           </div>
 
           {/* Personas grid with enhanced design */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {personas.map((persona, index) => (
               <div 
                 key={index}
-                className="group text-center p-6 rounded-xl bg-gray-800/50 border border-gray-700/50 hover:border-teal-500/50 backdrop-blur-sm transition-all duration-300 relative overflow-hidden"
+                className="group text-center p-3 sm:p-4 md:p-6 rounded-xl bg-gray-800/50 border border-gray-700/50 hover:border-teal-500/50 backdrop-blur-sm transition-all duration-300 relative overflow-hidden"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* Gradient glow on hover */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${persona.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500 blur-xl`} />
                 
                 {/* Icon container with enhanced animation */}
-                <div className="relative mx-auto mb-4">
+                <div className="relative mx-auto mb-2 sm:mb-3 md:mb-4">
                   <div className={`absolute inset-0 bg-gradient-to-br ${persona.color} opacity-20 rounded-full blur-md group-hover:blur-lg transition-all`} />
-                  <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-teal-500/10 border-2 border-teal-500/30 flex items-center justify-center text-teal-400 mx-auto group-hover:scale-110 group-hover:border-teal-500/50 transition-all duration-300">
-                    <persona.icon className="w-6 h-6 md:w-8 md:h-8 group-hover:rotate-6 transition-transform" />
+                  <div className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-teal-500/10 border-2 border-teal-500/30 flex items-center justify-center text-teal-400 mx-auto group-hover:scale-110 group-hover:border-teal-500/50 transition-all duration-300">
+                    <persona.icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 group-hover:rotate-6 transition-transform" />
                   </div>
                 </div>
                 
-                <h3 className="text-lg font-display font-bold text-white mb-2 relative z-10">
+                <h3 className="text-sm sm:text-base md:text-lg font-display font-bold text-white mb-1 sm:mb-2 relative z-10">
                   {persona.title}
                 </h3>
-                <p className="text-sm text-gray-300 relative z-10">
+                <p className="text-xs sm:text-sm text-gray-300 relative z-10">
                   {persona.description}
                 </p>
                 

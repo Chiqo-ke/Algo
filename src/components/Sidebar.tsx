@@ -32,7 +32,7 @@ const menuItems = [
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -45,38 +45,38 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       <aside 
         className={cn(
           "hidden md:flex relative flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
-          collapsed ? "w-20" : "w-64"
+          collapsed ? "w-16 lg:w-20" : "w-52 lg:w-64"
         )}
       >
         {/* Logo / Brand */}
-        <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
+        <div className="flex items-center justify-between p-3 lg:p-5 border-b border-sidebar-border">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
+              <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg text-sidebar-foreground">AlgoAI</span>
+              <span className="font-bold text-base lg:text-lg text-sidebar-foreground truncate">AlgoAI</span>
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            className="text-sidebar-foreground hover:bg-sidebar-accent"
+            className="text-sidebar-foreground hover:bg-sidebar-accent h-8 w-8 lg:h-9 lg:w-9 flex-shrink-0"
           >
-            {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+            {collapsed ? <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" /> : <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" />}
           </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-2 lg:p-3 space-y-1">
           {menuItems.map((item) => (
             <Tooltip key={item.path}>
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center px-4 py-3 rounded-lg transition-all",
+                    "flex items-center px-3 py-2 lg:px-4 lg:py-3 rounded-lg transition-all",
                     "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     isActive && "bg-sidebar-accent text-sidebar-primary font-medium shadow-glow",
                     collapsed && "justify-center"
@@ -85,9 +85,9 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
               >
                 {/* Use TooltipTrigger on inner inline-flex to avoid className function stringification */}
                 <TooltipTrigger asChild>
-                  <span className={cn("inline-flex items-center gap-3")}>
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {!collapsed && <span className="text-sm">{item.label}</span>}
+                  <span className={cn("inline-flex items-center gap-2 lg:gap-3")}>
+                    <item.icon className="w-4 h-4 lg:w-5 lg:h-5 flex-shrink-0" />
+                    {!collapsed && <span className="text-xs lg:text-sm truncate">{item.label}</span>}
                   </span>
                 </TooltipTrigger>
               </NavLink>
@@ -104,20 +104,20 @@ export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         </nav>
 
         {/* Bottom: Logout separated */}
-        <div className="mt-auto p-4 border-t border-sidebar-border">
+        <div className="mt-auto p-2 lg:p-3 border-t border-sidebar-border">
           <Tooltip>
             <button
               onClick={handleLogout}
               className={cn(
-                "w-full flex items-center px-4 py-3 rounded-lg transition-all",
+                "w-full flex items-center px-3 py-2 lg:px-4 lg:py-3 rounded-lg transition-all",
                 "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 collapsed && "justify-center"
               )}
             >
               <TooltipTrigger asChild>
-                <span className={cn("inline-flex items-center gap-3")}>
-                  <LogOut className="w-5 h-5 flex-shrink-0" />
-                  {!collapsed && <span className="text-sm">Logout</span>}
+                <span className={cn("inline-flex items-center gap-2 lg:gap-3")}>
+                  <LogOut className="w-4 h-4 lg:w-5 lg:h-5 flex-shrink-0" />
+                  {!collapsed && <span className="text-xs lg:text-sm">Logout</span>}
                 </span>
               </TooltipTrigger>
             </button>

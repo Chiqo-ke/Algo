@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Play, Edit, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 import { symbolService, strategyService, backtestService, type Symbol, type Strategy, type LatestBacktestResult } from "@/lib/services";
 import { API_ENDPOINTS, apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -15,11 +14,8 @@ import { logger } from "@/lib/logger";
 
 interface BacktestParams {
   symbol: string;
-  start_date?: Date;
-  end_date?: Date;
-  customDateFrom?: Date;
-  customDateTo?: Date;
-  indicators?: Record<string, any>; // For strategy indicators
+  interval: string;
+  amount: string;
 }
 
 interface BacktestResults {
@@ -72,14 +68,13 @@ export default function Backtesting() {
 
   const [backtestParams, setBacktestParams] = useState<BacktestParams>({
     symbol: backtestConfig?.symbol || "",
-    start_date: backtestConfig?.start_date ? new Date(backtestConfig.start_date) : new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
-    end_date: backtestConfig?.end_date ? new Date(backtestConfig.end_date) : new Date(),
+    interval: "1d",
+    amount: "1000",
   });
 
   const [isRunning, setIsRunning] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [results, setResults] = useState<BacktestResults | null>(null);
-  const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(new Date());
 
   // Validation state
   const [isValidating, setIsValidating] = useState(false);
@@ -143,7 +138,6 @@ export default function Backtesting() {
     sharpeRatio?: number;
     finalEquity?: number;
   }) => {
-    setIsStreaming(false);
     setIsRunning(false);
     
     // Mark that we've completed the first backtest run
@@ -255,12 +249,12 @@ export default function Backtesting() {
         // Use the helper function to display results
         displayResults(savedResults);
         
-        // Also set the backtest params from saved data if available
+        // Pre-fill symbol from saved results if not already set (don't overwrite amount —
+        // it's user-defined and a failed 0-trade run may have saved a bad value)
         if (savedResults.symbol && !backtestParams.symbol) {
           setBacktestParams(prev => ({
             ...prev,
             symbol: savedResults.symbol || prev.symbol,
-            initialBalance: savedResults.initial_balance?.toString() || prev.initialBalance,
           }));
         }
       }
@@ -404,38 +398,26 @@ export default function Backtesting() {
       strategyId,
       strategyName,
       symbol: backtestParams.symbol,
-      start_date: backtestParams.start_date,
-      end_date: backtestParams.end_date,
+      interval: backtestParams.interval,
+      amount: backtestParams.amount,
       hasStrategyCode: !!strategy?.strategy_code
     });
     
-    if (!backtestParams.symbol || !backtestParams.start_date || !backtestParams.end_date) {
+    if (!backtestParams.symbol || !backtestParams.interval) {
       logger.backtest.warn("Missing required fields", { backtestParams });
       toast({
         title: "Missing fields",
-        description: "Please fill in all required fields (Symbol, Start Date, End Date)",
+        description: "Please fill in all required fields (Symbol and Interval)",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate dates are valid Date objects
-    const startDate = backtestParams.start_date instanceof Date ? backtestParams.start_date : new Date(backtestParams.start_date);
-    const endDate = backtestParams.end_date instanceof Date ? backtestParams.end_date : new Date(backtestParams.end_date);
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    const initialCapital = parseFloat(backtestParams.amount) || 1000;
+    if (initialCapital <= 0) {
       toast({
-        title: "Invalid Dates",
-        description: "Please select valid start and end dates",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (startDate >= endDate) {
-      toast({
-        title: "Invalid Date Range",
-        description: "Start date must be before end date",
+        title: "Invalid Amount",
+        description: "Amount must be a positive number",
         variant: "destructive",
       });
       return;
@@ -480,15 +462,15 @@ export default function Backtesting() {
       logger.backtest.info("Starting direct backtest execution", { 
         strategyId,
         symbol: backtestParams.symbol,
-        start_date: format(startDate, "yyyy-MM-dd"),
-        end_date: format(endDate, "yyyy-MM-dd")
+        interval: backtestParams.interval,
+        initialCapital,
       });
 
       // Execute backtest with user's selected parameters
       const executePayload = {
         test_symbol: backtestParams.symbol,
-        start_date: format(startDate, "yyyy-MM-dd"),
-        end_date: format(endDate, "yyyy-MM-dd"),
+        interval: backtestParams.interval,
+        initial_capital: initialCapital,
       };
 
       logger.backtest.info("Executing backtest with params", executePayload);
@@ -642,39 +624,36 @@ export default function Backtesting() {
                 )}
               </div>
 
-              {/* Start Date */}
+              {/* Interval */}
               <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={backtestParams.start_date && backtestParams.start_date instanceof Date && !isNaN(backtestParams.start_date.getTime()) 
-                    ? format(backtestParams.start_date, "yyyy-MM-dd") 
-                    : ""}
-                  onChange={(e) => setBacktestParams({ ...backtestParams, start_date: e.target.value ? new Date(e.target.value) : undefined })}
-                  max={backtestParams.end_date && backtestParams.end_date instanceof Date && !isNaN(backtestParams.end_date.getTime())
-                    ? format(backtestParams.end_date, "yyyy-MM-dd") 
-                    : format(new Date(), "yyyy-MM-dd")}
-                />
-                <p className="text-xs text-muted-foreground">Beginning of backtest period</p>
+                <Label htmlFor="interval">Interval *</Label>
+                <select
+                  id="interval"
+                  value={backtestParams.interval}
+                  onChange={(e) => setBacktestParams({ ...backtestParams, interval: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="1h">1 Hour (1h)</option>
+                  <option value="2h">2 Hours (2h)</option>
+                  <option value="4h">4 Hours (4h)</option>
+                  <option value="1d">1 Day (1d)</option>
+                </select>
+                <p className="text-xs text-muted-foreground">Data bar interval for the backtest</p>
               </div>
 
-              {/* End Date */}
+              {/* Amount */}
               <div className="space-y-2">
-                <Label htmlFor="endDate">End Date *</Label>
+                <Label htmlFor="amount">Simulation Amount (USD) *</Label>
                 <Input
-                  id="endDate"
-                  type="date"
-                  value={backtestParams.end_date && backtestParams.end_date instanceof Date && !isNaN(backtestParams.end_date.getTime())
-                    ? format(backtestParams.end_date, "yyyy-MM-dd") 
-                    : ""}
-                  onChange={(e) => setBacktestParams({ ...backtestParams, end_date: e.target.value ? new Date(e.target.value) : undefined })}
-                  min={backtestParams.start_date && backtestParams.start_date instanceof Date && !isNaN(backtestParams.start_date.getTime())
-                    ? format(backtestParams.start_date, "yyyy-MM-dd") 
-                    : undefined}
-                  max={format(new Date(), "yyyy-MM-dd")}
+                  id="amount"
+                  type="number"
+                  min="1"
+                  step="100"
+                  placeholder="1000"
+                  value={backtestParams.amount}
+                  onChange={(e) => setBacktestParams({ ...backtestParams, amount: e.target.value })}
                 />
-                <p className="text-xs text-muted-foreground">End of backtest period</p>
+                <p className="text-xs text-muted-foreground">Starting capital for the simulation (default: $1,000)</p>
               </div>
             </div>
 
@@ -779,10 +758,10 @@ export default function Backtesting() {
       {/* Floating Edit Button */}
       <Button
         onClick={handleEditStrategy}
-        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg bg-transparent border-2 border-primary hover:bg-primary hover:scale-125 transition-all duration-300 group"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 md:bottom-8 md:right-8 h-11 w-11 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full shadow-lg bg-transparent border-2 border-primary hover:bg-primary hover:scale-125 transition-all duration-300 group"
         size="icon"
       >
-        <Edit className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+        <Edit className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
       </Button>
     </DashboardLayout>
   );

@@ -58,6 +58,9 @@ export const DashboardLayout = ({ children, hideAssistant = false }: DashboardLa
 
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+
+      {/* Tutor overlay + step panel — always mounted so tours work across page navigations */}
+      <TutorPanel />
     </div>
   );
 };
