@@ -206,13 +206,10 @@ interface TutorContextType {
   currentStep: number;
   totalSteps: number;
   currentStepData: TourStep | null;
-  showMenu: boolean;
   startTour: (tourId: string) => void;
   endTour: () => void;
   nextStep: () => void;
   prevStep: () => void;
-  openMenu: () => void;
-  closeMenu: () => void;
   simulatingText: string | null;
   isActing: boolean;
   highlightRect: DOMRect | null;
@@ -225,7 +222,6 @@ export function TutorProvider({ children }: { children: ReactNode }) {
   const [isActive, setIsActive] = useState(false);
   const [activeTour, setActiveTour] = useState<Tour | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
-  const [showMenu, setShowMenu] = useState(false);
   const [simulatingText, setSimulatingText] = useState<string | null>(null);
   const [isActing, setIsActing] = useState(false);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
@@ -286,6 +282,13 @@ export function TutorProvider({ children }: { children: ReactNode }) {
     const step = tour.steps[stepIndex];
     if (!step) return;
     if (step.route && navigateRef.current) navigateRef.current(step.route);
+    if (step.targetSelector) {
+      const selector = step.targetSelector;
+      setTimeout(() => {
+        const target = document.querySelector(selector) as HTMLElement | null;
+        target?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      }, 220);
+    }
     setHighlightRect(null);
     setSimulatingText(null);
     setIsActing(false);
@@ -308,7 +311,6 @@ export function TutorProvider({ children }: { children: ReactNode }) {
     setActiveTour(tour);
     setCurrentStep(0);
     setIsActive(true);
-    setShowMenu(false);
     goToStep(tour, 0);
   }, [goToStep]);
 
@@ -361,8 +363,6 @@ export function TutorProvider({ children }: { children: ReactNode }) {
     goToStep(activeTour, currentStep - 1);
   }, [activeTour, currentStep, goToStep]);
 
-  const openMenu = useCallback(() => setShowMenu(true), []);
-  const closeMenu = useCallback(() => setShowMenu(false), []);
   const currentStepData = activeTour?.steps[currentStep] ?? null;
   const totalSteps = activeTour?.steps.length ?? 0;
 
@@ -374,13 +374,10 @@ export function TutorProvider({ children }: { children: ReactNode }) {
         currentStep,
         totalSteps,
         currentStepData,
-        showMenu,
         startTour,
         endTour,
         nextStep,
         prevStep,
-        openMenu,
-        closeMenu,
         simulatingText,
         isActing,
         highlightRect,

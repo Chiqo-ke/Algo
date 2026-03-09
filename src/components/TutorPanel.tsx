@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback, useState, CSSProperties } from "react";
-import { useTutor, TOURS } from "@/context/TutorContext";
+import { useTutor } from "@/context/TutorContext";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronLeft,
@@ -10,10 +9,7 @@ import {
   X,
   Lightbulb,
   GraduationCap,
-  Clock,
   CheckCircle2,
-  ArrowRight,
-  Keyboard,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,6 +29,7 @@ const KEYFRAMES = `
 /* â”€â”€â”€ Spotlight overlay â”€â”€â”€ */
 function SpotlightOverlay() {
   const { isActive, currentStepData, setHighlightRect, highlightRect } = useTutor();
+  const stepTitle = currentStepData?.title ?? "";
   const rafRef = useRef<number | null>(null);
 
   const findAndTrack = useCallback(() => {
@@ -90,6 +87,32 @@ function SpotlightOverlay() {
           transition: "all 0.3s ease",
         }}
       />
+
+      {/* Floating label: "Now showing: <title>" */}
+      {stepTitle && (
+        <div
+          className="fixed pointer-events-none flex items-center gap-1.5 px-3 py-1 rounded-full shadow-lg"
+          style={{
+            zIndex: 9002,
+            left: Math.max(8, l + w / 2 - 120),
+            top: t > 38 ? t - 34 : t + h + 8,
+            background: "hsl(var(--primary))",
+            color: "hsl(var(--primary-foreground))",
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            whiteSpace: "nowrap",
+            maxWidth: "calc(100vw - 16px)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            transition: "top 0.3s ease, left 0.3s ease",
+          }}
+        >
+          <span style={{ opacity: 0.75, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Now explaining</span>
+          <span style={{ opacity: 0.5 }}>&#x2022;</span>
+          <span>{stepTitle}</span>
+        </div>
+      )}
     </>
   );
 }
@@ -113,7 +136,7 @@ function TutorPointer() {
           key={i}
           className="fixed pointer-events-none rounded-full border-2 border-primary"
           style={{
-            zIndex: 9003,
+            zIndex: 9303,
             width: 46,
             height: 46,
             left: cx,
@@ -127,7 +150,7 @@ function TutorPointer() {
       <div
         className="fixed pointer-events-none rounded-full bg-primary"
         style={{
-          zIndex: 9004,
+          zIndex: 9304,
           width: 10,
           height: 10,
           left: cx - 5,
@@ -140,7 +163,7 @@ function TutorPointer() {
       <div
         className="fixed pointer-events-none"
         style={{
-          zIndex: 9005,
+          zIndex: 9305,
           left: cx + Math.min(highlightRect.width * 0.3, 40),
           top: cy - Math.min(highlightRect.height * 0.4, 30),
           animation: "tutor-bob 1.4s ease-in-out infinite",
@@ -164,72 +187,6 @@ function TutorPointer() {
   );
 }
 
-/* â”€â”€â”€ Tour Selection Menu â”€â”€â”€ */
-function TourMenu() {
-  const { showMenu, closeMenu, startTour } = useTutor();
-  if (!showMenu) return null;
-
-  return (
-    <div className="fixed inset-0 z-[9500] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeMenu} />
-      <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-primary/20 to-primary/5 p-5 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-foreground">AlgoAI Guided Tours</h2>
-                <p className="text-xs text-muted-foreground">Pick a walkthrough to get started</p>
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={closeMenu} className="rounded-full">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        <ScrollArea className="max-h-[60vh]">
-          <div className="p-4 space-y-3">
-            {TOURS.map((tour) => (
-              <button
-                key={tour.id}
-                onClick={() => startTour(tour.id)}
-                className="w-full text-left p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all group"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl flex-shrink-0 mt-0.5">{tour.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
-                        {tour.name}
-                      </span>
-                      <Badge variant="secondary" className="text-xs gap-1 flex-shrink-0">
-                        <Clock className="w-3 h-3" />
-                        {tour.estimatedTime}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{tour.description}</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
-                </div>
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
-
-        <div className="p-3 border-t border-border bg-muted/30">
-          <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-            <Keyboard className="w-3 h-3" />
-            Press <kbd className="px-1.5 py-0.5 rounded bg-border text-foreground text-xs font-mono mx-1">Esc</kbd> to close
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* â”€â”€â”€ Smart position calculator â”€â”€â”€ */
 const PANEL_W = 380;
 const PANEL_H = 480;
@@ -247,11 +204,33 @@ function calcPosition(rect: DOMRect | null, preferred?: string): PositionResult 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // On small screens (phones/tablets — bottom nav visible at < 768px) use a compact
-  // bottom sheet positioned above the 64px mobile nav bar.
+  // On small screens, keep the panel compact and move it to top or bottom
+  // so the highlighted region remains visible.
   if (vw < 768) {
+    const sidePad = 8;
+    const topPad = 8;
+    const navOffset = 64;
+    const panelBottom = navOffset + 8;
+
+    if (rect) {
+      const spaceAbove = rect.top - topPad;
+      const spaceBelow = vh - rect.bottom - panelBottom;
+      if (spaceAbove >= spaceBelow && spaceAbove > 120) {
+        return {
+          style: {
+            position: "fixed",
+            top: topPad,
+            left: sidePad,
+            right: sidePad,
+            width: "auto",
+          },
+          placement: "center",
+        };
+      }
+    }
+
     return {
-      style: { position: "fixed", bottom: 64, left: 0, right: 0, width: "100%" },
+      style: { position: "fixed", bottom: panelBottom, left: sidePad, right: sidePad, width: "auto" },
       placement: "center",
     };
   }
@@ -372,7 +351,7 @@ function TourStepPanel() {
         maxHeight: isMobile ? undefined : "calc(100vh - 80px)",
         display: "flex",
         flexDirection: "column",
-        transition: isMobile ? undefined : "top 0.25s ease, left 0.25s ease, bottom 0.25s ease, right 0.25s ease",
+        transition: "top 0.22s ease, left 0.22s ease, bottom 0.22s ease, right 0.22s ease",
       }}
     >
       {/* Callout tail – desktop only */}
@@ -384,7 +363,7 @@ function TourStepPanel() {
           "relative bg-card border border-border shadow-2xl flex flex-col",
           isMobile ? "rounded-t-2xl border-b-0" : "rounded-2xl"
         )}
-        style={{ zIndex: 1, overflow: "hidden", maxHeight: isMobile ? "42vh" : "calc(100vh - 80px)" }}
+        style={{ zIndex: 1, overflow: "hidden", maxHeight: isMobile ? "30vh" : "calc(100vh - 80px)" }}
       >
         {/* Drag handle – mobile only */}
         {isMobile && (
@@ -496,7 +475,6 @@ export function TutorPanel() {
     <>
       <SpotlightOverlay />
       <TutorPointer />
-      <TourMenu />
       <TourStepPanel />
     </>
   );
