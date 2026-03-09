@@ -32,7 +32,7 @@ const menuItems = [
 ];
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {

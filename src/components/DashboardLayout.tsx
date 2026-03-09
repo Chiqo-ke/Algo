@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { CommandPalette } from "./CommandPalette";
+import { TutorPanel } from "./TutorPanel";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -50,6 +51,9 @@ export const DashboardLayout = ({ children, hideAssistant = false }: DashboardLa
 
       {/* Command Palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+
+      {/* Tutor overlay + step panel — always mounted so tours work across page navigations */}
+      <TutorPanel />
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SessionExpirationHandler from "@/components/SessionExpirationHandler";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { TutorProvider } from "@/context/TutorContext";
 
 // Eager load critical pages
 import LandingPage from "./pages/LandingPage";
@@ -48,7 +49,6 @@ function RootPage() {
 const queryClient = new QueryClient();
 
 const App = () => (
-  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -56,7 +56,9 @@ const App = () => (
       <SpeedInsights />
       <Analytics />
       <BrowserRouter>
+        <ErrorBoundary>
         <AuthProvider>
+          <TutorProvider>
           <SessionExpirationHandler />
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -120,11 +122,12 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </TutorProvider>
         </AuthProvider>
+        </ErrorBoundary>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-  </ErrorBoundary>
 );
 
 export default App;

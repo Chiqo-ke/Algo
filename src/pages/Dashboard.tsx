@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Send, Sparkles, AlertCircle, Loader2, CheckCircle, ArrowRight, FileCheck, Activity } from "lucide-react";
+import { TutorButton } from "@/components/TutorButton";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -1095,7 +1096,9 @@ export default function Dashboard() {
     <DashboardLayout hideAssistant={true}>
       <div className="flex flex-col h-full p-2 sm:p-4 md:p-6 gap-1 sm:gap-4">
         {/* Header */}
-        <div className="text-center flex-shrink-0">
+        <div className="relative flex items-start justify-center flex-shrink-0">
+          {/* Centred title */}
+          <div className="text-center">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center justify-center gap-2">
             <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
             {strategyName}
@@ -1114,6 +1117,12 @@ export default function Dashboard() {
               </span>
             </div>
           )}
+          </div>{/* end centred title */}
+
+          {/* Tour button — top-right corner of header */}
+          <div className="absolute right-0 top-0">
+            <TutorButton />
+          </div>
         </div>
 
         {/* Chat Area - Fills available space */}
@@ -1211,6 +1220,7 @@ export default function Dashboard() {
                           <Button
                             onClick={() => handleOpenConfirmation(message)}
                             className="w-full bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow group"
+                            data-tutor-id="review-proceed"
                             size="sm"
                           >
                             <FileCheck className="w-4 h-4 mr-2" />
@@ -1277,6 +1287,7 @@ export default function Dashboard() {
                 onClick={handleSendMessage} 
                 size="icon" 
                 className="bg-gradient-primary"
+                data-tutor-id="send-message"
                 disabled={isLoading || !input.trim()}
               >
                 {isLoading ? (
@@ -1416,6 +1427,7 @@ export default function Dashboard() {
               onClick={handleConfirmAndProceed}
               disabled={isProceedingToNext}
               className="bg-gradient-primary shadow-glow group w-full sm:w-auto text-xs sm:text-sm"
+              data-tutor-id="confirm-proceed"
             >
               {isProceedingToNext ? (
                 <>
