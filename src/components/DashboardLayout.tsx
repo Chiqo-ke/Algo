@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { CommandPalette } from "./CommandPalette";
-import { TourButton } from "@/components/tour";
+import { TutorPanel } from "@/components/TutorPanel";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -15,8 +14,6 @@ export const DashboardLayout = ({ children, hideAssistant = false }: DashboardLa
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const { pathname } = useLocation();
-  const isOnDashboard = pathname === "/dashboard";
 
   // Global keyboard shortcut for command palette
   useState(() => {
@@ -43,13 +40,6 @@ export const DashboardLayout = ({ children, hideAssistant = false }: DashboardLa
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
-
-      {/* Tour Button - fixed top-right, only on the main Dashboard page */}
-      {isOnDashboard && (
-        <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50">
-          <TourButton />
-        </div>
-      )}
 
       {/* Right AI Assistant Panel */}
       {!hideAssistant && assistantOpen && (

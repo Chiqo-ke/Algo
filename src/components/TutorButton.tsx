@@ -25,9 +25,9 @@ export function TutorButton() {
           <Button
             onClick={handleClick}
             variant="outline"
-            size="sm"
             className={cn(
-              "relative gap-1.5 h-8 px-3 text-xs transition-all",
+              "relative h-8 transition-all text-xs",
+              "w-8 p-0 sm:w-auto sm:px-3 sm:gap-1.5",
               isActive
                 ? "border-destructive/60 text-destructive hover:bg-destructive/10"
                 : "border-primary/50 text-primary hover:bg-primary/10 hover:border-primary"
@@ -37,7 +37,7 @@ export function TutorButton() {
             {isActive
               ? <X className="w-3.5 h-3.5" />
               : <GraduationCap className="w-3.5 h-3.5" />}
-            <span>{isActive ? "Exit Tour" : "Take a Tour"}</span>
+            <span className="hidden sm:inline">{isActive ? "Exit Tour" : "Take a Tour"}</span>
 
             {/* Notification dot */}
             {!isActive && (

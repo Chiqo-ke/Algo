@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
+﻿import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 export type AutoAction =
@@ -35,47 +35,44 @@ export const TOURS: Tour[] = [
   {
     id: "full-system",
     name: "Full System Walkthrough",
-    description:
-      "An interactive guided tour â€” the tutor operates the system for you step by step, just like a real user would.",
-    icon: "ðŸ—ºï¸",
-    estimatedTime: "5â€“10 min",
+    description: "An interactive guided tour that operates the system for you step by step.",
+    icon: "tour",
+    estimatedTime: "5-10 min",
     steps: [
       {
         id: "welcome",
-        title: "Welcome to AlgoAI! ðŸ‘‹",
+        title: "Welcome to AlgoAI",
         description:
-          "I'm your interactive guide. I'll operate the system for you â€” typing strategies, clicking buttons, and filling forms â€” so you can see exactly how AlgoAI works in practice.\n\nYou only ever need to press **Next**. I do the rest.\n\nPress **Next** to begin!",
+          "I am your interactive guide. I will operate the system for you - typing strategies, clicking buttons, and filling forms - so you can see exactly how AlgoAI works.\n\nYou only ever need to press **Next**. I do the rest.\n\nPress **Next** to begin.",
         route: "/dashboard",
         position: "center",
       },
       {
         id: "sidebar",
-        title: "Navigation Sidebar",
+        title: "Navigation",
         description:
-          "This is the sidebar â€” your primary navigation hub. From here you can access:\n\nâ€¢ **Dashboard** â€” your AI strategy builder\nâ€¢ **Strategy** â€” manage all your saved strategies\nâ€¢ **Learning Hub** â€” tutorials and documentation\nâ€¢ **Settings** â€” configure your account\n\nPress **Next** to explore the Dashboard.",
+          "On desktop, navigation is the sidebar on the left. On mobile (phone or tablet), it is the bar at the bottom of your screen.\n\nYou can go to the Dashboard, Strategy page, and Settings from there.\n\nPress **Next** to explore the Dashboard.",
         route: "/dashboard",
-        targetSelector: "aside",
-        position: "right",
+        position: "center",
       },
       {
         id: "dashboard-intro",
-        title: "The AI Dashboard ðŸ¤–",
+        title: "The AI Dashboard",
         description:
-          "This is the heart of AlgoAI â€” where you describe trading strategies in plain English and the AI turns them into executable code.\n\nNo programming knowledge required. Just describe your idea like you would to a human trading analyst.\n\nPress **Next** and I'll type a sample strategy for you.",
+          "This is where you describe trading strategies in plain English and the AI turns them into executable code. No programming knowledge required.\n\nPress **Next** and I will type a sample strategy for you.",
         route: "/dashboard",
         targetSelector: "main",
         position: "center",
         tips: [
-          "Be specific about entry AND exit conditions",
-          "Name the asset you want to trade",
+          "Be specific about entry and exit conditions",
           "Include risk parameters like a stop-loss",
         ],
       },
       {
         id: "type-strategy",
-        title: "Typing a Strategy Into the Chat ðŸ“",
+        title: "Typing a Strategy",
         description:
-          "Watch â€” I'm typing a real RSI momentum strategy into the chat box below.\n\nOnce typing finishes (the cursor stops blinking), press **Next** and I'll send it to the AI for you.",
+          "Watch - I am typing a real RSI momentum strategy into the chat box below.\n\nWhen typing finishes, press **Next** to send it to the AI.",
         route: "/dashboard",
         targetSelector: "textarea",
         position: "top",
@@ -92,32 +89,30 @@ export const TOURS: Tour[] = [
       },
       {
         id: "ai-thinking",
-        title: "AI Is Generating Your Strategy âš™ï¸",
+        title: "AI Generating Your Strategy",
         description:
-          "I just sent the message to the AI. You can see the live **workflow progress indicator** in the chat â€” it shows each internal stage:\n\n1. Parsing your description\n2. Structuring entry / exit rules\n3. Applying risk parameters\n4. Generating Python code\n\nWhen the AI response appears with a blue **Review & Proceed** button at the bottom, press **Next**.",
+          "The message was sent. The AI is parsing your description, structuring entry and exit rules, and generating Python code.\n\nWhen the blue **Review and Proceed** button appears at the bottom of the chat, press **Next**.",
         position: "center",
         tips: [
-          "This typically takes 15â€“40 seconds",
-          "The AI retains context â€” you can send follow-up messages after the tour",
+          "This typically takes 15-40 seconds",
         ],
       },
       {
         id: "ai-response",
-        title: "AI Strategy Response âœ…",
+        title: "AI Strategy Response",
         description:
-          "The AI has responded with your fully structured strategy â€” complete with entry conditions, exit rules, and risk parameters.\n\nPress **Next** and I'll click the **Review & Proceed** button in the chat for you, opening the confirmation dialog.",
+          "The AI has responded with your fully structured strategy - entry conditions, exit rules, and risk parameters are all defined.\n\nPress **Next** and I will click the **Review and Proceed** button for you.",
         position: "center",
         nextAction: { kind: "click-last", selector: "[data-tutor-id='review-proceed']" },
         tips: [
-          "Scroll down in the AI message to see the full strategy output",
-          "If the button is not visible yet, the AI may still be processing â€” wait a moment then press Next",
+          "If the button is not visible yet, the AI may still be processing - wait a moment then press Next",
         ],
       },
       {
         id: "dialog-form",
-        title: "Strategy Confirmation Dialog ðŸ“‹",
+        title: "Confirmation Dialog",
         description:
-          "A confirmation dialog has opened. I'm filling in the strategy **name** and **initial backtest symbol** for you automatically.\n\nOnce the fields are filled, press **Next** and I'll click Confirm â€” this will generate the trading code and kick off the first backtest.",
+          "A confirmation dialog has opened. I am filling in the strategy name and backtest symbol automatically.\n\nOnce the fields are filled, press **Next** to confirm and generate the code.",
         targetSelector: "#strategy-name",
         position: "bottom",
         autoAction: {
@@ -131,36 +126,34 @@ export const TOURS: Tour[] = [
         },
         nextAction: { kind: "click", selector: "[data-tutor-id='confirm-proceed']" },
         tips: [
-          "Any descriptive name works â€” you can rename strategies later",
-          "The backtest symbol can be any stock or crypto ticker (e.g. TSLA, ETH-USD)",
-          "Strategy code is auto-generated after confirmation",
+          "Any descriptive name works - you can rename strategies later",
+          "The backtest symbol can be any stock or crypto ticker",
         ],
       },
       {
         id: "generating",
-        title: "Generating Strategy & Running Backtest ðŸš€",
+        title: "Generating Strategy",
         description:
-          "I clicked Confirm. The system is now:\n\n1. Saving your strategy definition\n2. Auto-generating the Python trading code\n3. Running an initial backtest on AAPL historical data\n\nThis takes 20â€“60 seconds. Watch the backtesting page load with results. Once results appear, press **Next** to continue.",
+          "The system is saving your strategy, generating the Python trading code, and running an initial backtest on AAPL historical data.\n\nWait for the results to appear on screen, then press **Next**.",
         position: "center",
         tips: [
           "Do not navigate away while generation is in progress",
-          "The page updates automatically when results are ready",
         ],
       },
       {
         id: "strategy-page",
-        title: "Strategy Management Page ðŸ“Š",
+        title: "Strategy Page",
         description:
-          "Here on the Strategy page you can manage all your saved strategies. Each entry shows:\n\nâ€¢ Real-time performance metrics (win rate, return)\nâ€¢ Status badge: **Live**, **Testing**, or **Paused**\nâ€¢ Quick actions: open backtesting lab, edit, or delete\n\nPress **Next** to look at strategy cards.",
+          "Here you can manage all your saved strategies. Each entry shows real-time performance metrics, a status badge, and quick actions.\n\nPress **Next** to look at strategy cards.",
         route: "/strategy",
         targetSelector: "main",
         position: "center",
       },
       {
         id: "strategy-cards",
-        title: "Strategy Cards ðŸƒ",
+        title: "Strategy Cards",
         description:
-          "Each card represents one strategy. You can:\n\nâ€¢ **Click the card body** â€” opens the dedicated backtesting lab\nâ€¢ **Use the â‹® menu** â€” rename, edit, or delete\nâ€¢ **Read at-a-glance stats** â€” total return, win rate, trade count\n\nPress **Next** to explore the Backtesting Engine.",
+          "Each card represents one strategy. Click the card body to open the backtesting lab, or use the menu button to rename, edit, or delete.\n\nPress **Next** to explore the Backtesting Engine.",
         route: "/strategy",
         targetSelector: "[class*='Card']",
         position: "bottom",
@@ -168,9 +161,9 @@ export const TOURS: Tour[] = [
       },
       {
         id: "backtesting",
-        title: "Backtesting Engine ðŸ“ˆ",
+        title: "Backtesting Engine",
         description:
-          "The Backtesting Engine validates your strategy against **real historical price data** before you risk any capital.\n\nYou can configure:\nâ€¢ **Symbol** â€” AAPL, BTC-USD, TSLA, etc.\nâ€¢ **Time period** â€” 1 month to 5 years of history\nâ€¢ **Interval** â€” daily, hourly, or 15-minute candles\n\nPress **Next** to learn how to read results.",
+          "Validate your strategy against real historical price data before risking any capital. Configure the symbol, time period, and candle interval.\n\nPress **Next** to learn how to read the results.",
         route: "/backtesting",
         targetSelector: "main",
         position: "center",
@@ -181,46 +174,42 @@ export const TOURS: Tour[] = [
       },
       {
         id: "backtest-metrics",
-        title: "Interpreting Backtest Results ðŸ“‰",
+        title: "Reading Backtest Results",
         description:
-          "Focus on these key metrics when reading results:\n\nâ€¢ **Total Return** â€” overall % gain or loss\nâ€¢ **Win Rate > 50%** â€” more winners than losers\nâ€¢ **Sharpe Ratio > 1.0** â€” strong risk-adjusted returns\nâ€¢ **Max Drawdown < 20%** â€” acceptable worst-case risk\nâ€¢ **Trade History** â€” every entry, exit, and P&L\n\nPress **Next** to see Settings.",
+          "Key metrics: **Total Return** (overall gain or loss), **Win Rate** (aim above 50%), **Sharpe Ratio** (aim above 1.0), **Max Drawdown** (aim below 20%).\n\nPress **Next** to see Settings.",
         route: "/backtesting",
         position: "center",
       },
       {
         id: "settings",
-        title: "Settings & Account âš™ï¸",
+        title: "Settings",
         description:
-          "In Settings you can configure:\n\nâ€¢ **Profile** â€” update your personal information\nâ€¢ **API Keys** â€” connect to live brokers\nâ€¢ **Notifications** â€” configure alerts and thresholds\nâ€¢ **Subscription** â€” manage your plan\n\nAlways keep API keys private â€” never share them.\n\nPress **Next** to finish the tour.",
+          "Configure your profile, connect API keys to live brokers, set up notification alerts, and manage your subscription.\n\nKeep API keys private - never share them.\n\nPress **Next** to finish the tour.",
         route: "/settings",
         targetSelector: "main",
         position: "center",
       },
       {
         id: "complete",
-        title: "Tour Complete â€” You're Ready! ðŸŽ‰",
+        title: "Tour Complete",
         description:
-          "You've seen the entire AlgoAI workflow operated live:\n\n1. **Describe** your strategy in natural language\n2. **AI generates** structured rules and Python code automatically\n3. **Confirm** with a name and backtest configuration\n4. **Backtest** against historical data to validate\n5. **Deploy** once you're confident in the results\n\nYou now have a real strategy saved in your account. Go build your next one! ðŸš€",
+          "You have seen the full AlgoAI workflow: describe a strategy in plain English, the AI generates the code, confirm and backtest, then deploy when confident.\n\nYou now have a real strategy saved. Go build your next one!",
         route: "/dashboard",
         position: "center",
       },
     ],
   },
 ];
-
 interface TutorContextType {
   isActive: boolean;
   activeTour: Tour | null;
   currentStep: number;
   totalSteps: number;
   currentStepData: TourStep | null;
-  showMenu: boolean;
   startTour: (tourId: string) => void;
   endTour: () => void;
   nextStep: () => void;
   prevStep: () => void;
-  openMenu: () => void;
-  closeMenu: () => void;
   simulatingText: string | null;
   isActing: boolean;
   highlightRect: DOMRect | null;
@@ -233,7 +222,6 @@ export function TutorProvider({ children }: { children: ReactNode }) {
   const [isActive, setIsActive] = useState(false);
   const [activeTour, setActiveTour] = useState<Tour | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
-  const [showMenu, setShowMenu] = useState(false);
   const [simulatingText, setSimulatingText] = useState<string | null>(null);
   const [isActing, setIsActing] = useState(false);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
@@ -294,6 +282,13 @@ export function TutorProvider({ children }: { children: ReactNode }) {
     const step = tour.steps[stepIndex];
     if (!step) return;
     if (step.route && navigateRef.current) navigateRef.current(step.route);
+    if (step.targetSelector) {
+      const selector = step.targetSelector;
+      setTimeout(() => {
+        const target = document.querySelector(selector) as HTMLElement | null;
+        target?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      }, 220);
+    }
     setHighlightRect(null);
     setSimulatingText(null);
     setIsActing(false);
@@ -316,7 +311,6 @@ export function TutorProvider({ children }: { children: ReactNode }) {
     setActiveTour(tour);
     setCurrentStep(0);
     setIsActive(true);
-    setShowMenu(false);
     goToStep(tour, 0);
   }, [goToStep]);
 
@@ -369,8 +363,6 @@ export function TutorProvider({ children }: { children: ReactNode }) {
     goToStep(activeTour, currentStep - 1);
   }, [activeTour, currentStep, goToStep]);
 
-  const openMenu = useCallback(() => setShowMenu(true), []);
-  const closeMenu = useCallback(() => setShowMenu(false), []);
   const currentStepData = activeTour?.steps[currentStep] ?? null;
   const totalSteps = activeTour?.steps.length ?? 0;
 
@@ -382,13 +374,10 @@ export function TutorProvider({ children }: { children: ReactNode }) {
         currentStep,
         totalSteps,
         currentStepData,
-        showMenu,
         startTour,
         endTour,
         nextStep,
         prevStep,
-        openMenu,
-        closeMenu,
         simulatingText,
         isActing,
         highlightRect,

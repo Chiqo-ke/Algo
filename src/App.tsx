@@ -9,8 +9,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SessionExpirationHandler from "@/components/SessionExpirationHandler";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { TourProvider, TourOverlay } from "@/components/tour";
+import { TutorProvider } from "@/context/TutorContext";
 
 // Eager load critical pages
 import LandingPage from "./pages/LandingPage";
@@ -56,10 +55,9 @@ const App = () => (
       <SpeedInsights />
       <Analytics />
       <BrowserRouter>
-        <TourProvider>
+        <TutorProvider>
           <AuthProvider>
             <SessionExpirationHandler />
-            <TourOverlay />
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<RootPage />} />
@@ -123,7 +121,7 @@ const App = () => (
             </Routes>
             </Suspense>
           </AuthProvider>
-        </TourProvider>
+        </TutorProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
