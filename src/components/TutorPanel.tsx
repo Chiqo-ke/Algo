@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useCallback, useState, CSSProperties } from "react";
+import { useEffect, useRef, useCallback, useState, CSSProperties } from "react";
 import { useTutor, TOURS } from "@/context/TutorContext";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -247,6 +247,15 @@ function calcPosition(rect: DOMRect | null, preferred?: string): PositionResult 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
+  // On small screens (phones/tablets — bottom nav visible at < 768px) use a compact
+  // bottom sheet positioned above the 64px mobile nav bar.
+  if (vw < 768) {
+    return {
+      style: { position: "fixed", bottom: 64, left: 0, right: 0, width: "100%" },
+      placement: "center",
+    };
+  }
+
   if (!rect || preferred === "center") {
     return {
       style: { position: "fixed", top: Math.max(VP_PAD, (vh - PANEL_H) / 2), left: Math.max(VP_PAD, (vw - PANEL_W) / 2), width: Math.min(PANEL_W, vw - VP_PAD * 2) },
@@ -310,9 +319,13 @@ function CalloutTail({ placement }: { placement: Placement }) {
 function TourStepPanel() {
   const { isActive, activeTour, currentStep, totalSteps, currentStepData, endTour, nextStep, prevStep, simulatingText, isActing, highlightRect } = useTutor();
   const [result, setResult] = useState<PositionResult>({ style: { position: "fixed", bottom: VP_PAD, right: VP_PAD }, placement: "center" });
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {
-    const upd = () => setResult(calcPosition(highlightRect, currentStepData?.position));
+    const upd = () => {
+      setIsMobile(window.innerWidth < 768);
+      setResult(calcPosition(highlightRect, currentStepData?.position));
+    };
     upd();
     window.addEventListener("resize", upd);
     return () => window.removeEventListener("resize", upd);
@@ -340,7 +353,7 @@ function TourStepPanel() {
     text.split("\n").map((line, i) => {
       const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
       return (
-        <p key={i} className="text-sm leading-relaxed mb-0.5">
+        <p key={i} className={cn(isMobile ? "text-xs" : "text-sm", "leading-relaxed mb-0.5")}>
           {parts.map((p, j) => {
             if (p.startsWith("**") && p.endsWith("**")) return <strong key={j} className="font-semibold text-foreground">{p.slice(2, -2)}</strong>;
             if (p.startsWith("*") && p.endsWith("*")) return <em key={j} className="italic text-primary/90">{p.slice(1, -1)}</em>;
@@ -355,20 +368,33 @@ function TourStepPanel() {
       style={{
         ...style,
         zIndex: 9200,
-        maxWidth: style.width ?? PANEL_W,
-        maxHeight: "calc(100vh - 80px)",
+        maxWidth: isMobile ? "100%" : (style.width ?? PANEL_W),
+        maxHeight: isMobile ? undefined : "calc(100vh - 80px)",
         display: "flex",
         flexDirection: "column",
-        transition: "top 0.25s ease, left 0.25s ease, bottom 0.25s ease, right 0.25s ease",
+        transition: isMobile ? undefined : "top 0.25s ease, left 0.25s ease, bottom 0.25s ease, right 0.25s ease",
       }}
     >
-      {/* Callout tail â€” outside the card, covered half-way by the card */}
-      <CalloutTail placement={placement} />
+      {/* Callout tail – desktop only */}
+      {!isMobile && <CalloutTail placement={placement} />}
 
-      {/* Card â€” z-index:1 so it paints over the inner half of the tail */}
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl flex flex-col" style={{ zIndex: 1, overflow: "hidden", maxHeight: "calc(100vh - 80px)" }}>
+      {/* Card – z-index:1 so it paints over the inner half of the tail */}
+      <div
+        className={cn(
+          "relative bg-card border border-border shadow-2xl flex flex-col",
+          isMobile ? "rounded-t-2xl border-b-0" : "rounded-2xl"
+        )}
+        style={{ zIndex: 1, overflow: "hidden", maxHeight: isMobile ? "42vh" : "calc(100vh - 80px)" }}
+      >
+        {/* Drag handle – mobile only */}
+        {isMobile && (
+          <div className="flex-shrink-0 flex justify-center pt-2.5">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+        )}
+
         {/* Header */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-primary/15 to-transparent px-4 py-3 border-b border-border flex items-center gap-2">
+        <div className={cn("flex-shrink-0 bg-gradient-to-r from-primary/15 to-transparent border-b border-border flex items-center gap-2", isMobile ? "px-4 py-2" : "px-4 py-3")}>
           <GraduationCap className="w-4 h-4 text-primary flex-shrink-0" />
           <span className="text-xs font-medium text-muted-foreground flex-1 truncate">{activeTour.name}</span>
           <span className="text-xs text-muted-foreground flex-shrink-0">{currentStep + 1} / {totalSteps}</span>
@@ -380,9 +406,9 @@ function TourStepPanel() {
         <Progress value={progress} className="flex-shrink-0 h-1 rounded-none" />
 
         <ScrollArea className="flex-1 min-h-0">
-          <div className="p-4 space-y-3">
-            <h3 className="font-bold text-base text-foreground leading-snug">{currentStepData.title}</h3>
-            <div className="text-muted-foreground">{fmt(currentStepData.description)}</div>
+          <div className={cn(isMobile ? "p-3 space-y-2" : "p-4 space-y-3")}>
+            <h3 className={cn("font-bold text-foreground leading-snug", isMobile ? "text-sm" : "text-base")}>{currentStepData.title}</h3>
+            <div className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>{fmt(currentStepData.description)}</div>
 
             {(simulatingText !== null || isActing) && (
               <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
@@ -397,7 +423,7 @@ function TourStepPanel() {
               </div>
             )}
 
-            {currentStepData.tips && currentStepData.tips.length > 0 && (
+            {!isMobile && currentStepData.tips && currentStepData.tips.length > 0 && (
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1.5">
                 <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <Lightbulb className="w-3 h-3" /> Tips
@@ -405,7 +431,7 @@ function TourStepPanel() {
                 <ul className="space-y-1">
                   {currentStepData.tips.map((tip, i) => (
                     <li key={i} className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-1.5">
-                      <span className="flex-shrink-0 mt-0.5">â€¢</span>
+                      <span className="flex-shrink-0 mt-0.5">&#x2022;</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -416,19 +442,36 @@ function TourStepPanel() {
         </ScrollArea>
 
         {/* Nav footer */}
-        <div className="flex-shrink-0 px-4 py-3 border-t border-border bg-muted/30 flex items-center justify-between gap-2">
-          <Button variant="outline" size="sm" onClick={prevStep} disabled={isFirst || isActing} className="gap-1 text-xs h-8">
+        <div className={cn("flex-shrink-0 border-t border-border bg-muted/30 flex items-center justify-between gap-2", isMobile ? "px-3 py-3" : "px-4 py-3")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={prevStep}
+            disabled={isFirst || isActing}
+            className={cn("gap-1 text-xs", isMobile ? "h-10 flex-1" : "h-8")}
+          >
             <ChevronLeft className="w-3 h-3" /> Back
           </Button>
 
-          <div className="flex items-center gap-1 overflow-hidden">
-            {Array.from({ length: Math.min(totalSteps, 12) }).map((_, i) => (
-              <div key={i} className={cn("h-1.5 rounded-full transition-all duration-200 flex-shrink-0", i === currentStep ? "bg-primary w-4" : "bg-border w-1.5")} />
-            ))}
-            {totalSteps > 12 && <span className="text-xs text-muted-foreground ml-1">+{totalSteps - 12}</span>}
-          </div>
+          {isMobile ? (
+            <span className="text-xs text-muted-foreground flex-shrink-0 px-2 tabular-nums">
+              {currentStep + 1} / {totalSteps}
+            </span>
+          ) : (
+            <div className="flex items-center gap-1 overflow-hidden">
+              {Array.from({ length: Math.min(totalSteps, 12) }).map((_, i) => (
+                <div key={i} className={cn("h-1.5 rounded-full transition-all duration-200 flex-shrink-0", i === currentStep ? "bg-primary w-4" : "bg-border w-1.5")} />
+              ))}
+              {totalSteps > 12 && <span className="text-xs text-muted-foreground ml-1">+{totalSteps - 12}</span>}
+            </div>
+          )}
 
-          <Button size="sm" onClick={nextStep} disabled={isActing} className="gap-1 text-xs h-8 bg-gradient-to-r from-primary to-primary/80">
+          <Button
+            size="sm"
+            onClick={nextStep}
+            disabled={isActing}
+            className={cn("gap-1 text-xs bg-gradient-to-r from-primary to-primary/80", isMobile ? "h-10 flex-1" : "h-8")}
+          >
             {isActing
               ? <><Loader2 className="w-3 h-3 animate-spin" /> Acting&hellip;</>
               : isLast
@@ -437,9 +480,11 @@ function TourStepPanel() {
           </Button>
         </div>
 
-        <div className="flex-shrink-0 px-4 pb-2">
-          <p className="text-xs text-muted-foreground/50 text-center">â† â†’ arrow keys â€¢ Esc to exit</p>
-        </div>
+        {!isMobile && (
+          <div className="flex-shrink-0 px-4 pb-2">
+            <p className="text-xs text-muted-foreground/50 text-center">&#x2190; &#x2192; arrow keys &bull; Esc to exit</p>
+          </div>
+        )}
       </div>
     </div>
   );
