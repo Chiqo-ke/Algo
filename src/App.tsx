@@ -24,6 +24,7 @@ const StrategyBuilder = lazy(() => import("./pages/StrategyBuilder"));
 const Strategy = lazy(() => import("./pages/Strategy"));
 const Backtesting = lazy(() => import("./pages/Backtesting"));
 const Settings = lazy(() => import("./pages/Settings"));
+const LiveTrading = lazy(() => import("./pages/LiveTrading"));
 const ConnectionTest = lazy(() => import("./pages/ConnectionTest"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ErrorPage = lazy(() => import("./pages/ErrorPage"));
@@ -95,6 +96,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Backtesting />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/live-trading"
+                element={
+                  <ProtectedRoute>
+                    <LiveTrading />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/live-trading/:strategyId"
+                element={
+                  <ProtectedRoute>
+                    <LiveTrading />
                   </ProtectedRoute>
                 }
               />

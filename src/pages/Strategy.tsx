@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { strategyService, botPerformanceService } from "@/lib/services";
 import type { BotPerformance } from "@/lib/types";
@@ -195,7 +195,7 @@ export default function Strategy() {
 
   const handleAddStrategy = () => {
     logger.ui.info("User clicked Add Strategy button");
-    // This will later open a dialog or navigate to strategy creation
+    navigate("/dashboard");
   };
 
   const handleRunBacktest = (strategyId: number, strategyName: string) => {
@@ -220,11 +220,8 @@ export default function Strategy() {
   };
 
   const handleGoLive = (strategyId: number) => {
-    logger.strategy.info("User attempted to go live with strategy", { strategyId });
-    toast({
-      title: "Feature coming soon",
-      description: "Live trading will be available in the next version",
-    });
+    logger.strategy.info("Navigating to live trading for strategy", { strategyId });
+    navigate(`/live-trading/${strategyId}`);
   };
 
   // Handle delete strategy
@@ -535,12 +532,13 @@ export default function Strategy() {
                       className={cn(
                         "flex-1 min-w-0 px-2 sm:px-4",
                         strategy.status === "live" 
-                          ? "bg-red-500 hover:bg-red-600" 
-                          : "bg-green-500 hover:bg-green-600"
+                          ? "bg-green-500 hover:bg-green-600" 
+                          : "bg-primary hover:bg-primary/90"
                       )}
                       onClick={() => handleGoLive(strategy.id)}
                     >
-                      <span className="truncate">{strategy.status === "live" ? "Pause" : "Join Live Waitlist"}</span>
+                      <Zap className="w-3.5 h-3.5 mr-1 sm:mr-1.5 flex-shrink-0" />
+                      <span className="truncate">Live</span>
                     </Button>
                   </div>
                 </CardContent>
