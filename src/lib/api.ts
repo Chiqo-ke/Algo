@@ -125,6 +125,16 @@ export const API_ENDPOINTS = {
     latestResultByStrategy: (strategyId: number) => `${API_BASE_URL}/strategies/backtest-results/${strategyId}/`,
     latestResultByStrategyQuery: (strategyId: number) => `${API_BASE_URL}/strategies/backtest-results/by_strategy/?strategy_id=${strategyId}`,
   },
+  // Live Trading API
+  trading: {
+    credentials: `${API_BASE_URL}/trading/credentials/`,
+    credentialDetail: (id: number) => `${API_BASE_URL}/trading/credentials/${id}/`,
+    sessions: `${API_BASE_URL}/trading/sessions/`,
+    sessionDetail: (id: number) => `${API_BASE_URL}/trading/sessions/${id}/`,
+    sessionStop: (id: number) => `${API_BASE_URL}/trading/sessions/${id}/stop/`,
+    sessionPositions: (id: number) => `${API_BASE_URL}/trading/sessions/${id}/positions/`,
+    sessionClosePosition: (id: number) => `${API_BASE_URL}/trading/sessions/${id}/close_position/`,
+  },
   // Production API
   production: {
     strategies: {

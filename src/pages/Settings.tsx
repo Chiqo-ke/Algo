@@ -1,17 +1,27 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { User, Lock, Sliders, CreditCard, Loader2, CheckCircle2, AlertCircle, LogOut, BarChart3, GraduationCap } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { User, Lock, Sliders, CreditCard, Loader2, CheckCircle2, AlertCircle, LogOut, BarChart3, GraduationCap, Server, Trash2, Pencil, Plus, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiGet, apiPut, apiPost, API_ENDPOINTS } from "@/lib/api";
+import { apiGet, apiPut, apiPost, apiDelete, API_ENDPOINTS } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
@@ -45,10 +55,31 @@ interface PremiumStatus {
   };
 }
 
+interface BrokerCredential {
+  id: number;
+  label: string;
+  mt5_login: number;
+  mt5_server: string;
+  mt5_terminal_path: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+const EMPTY_BROKER_FORM = {
+  label: "",
+  mt5_login: "",
+  mt5_password: "",
+  mt5_server: "",
+  mt5_terminal_path: "",
+  is_default: false,
+};
+
 export default function Settings() {
   const { toast } = useToast();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "profile";
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -75,6 +106,16 @@ export default function Settings() {
 
   // Premium state
   const [premium, setPremium] = useState<PremiumStatus | null>(null);
+
+  // Broker credentials state
+  const [brokerCredentials, setBrokerCredentials] = useState<BrokerCredential[]>([]);
+  const [loadingBroker, setLoadingBroker] = useState(false);
+  const [brokerDialogOpen, setBrokerDialogOpen] = useState(false);
+  const [editingCredential, setEditingCredential] = useState<BrokerCredential | null>(null);
+  const [brokerForm, setBrokerForm] = useState({ ...EMPTY_BROKER_FORM });
+  const [savingBroker, setSavingBroker] = useState(false);
+  const [deletingBroker, setDeletingBroker] = useState<number | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Fetch user profile
   useEffect(() => {
@@ -118,6 +159,14 @@ export default function Settings() {
         api_calls: { used: 4521, limit: 10000 },
       },
     });
+  }, []);
+
+  // Fetch broker credentials when the broker tab is active
+  useEffect(() => {
+    if (defaultTab === "broker") {
+      fetchBrokerCredentials();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleProfileUpdate = async () => {
@@ -194,6 +243,88 @@ export default function Settings() {
     setPasswordLoading(false);
   };
 
+  // ─── Broker credentials handlers ─────────────────────────────────────────
+
+  const fetchBrokerCredentials = async () => {
+    setLoadingBroker(true);
+    const { data, error } = await apiGet<any>(API_ENDPOINTS.trading.credentials);
+    if (!error && data) {
+      const list: BrokerCredential[] = Array.isArray(data) ? data : data.results ?? [];
+      setBrokerCredentials(list);
+    }
+    setLoadingBroker(false);
+  };
+
+  const openAddBrokerDialog = () => {
+    setEditingCredential(null);
+    setBrokerForm({ ...EMPTY_BROKER_FORM });
+    setShowPassword(false);
+    setBrokerDialogOpen(true);
+  };
+
+  const openEditBrokerDialog = (cred: BrokerCredential) => {
+    setEditingCredential(cred);
+    setBrokerForm({
+      label: cred.label,
+      mt5_login: String(cred.mt5_login),
+      mt5_password: "",  // never pre-filled for security
+      mt5_server: cred.mt5_server,
+      mt5_terminal_path: cred.mt5_terminal_path ?? "",
+      is_default: cred.is_default,
+    });
+    setShowPassword(false);
+    setBrokerDialogOpen(true);
+  };
+
+  const handleSaveBrokerCredential = async () => {
+    if (!brokerForm.label.trim() || !brokerForm.mt5_login || !brokerForm.mt5_server.trim()) {
+      toast({ title: "Missing fields", description: "Label, Login, and Server are required", variant: "destructive" });
+      return;
+    }
+    if (!editingCredential && !brokerForm.mt5_password) {
+      toast({ title: "Missing password", description: "MT5 password is required", variant: "destructive" });
+      return;
+    }
+
+    setSavingBroker(true);
+    const payload: Record<string, unknown> = {
+      label: brokerForm.label.trim(),
+      mt5_login: parseInt(brokerForm.mt5_login),
+      mt5_server: brokerForm.mt5_server.trim(),
+      mt5_terminal_path: brokerForm.mt5_terminal_path.trim(),
+      is_default: brokerForm.is_default,
+    };
+    if (brokerForm.mt5_password) payload.mt5_password = brokerForm.mt5_password;
+
+    let error: string | undefined;
+    if (editingCredential) {
+      ({ error } = await apiPut(API_ENDPOINTS.trading.credentialDetail(editingCredential.id), payload));
+    } else {
+      ({ error } = await apiPost(API_ENDPOINTS.trading.credentials, payload));
+    }
+
+    if (error) {
+      toast({ title: "Failed to save", description: error, variant: "destructive" });
+    } else {
+      toast({ title: editingCredential ? "Credential updated" : "Credential added", description: brokerForm.label });
+      setBrokerDialogOpen(false);
+      await fetchBrokerCredentials();
+    }
+    setSavingBroker(false);
+  };
+
+  const handleDeleteBrokerCredential = async (id: number) => {
+    setDeletingBroker(id);
+    const { error } = await apiDelete(API_ENDPOINTS.trading.credentialDetail(id));
+    if (error) {
+      toast({ title: "Failed to delete", description: error, variant: "destructive" });
+    } else {
+      toast({ title: "Credential deleted" });
+      setBrokerCredentials(prev => prev.filter(c => c.id !== id));
+    }
+    setDeletingBroker(null);
+  };
+
   const handleAccountSettingsUpdate = async () => {
     setSaveLoading(true);
     // Save account settings to backend
@@ -237,8 +368,8 @@ export default function Settings() {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 md:grid-cols-5">
+          <Tabs defaultValue={defaultTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 md:grid-cols-6">
               <TabsTrigger value="profile" className="gap-1.5">
                 <User className="h-4 w-4 shrink-0" />
                 <span className="hidden sm:inline">Profile</span>
@@ -250,6 +381,10 @@ export default function Settings() {
               <TabsTrigger value="security" className="gap-1.5">
                 <Lock className="h-4 w-4 shrink-0" />
                 <span className="hidden sm:inline">Security</span>
+              </TabsTrigger>
+              <TabsTrigger value="broker" className="gap-1.5">
+                <Server className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Broker</span>
               </TabsTrigger>
               <TabsTrigger value="premium" className="hidden md:flex gap-1.5">
                 <CreditCard className="h-4 w-4 shrink-0" />
@@ -476,6 +611,7 @@ export default function Settings() {
                       </div>
                       <input
                         type="checkbox"
+                        title="Toggle email notifications"
                         checked={accountSettings.notification_email}
                         onChange={(e) =>
                           setAccountSettings({
@@ -493,6 +629,7 @@ export default function Settings() {
                       </div>
                       <input
                         type="checkbox"
+                        title="Toggle push notifications"
                         checked={accountSettings.notification_push}
                         onChange={(e) =>
                           setAccountSettings({
@@ -697,14 +834,10 @@ export default function Settings() {
                             {premium.usage.strategies.used} / {premium.usage.strategies.limit}
                           </p>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all"
-                            style={{
-                              width: `${(premium.usage.strategies.used / premium.usage.strategies.limit) * 100}%`,
-                            }}
-                          />
-                        </div>
+                        <Progress
+                          className="h-2"
+                          value={(premium.usage.strategies.used / premium.usage.strategies.limit) * 100}
+                        />
                       </div>
 
                       {/* Backtests */}
@@ -715,14 +848,10 @@ export default function Settings() {
                             {premium.usage.backtests.used} / {premium.usage.backtests.limit}
                           </p>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all"
-                            style={{
-                              width: `${(premium.usage.backtests.used / premium.usage.backtests.limit) * 100}%`,
-                            }}
-                          />
-                        </div>
+                        <Progress
+                          className="h-2"
+                          value={(premium.usage.backtests.used / premium.usage.backtests.limit) * 100}
+                        />
                       </div>
 
                       {/* API Calls */}
@@ -733,19 +862,99 @@ export default function Settings() {
                             {premium.usage.api_calls.used} / {premium.usage.api_calls.limit}
                           </p>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all"
-                            style={{
-                              width: `${(premium.usage.api_calls.used / premium.usage.api_calls.limit) * 100}%`,
-                            }}
-                          />
-                        </div>
+                        <Progress
+                          className="h-2"
+                          value={(premium.usage.api_calls.used / premium.usage.api_calls.limit) * 100}
+                        />
                       </div>
                     </CardContent>
                   </Card>
                 </>
               )}
+            </TabsContent>
+
+            {/* Broker Tab */}
+            <TabsContent value="broker" className="space-y-6">
+              <Card className="border border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-5 w-5 text-primary" />
+                      <div>
+                        <CardTitle>Broker Accounts</CardTitle>
+                        <CardDescription>Saved MT5 credentials for live trading sessions</CardDescription>
+                      </div>
+                    </div>
+                    <Button onClick={openAddBrokerDialog} size="sm" className="bg-primary hover:bg-primary/90">
+                      <Plus className="h-4 w-4 mr-1.5" /> Add Account
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingBroker ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : brokerCredentials.length === 0 ? (
+                    <div className="py-10 text-center text-muted-foreground">
+                      <Server className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm mb-4">No broker accounts saved yet</p>
+                      <Button onClick={openAddBrokerDialog} variant="outline" size="sm">
+                        <Plus className="h-4 w-4 mr-1.5" /> Add your first account
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {brokerCredentials.map((cred) => (
+                        <div
+                          key={cred.id}
+                          className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <p className="font-medium text-sm">{cred.label}</p>
+                              {cred.is_default && (
+                                <Badge
+                                  className="text-[10px] h-4 bg-primary/10 text-primary border-primary/30"
+                                  variant="outline"
+                                >
+                                  Default
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {cred.mt5_server} · Login: {cred.mt5_login}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => openEditBrokerDialog(cred)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteBrokerCredential(cred.id)}
+                              disabled={deletingBroker === cred.id}
+                            >
+                              {deletingBroker === cred.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* More Tab - Combined Premium and Quick Links */}
@@ -832,6 +1041,137 @@ export default function Settings() {
           </Tabs>
         </div>
       </div>
+
+      {/* ── Broker Add / Edit Dialog ─────────────────────────────────── */}
+      <Dialog open={brokerDialogOpen} onOpenChange={setBrokerDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCredential ? "Edit Broker Account" : "Add Broker Account"}
+            </DialogTitle>
+            <DialogDescription>
+              MT5 credentials used to start live trading sessions.
+              {editingCredential && " Leave password blank to keep the existing one."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Label */}
+            <div className="space-y-1.5">
+              <Label htmlFor="broker-label">Label *</Label>
+              <Input
+                id="broker-label"
+                placeholder="e.g. My ICMarkets Account"
+                value={brokerForm.label}
+                onChange={(e) => setBrokerForm((f) => ({ ...f, label: e.target.value }))}
+              />
+            </div>
+
+            {/* MT5 Login */}
+            <div className="space-y-1.5">
+              <Label htmlFor="broker-login">MT5 Login *</Label>
+              <Input
+                id="broker-login"
+                type="number"
+                placeholder="e.g. 123456789"
+                value={brokerForm.mt5_login}
+                onChange={(e) => setBrokerForm((f) => ({ ...f, mt5_login: e.target.value }))}
+              />
+            </div>
+
+            {/* MT5 Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="broker-password">
+                MT5 Password {editingCredential ? "(leave blank to keep)" : "*"}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="broker-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={editingCredential ? "••••••••" : "Enter MT5 password"}
+                  value={brokerForm.mt5_password}
+                  onChange={(e) => setBrokerForm((f) => ({ ...f, mt5_password: e.target.value }))}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* MT5 Server */}
+            <div className="space-y-1.5">
+              <Label htmlFor="broker-server">MT5 Server *</Label>
+              <Input
+                id="broker-server"
+                placeholder="e.g. ICMarketsSC-Demo"
+                value={brokerForm.mt5_server}
+                onChange={(e) => setBrokerForm((f) => ({ ...f, mt5_server: e.target.value }))}
+                autoComplete="off"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Your broker\u2019s server name (e.g. ICMarkets-Demo or FBS-Demo) \u2014 provided by your broker, not your MT5 account username.
+              </p>
+            </div>
+
+            {/* Terminal Path */}
+            <div className="space-y-1.5">
+              <Label htmlFor="broker-terminal">Terminal Path <span className="text-muted-foreground">(optional)</span></Label>
+              <Input
+                id="broker-terminal"
+                placeholder="C:\Program Files\MetaTrader 5\terminal64.exe"
+                value={brokerForm.mt5_terminal_path}
+                onChange={(e) =>
+                  setBrokerForm((f) => ({ ...f, mt5_terminal_path: e.target.value }))
+                }
+              />
+            </div>
+
+            {/* Default toggle */}
+            <div className="flex items-center gap-3 pt-1">
+              <input
+                id="broker-default"
+                type="checkbox"
+                title="Set as default broker account"
+                checked={brokerForm.is_default}
+                onChange={(e) => setBrokerForm((f) => ({ ...f, is_default: e.target.checked }))}
+                className="h-4 w-4 rounded border-border accent-primary"
+              />
+              <Label htmlFor="broker-default" className="cursor-pointer">
+                Set as default broker account
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBrokerDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveBrokerCredential}
+              disabled={savingBroker}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {savingBroker ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  {editingCredential ? "Update" : "Save"}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

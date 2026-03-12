@@ -7,7 +7,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -27,6 +28,7 @@ interface SidebarProps {
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Bot, label: "Strategy", path: "/strategy" },
+  { icon: Zap, label: "Live Trading", path: "/live-trading" },
   { icon: GraduationCap, label: "Learning Hub", path: "/learning" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
