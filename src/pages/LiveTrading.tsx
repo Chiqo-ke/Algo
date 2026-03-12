@@ -150,6 +150,11 @@ export default function LiveTrading() {
   const [stoppingSession, setStoppingSession] = useState<number | null>(null);
   const [refreshingPositions, setRefreshingPositions] = useState(false);
 
+  // Session activity log
+  const [sessionLogs, setSessionLogs] = useState<string[]>([]);
+  const [lastActivityAt, setLastActivityAt] = useState<string | null>(null);
+  const [sessionAlive, setSessionAlive] = useState(false);
+
   // Session config form
   const [selectedCredential, setSelectedCredential] = useState<string>("");
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(["EURUSD"]);
@@ -209,6 +214,17 @@ export default function LiveTrading() {
     setLoadingPositions(false);
   }, []);
 
+  const fetchLogs = useCallback(async (sessionId: number) => {
+    const { data } = await apiGet<{ lines: string[]; last_modified_at: string | null; is_process_alive: boolean }>(
+      API_ENDPOINTS.trading.sessionLogs(sessionId)
+    );
+    if (data) {
+      setSessionLogs(data.lines ?? []);
+      setLastActivityAt(data.last_modified_at ?? null);
+      setSessionAlive(data.is_process_alive ?? false);
+    }
+  }, []);
+
   // ─── Effects ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -223,6 +239,19 @@ export default function LiveTrading() {
     const id = setInterval(() => fetchPositions(activeSessionId), 10000);
     return () => clearInterval(id);
   }, [activeSessionId, fetchPositions]);
+
+  // Poll subprocess activity log every 5 seconds while a session is running
+  useEffect(() => {
+    if (!activeSessionId) {
+      setSessionLogs([]);
+      setLastActivityAt(null);
+      setSessionAlive(false);
+      return;
+    }
+    fetchLogs(activeSessionId);
+    const id = setInterval(() => fetchLogs(activeSessionId), 5000);
+    return () => clearInterval(id);
+  }, [activeSessionId, fetchLogs]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
@@ -764,6 +793,70 @@ export default function LiveTrading() {
                       <p className="font-semibold">{activeSession.risk_pct}%</p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Subprocess activity log */}
+            {hasRunningSession && (
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2 pt-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {sessionLogs.length === 0 ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                      ) : sessionAlive ? (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full h-2 w-2 bg-gray-400" />
+                      )}
+                      <span className="text-xs font-medium">
+                        {sessionLogs.length === 0
+                          ? "Connecting to subprocess…"
+                          : sessionAlive
+                          ? "Live — processing data"
+                          : "Subprocess stopped"}
+                      </span>
+                    </div>
+                    {lastActivityAt && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {(() => {
+                          const secs = Math.round((Date.now() - new Date(lastActivityAt).getTime()) / 1000);
+                          if (secs < 5) return 'just now';
+                          if (secs < 60) return `${secs}s ago`;
+                          return `${Math.round(secs / 60)}m ago`;
+                        })()}
+                      </span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-3">
+                  {sessionLogs.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground italic">
+                      Waiting for first activity line…
+                    </p>
+                  ) : (
+                    <div className="font-mono text-[11px] bg-muted/50 rounded-md px-3 py-2 space-y-0.5 max-h-32 overflow-y-auto">
+                      {sessionLogs.map((line, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            'leading-relaxed whitespace-pre-wrap break-all',
+                            /error/i.test(line)
+                              ? 'text-red-400'
+                              : /kill switch|SHUTDOWN/i.test(line)
+                              ? 'text-yellow-400'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          {line}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
