@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Play, Edit, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Play, Edit, Loader2, CheckCircle2, XCircle, ChevronsUpDown, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { symbolService, strategyService, backtestService, type Symbol, type Strategy, type LatestBacktestResult } from "@/lib/services";
 import { API_ENDPOINTS, apiPost } from "@/lib/api";
@@ -78,6 +80,8 @@ export default function Backtesting() {
 
   // Validation state
   const [isValidating, setIsValidating] = useState(false);
+  const [symbolOpen, setSymbolOpen] = useState(false);
+  const [symbolSearch, setSymbolSearch] = useState("");
   const [validationResult, setValidationResult] = useState<{
     isValid: boolean;
     tradesExecuted: number;
@@ -600,27 +604,78 @@ export default function Backtesting() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   </div>
                 ) : (
-                  <div className="relative">
-                    <Input
-                      id="symbol"
-                      list="symbols-list"
-                      placeholder="Enter symbol (e.g., AAPL, EURUSD)"
-                      value={backtestParams.symbol}
-                      onChange={(e) => setBacktestParams({ ...backtestParams, symbol: e.target.value.toUpperCase() })}
-                      className="uppercase"
-                    />
-                    <datalist id="symbols-list">
-                      {symbols.length > 0 ? (
-                        symbols.map((symbol) => (
-                          <option key={symbol.id} value={symbol.symbol}>
-                            {symbol.name ? `${symbol.symbol} - ${symbol.name}` : symbol.symbol}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="AAPL">AAPL - Apple Inc.</option>
-                      )}
-                    </datalist>
-                  </div>
+                  <Popover open={symbolOpen} onOpenChange={(open) => {
+                    setSymbolOpen(open);
+                    if (!open && symbolSearch.trim() && symbolSearch.trim() !== backtestParams.symbol) {
+                      setBacktestParams(prev => ({ ...prev, symbol: symbolSearch.trim().toUpperCase() }));
+                    }
+                    if (!open) setSymbolSearch("");
+                  }}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={symbolOpen}
+                        id="symbol"
+                        className="w-full justify-between font-normal h-10"
+                      >
+                        <span className={backtestParams.symbol ? "uppercase font-medium" : "text-muted-foreground font-normal"}>
+                          {backtestParams.symbol || "Select or type symbol..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search symbol (e.g. AAPL, EURUSD)..."
+                          value={symbolSearch}
+                          onValueChange={(val) => setSymbolSearch(val.toUpperCase())}
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {symbolSearch.trim() ? (
+                              <button
+                                className="w-full py-2 px-3 text-sm text-left hover:bg-accent rounded-sm"
+                                onClick={() => {
+                                  setBacktestParams(prev => ({ ...prev, symbol: symbolSearch.trim().toUpperCase() }));
+                                  setSymbolSearch("");
+                                  setSymbolOpen(false);
+                                }}
+                              >
+                                Use &ldquo;{symbolSearch.trim().toUpperCase()}&rdquo;
+                              </button>
+                            ) : (
+                              "No symbols found."
+                            )}
+                          </CommandEmpty>
+                          {symbols.length > 0 && (
+                            <CommandGroup heading="Available Securities">
+                              {symbols.map((sym) => (
+                                <CommandItem
+                                  key={sym.id}
+                                  value={`${sym.symbol} ${sym.name || ""}`}
+                                  onSelect={() => {
+                                    setBacktestParams(prev => ({ ...prev, symbol: sym.symbol }));
+                                    setSymbolSearch("");
+                                    setSymbolOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn("mr-2 h-4 w-4 shrink-0", backtestParams.symbol === sym.symbol ? "opacity-100" : "opacity-0")}
+                                  />
+                                  <span className="font-mono font-medium">{sym.symbol}</span>
+                                  {sym.name && (
+                                    <span className="ml-2 text-xs text-muted-foreground truncate">{sym.name}</span>
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
 
@@ -629,6 +684,8 @@ export default function Backtesting() {
                 <Label htmlFor="interval">Interval *</Label>
                 <select
                   id="interval"
+                  title="Backtest interval"
+                  aria-label="Backtest interval"
                   value={backtestParams.interval}
                   onChange={(e) => setBacktestParams({ ...backtestParams, interval: e.target.value })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
