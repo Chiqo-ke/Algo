@@ -31,17 +31,7 @@ export default function Login() {
     try {
       await login(username, password);
       logger.ui.info("Login form successful, navigating to dashboard", { username });
-      
-      toast({
-        title: "Login Successful",
-        description: "Welcome back! Redirecting to dashboard...",
-        variant: "success",
-      });
-
-      // Short delay to show the toast
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
+      navigate("/dashboard");
     } catch (err: any) {
       logger.ui.error("Login form error", err, { username });
       const errorMessage = err.message || "Invalid username or password. Please try again.";
