@@ -101,10 +101,8 @@ class Logger {
       this.logs.shift(); // Remove oldest log
     }
 
-    // Always log errors & warnings; log everything else only in dev or when debug enabled
-    if (!this.isProduction || this.debugEnabled || level === 'error' || level === 'warn') {
-      this.consoleLog(entry);
-    }
+    // Always log to browser console so DevTools always shows everything
+    this.consoleLog(entry);
 
     // Send errors & warns to Vercel Analytics (visible in Vercel dashboard → Analytics → Custom Events)
     if (level === 'error' || level === 'warn') {

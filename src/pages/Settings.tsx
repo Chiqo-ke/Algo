@@ -360,11 +360,11 @@ export default function Settings() {
   return (
     <DashboardLayout>
       <div className="h-full w-full overflow-auto bg-background">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 md:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-            <p className="mt-2 text-muted-foreground">Manage your account, preferences, and subscription</p>
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Settings</h1>
+            <p className="mt-1 text-xs sm:text-sm text-muted-foreground">Manage your account, preferences, and subscription</p>
           </div>
 
           {/* Tabs */}
@@ -397,24 +397,24 @@ export default function Settings() {
             </TabsList>
 
             {/* Profile Tab */}
-            <TabsContent value="profile" className="space-y-6">
+            <TabsContent value="profile" className="space-y-4">
               <Card className="border border-border bg-card">
-                <CardHeader>
+                <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
                   <div className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" />
+                    <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     <div>
-                      <CardTitle>Profile Information</CardTitle>
-                      <CardDescription>View and edit your personal information</CardDescription>
+                      <CardTitle className="text-base sm:text-lg">Profile Information</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">View and edit your personal information</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
                   {profile && (
                     <>
-                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
                         {/* Username */}
-                        <div className="space-y-2">
-                          <Label htmlFor="username">Username</Label>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="username" className="text-xs sm:text-sm">Username</Label>
                           <Input
                             id="username"
                             value={profileData.username || ""}
@@ -425,8 +425,8 @@ export default function Settings() {
                         </div>
 
                         {/* Email */}
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="email" className="text-xs sm:text-sm">Email Address</Label>
                           <Input
                             id="email"
                             type="email"
@@ -438,8 +438,8 @@ export default function Settings() {
                         </div>
 
                         {/* First Name */}
-                        <div className="space-y-2">
-                          <Label htmlFor="firstName">First Name</Label>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="firstName" className="text-xs sm:text-sm">First Name</Label>
                           <Input
                             id="firstName"
                             value={profileData.first_name || ""}
@@ -450,8 +450,8 @@ export default function Settings() {
                         </div>
 
                         {/* Last Name */}
-                        <div className="space-y-2">
-                          <Label htmlFor="lastName">Last Name</Label>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="lastName" className="text-xs sm:text-sm">Last Name</Label>
                           <Input
                             id="lastName"
                             value={profileData.last_name || ""}
@@ -463,23 +463,23 @@ export default function Settings() {
                       </div>
 
                       {/* Bio */}
-                      <div className="space-y-2">
-                        <Label htmlFor="bio">Bio</Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="bio" className="text-xs sm:text-sm">Bio</Label>
                         <textarea
                           id="bio"
                           value={profileData.bio || ""}
                           onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                           disabled={!profileEditing}
-                          className="min-h-24 w-full rounded-lg border border-border bg-background p-3 text-foreground placeholder-muted-foreground disabled:opacity-50"
+                          className="min-h-16 sm:min-h-20 w-full rounded-lg border border-border bg-background p-2 sm:p-3 text-sm text-foreground placeholder-muted-foreground disabled:opacity-50"
                           placeholder="Tell us about yourself..."
                         />
                       </div>
 
                       {/* Member Since */}
                       {profile.created_at && (
-                        <div className="space-y-2">
-                          <Label>Member Since</Label>
-                          <p className="text-foreground">
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm">Member Since</Label>
+                          <p className="text-sm text-foreground">
                             {new Date(profile.created_at).toLocaleDateString("en-US", {
                               year: "numeric",
                               month: "long",
@@ -490,7 +490,7 @@ export default function Settings() {
                       )}
 
                       {/* Action Buttons */}
-                      <div className="flex gap-3 pt-4">
+                      <div className="flex gap-2 pt-2">
                         {!profileEditing ? (
                           <Button
                             onClick={() => setProfileEditing(true)}
@@ -537,21 +537,21 @@ export default function Settings() {
             </TabsContent>
 
             {/* Account Tab */}
-            <TabsContent value="account" className="space-y-6">
+            <TabsContent value="account" className="space-y-4">
               <Card className="border border-border bg-card">
-                <CardHeader>
+                <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
                   <div className="flex items-center gap-2">
-                    <Sliders className="h-5 w-5 text-primary" />
+                    <Sliders className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     <div>
-                      <CardTitle>Account Settings</CardTitle>
-                      <CardDescription>Configure your trading preferences</CardDescription>
+                      <CardTitle className="text-base sm:text-lg">Account Settings</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">Configure your trading preferences</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
                   {/* Default Currency */}
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Default Simulation Currency</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="currency" className="text-xs sm:text-sm">Default Simulation Currency</Label>
                     <Select
                       value={accountSettings.default_currency}
                       onValueChange={(value) =>
@@ -571,14 +571,14 @@ export default function Settings() {
                         <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       The default currency to use for all simulations
                     </p>
                   </div>
 
                   {/* Default Simulation Mode */}
-                  <div className="space-y-2">
-                    <Label htmlFor="simMode">Default Simulation Mode</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="simMode" className="text-xs sm:text-sm">Default Simulation Mode</Label>
                     <Select
                       value={accountSettings.default_simulation_mode}
                       onValueChange={(value) =>
@@ -596,18 +596,18 @@ export default function Settings() {
                         <SelectItem value="pips">Pips Simulation</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       How you want to measure results in backtesting
                     </p>
                   </div>
 
                   {/* Notifications */}
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-foreground">Notifications</h3>
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-foreground">Notifications</h3>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-foreground">Email Notifications</p>
-                        <p className="text-sm text-muted-foreground">Receive updates via email</p>
+                        <p className="text-sm font-medium text-foreground">Email Notifications</p>
+                        <p className="text-xs text-muted-foreground">Receive updates via email</p>
                       </div>
                       <input
                         type="checkbox"
@@ -624,8 +624,8 @@ export default function Settings() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-foreground">Push Notifications</p>
-                        <p className="text-sm text-muted-foreground">Receive browser notifications</p>
+                        <p className="text-sm font-medium text-foreground">Push Notifications</p>
+                        <p className="text-xs text-muted-foreground">Receive browser notifications</p>
                       </div>
                       <input
                         type="checkbox"
@@ -643,7 +643,7 @@ export default function Settings() {
                   </div>
 
                   {/* Save Button */}
-                  <div className="flex gap-3 pt-4">
+                  <div className="flex gap-2 pt-2">
                     <Button
                       onClick={handleAccountSettingsUpdate}
                       disabled={saveLoading}
@@ -667,21 +667,21 @@ export default function Settings() {
             </TabsContent>
 
             {/* Security Tab */}
-            <TabsContent value="security" className="space-y-6">
+            <TabsContent value="security" className="space-y-4">
               <Card className="border border-border bg-card">
-                <CardHeader>
+                <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
                   <div className="flex items-center gap-2">
-                    <Lock className="h-5 w-5 text-primary" />
+                    <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     <div>
-                      <CardTitle>Change Password</CardTitle>
-                      <CardDescription>Update your password to keep your account secure</CardDescription>
+                      <CardTitle className="text-base sm:text-lg">Change Password</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">Update your password to keep your account secure</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
                   {/* Current Password */}
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Current Password</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="currentPassword" className="text-xs sm:text-sm">Current Password</Label>
                     <Input
                       id="currentPassword"
                       type="password"
@@ -695,8 +695,8 @@ export default function Settings() {
                   </div>
 
                   {/* New Password */}
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="newPassword" className="text-xs sm:text-sm">New Password</Label>
                     <Input
                       id="newPassword"
                       type="password"
@@ -707,14 +707,14 @@ export default function Settings() {
                       placeholder="Enter your new password"
                       className="bg-background"
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Password must be at least 8 characters long
                     </p>
                   </div>
 
                   {/* Confirm Password */}
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirmPassword" className="text-xs sm:text-sm">Confirm Password</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -728,7 +728,7 @@ export default function Settings() {
                   </div>
 
                   {/* Submit Button */}
-                  <div className="flex gap-3 pt-4">
+                  <div className="flex gap-2 pt-2">
                     <Button
                       onClick={handlePasswordChange}
                       disabled={passwordLoading || !passwordData.current_password || !passwordData.new_password}
@@ -874,18 +874,18 @@ export default function Settings() {
             </TabsContent>
 
             {/* Broker Tab */}
-            <TabsContent value="broker" className="space-y-6">
+            <TabsContent value="broker" className="space-y-4">
               <Card className="border border-border bg-card">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Server className="h-5 w-5 text-primary" />
-                      <div>
-                        <CardTitle>Broker Accounts</CardTitle>
-                        <CardDescription>Saved MT5 credentials for live trading sessions</CardDescription>
+                <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Server className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                      <div className="min-w-0">
+                        <CardTitle className="text-base sm:text-lg">Broker Accounts</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">Saved MT5 credentials for live trading sessions</CardDescription>
                       </div>
                     </div>
-                    <Button onClick={openAddBrokerDialog} size="sm" className="bg-primary hover:bg-primary/90">
+                    <Button onClick={openAddBrokerDialog} size="sm" className="bg-primary hover:bg-primary/90 flex-shrink-0">
                       <Plus className="h-4 w-4 mr-1.5" /> Add Account
                     </Button>
                   </div>
