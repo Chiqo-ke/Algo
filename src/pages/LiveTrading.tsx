@@ -163,8 +163,8 @@ export default function LiveTrading() {
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(["EURUSD"]);
   const [customSymbol, setCustomSymbol] = useState("");
   const [timeframe, setTimeframe] = useState("1h");
-  const [riskPct, setRiskPct] = useState("1.0");
-  const [slTpMode, setSlTpMode] = useState<"bot" | "percentage" | "fixed_pips">("bot");
+  const [riskPct, setRiskPct] = useState("2.0");
+  const [slTpMode, setSlTpMode] = useState<"bot" | "percentage" | "fixed_pips">("percentage");
   const [slPips, setSlPips] = useState("");
   const [tpPips, setTpPips] = useState("");
   const [dryRun, setDryRun] = useState(false);
@@ -317,6 +317,7 @@ export default function LiveTrading() {
       timeframe,
       dry_run: dryRun,
       risk_pct: parseFloat(riskPct),
+      exit_mode: slTpMode,
     };
 
     if (slTpMode === "fixed_pips") {
