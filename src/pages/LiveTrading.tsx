@@ -107,6 +107,8 @@ interface LiveSession {
   timeframe: string;
   dry_run: boolean;
   risk_pct: string;
+  sl_pips: number | null;
+  tp_pips: number | null;
   pid: number | null;
   created_at: string;
   started_at: string | null;
@@ -162,6 +164,9 @@ export default function LiveTrading() {
   const [customSymbol, setCustomSymbol] = useState("");
   const [timeframe, setTimeframe] = useState("1h");
   const [riskPct, setRiskPct] = useState("1.0");
+  const [slTpMode, setSlTpMode] = useState<"percentage" | "fixed_pips">("percentage");
+  const [slPips, setSlPips] = useState("");
+  const [tpPips, setTpPips] = useState("");
   const [dryRun, setDryRun] = useState(false);
 
   // Inline credential entry (used when no saved credentials exist or user chooses manual)
@@ -313,6 +318,11 @@ export default function LiveTrading() {
       dry_run: dryRun,
       risk_pct: parseFloat(riskPct),
     };
+
+    if (slTpMode === "fixed_pips") {
+      if (slPips) payload.sl_pips = parseFloat(slPips);
+      if (tpPips) payload.tp_pips = parseFloat(tpPips);
+    }
 
     if (useInlineCreds || credentials.length === 0) {
       // Pass inline MT5 credentials directly
@@ -693,6 +703,74 @@ export default function LiveTrading() {
                   </p>
                 </div>
 
+                {/* SL / TP mode */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Stop Loss / Take Profit</Label>
+                  <div className="flex rounded-md border border-border overflow-hidden text-xs">
+                    <button
+                      type="button"
+                      onClick={() => !hasRunningSession && setSlTpMode("percentage")}
+                      disabled={hasRunningSession}
+                      className={`flex-1 py-1.5 px-2 transition-colors ${
+                        slTpMode === "percentage"
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      % (from strategy)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => !hasRunningSession && setSlTpMode("fixed_pips")}
+                      disabled={hasRunningSession}
+                      className={`flex-1 py-1.5 px-2 transition-colors ${
+                        slTpMode === "fixed_pips"
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Fixed Pips
+                    </button>
+                  </div>
+
+                  {slTpMode === "fixed_pips" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">SL (pips)</Label>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 20"
+                          value={slPips}
+                          onChange={(e) => setSlPips(e.target.value)}
+                          min="1"
+                          step="1"
+                          disabled={hasRunningSession}
+                          className="bg-background h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">TP (pips)</Label>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 40"
+                          value={tpPips}
+                          onChange={(e) => setTpPips(e.target.value)}
+                          min="1"
+                          step="1"
+                          disabled={hasRunningSession}
+                          className="bg-background h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-muted-foreground">
+                    {slTpMode === "percentage"
+                      ? "SL/TP computed by the strategy bot. No session-level override."
+                      : "Fixed pip distance applied to every trade; overrides strategy if strategy provides none."}
+                  </p>
+                </div>
+
               </CardContent>
               )}
               {/* Go Live / Stop — always visible */}
@@ -795,6 +873,16 @@ export default function LiveTrading() {
                       <p className="text-[11px] text-muted-foreground mb-0.5">Risk</p>
                       <p className="font-semibold">{activeSession.risk_pct}%</p>
                     </div>
+                    {(activeSession.sl_pips != null || activeSession.tp_pips != null) && (
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-0.5">SL / TP</p>
+                        <p className="font-semibold text-xs">
+                          {activeSession.sl_pips != null ? `${activeSession.sl_pips}p` : "—"}
+                          {" / "}
+                          {activeSession.tp_pips != null ? `${activeSession.tp_pips}p` : "—"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1084,6 +1172,15 @@ export default function LiveTrading() {
             <p>
               Risk per trade: <strong>{riskPct}%</strong>
             </p>
+            {slTpMode === "fixed_pips" && (slPips || tpPips) && (
+              <p>
+                Fixed SL/TP:{" "}
+                <strong>
+                  {slPips ? `SL ${slPips} pips` : "no SL"}{" / "}
+                  {tpPips ? `TP ${tpPips} pips` : "no TP"}
+                </strong>
+              </p>
+            )}
             <p>
               Timeframe: <strong>{timeframe}</strong>
             </p>

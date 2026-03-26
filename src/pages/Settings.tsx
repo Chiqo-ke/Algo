@@ -877,17 +877,12 @@ export default function Settings() {
             <TabsContent value="broker" className="space-y-4">
               <Card className="border border-border bg-card">
                 <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
-                  <div className="flex flex-wrap items-start gap-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Server className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                      <div className="min-w-0">
-                        <CardTitle className="text-base sm:text-lg">Broker Accounts</CardTitle>
-                        <CardDescription className="text-xs sm:text-sm">Saved MT5 credentials for live trading sessions</CardDescription>
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <Server className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                    <div>
+                      <CardTitle className="text-base sm:text-lg">Broker Accounts</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">Saved MT5 credentials for live trading sessions</CardDescription>
                     </div>
-                    <Button onClick={openAddBrokerDialog} size="sm" className="bg-primary hover:bg-primary/90 flex-shrink-0">
-                      <Plus className="h-4 w-4 mr-1.5" /> Add Account
-                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -951,6 +946,11 @@ export default function Settings() {
                           </div>
                         </div>
                       ))}
+                      <div className="pt-1">
+                        <Button onClick={openAddBrokerDialog} variant="outline" size="sm" className="w-full">
+                          <Plus className="h-4 w-4 mr-1.5" /> Add Account
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>
