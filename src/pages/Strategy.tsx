@@ -337,7 +337,7 @@ export default function Strategy() {
         ) : (
           /* Strategy Grid - Centered and wrapping */
           <div className="flex justify-center w-full px-2 sm:px-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 max-w-7xl w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 max-w-7xl w-full">
             {/* Strategy Cards */}
             {strategies.map((strategy) => (
               <Card 
@@ -348,13 +348,13 @@ export default function Strategy() {
                   highlightedStrategyId === strategy.id && "ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse"
                 )}
               >
-                <CardHeader className="pb-4">
+                <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-4">
                   <div className="flex items-start justify-between gap-2 min-w-0">
                     <div className="flex-1 min-w-0 overflow-hidden">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <CardTitle className="text-lg text-card-foreground mb-2 truncate cursor-default">
+                            <CardTitle className="text-base sm:text-lg text-card-foreground mb-1 leading-tight cursor-default whitespace-normal break-words line-clamp-2">
                               {strategy.name}
                             </CardTitle>
                           </TooltipTrigger>
@@ -398,23 +398,15 @@ export default function Strategy() {
                       })()}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge 
-                        variant={
-                          strategy.status === "live" 
-                            ? "default" 
-                            : strategy.status === "testing"
-                            ? "secondary"
-                            : "outline"
-                        }
-                        className={cn(
-                          "flex-shrink-0",
-                          strategy.status === "live" && "bg-green-500 hover:bg-green-600",
-                          strategy.status === "testing" && "bg-blue-500 hover:bg-blue-600",
-                          strategy.status === "paused" && "bg-gray-500 hover:bg-gray-600"
-                        )}
-                      >
-                        {strategy.status === "live" ? "Live" : strategy.status === "testing" ? "Testing" : "Paused"}
-                      </Badge>
+                      <div className="flex items-center px-1.5 py-1.5 rounded-full border border-border bg-muted/30">
+                        <span
+                          className={cn(
+                            "h-2.5 w-2.5 rounded-full",
+                            strategy.status === "live" ? "bg-green-500 animate-pulse" : "bg-red-500"
+                          )}
+                          aria-hidden="true"
+                        />
+                      </div>
                       
                       {/* Options Menu */}
                       <DropdownMenu>
@@ -450,9 +442,9 @@ export default function Strategy() {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-4 overflow-hidden">
+                <CardContent className="space-y-3 sm:space-y-4 overflow-hidden px-3 sm:px-4 pb-3 sm:pb-4">
                   {/* Performance Metrics */}
-                  <div className="space-y-3">
+                  <div className="space-y-2.5 sm:space-y-3">
                     {(() => {
                       const botPerf = botPerformances.get(strategy.id);
                       const performance = botPerf?.total_return ?? strategy.performance;
@@ -463,7 +455,7 @@ export default function Strategy() {
                       return (
                         <>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Total Return</span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">Total Return</span>
                             <div className="flex items-center gap-1">
                               {performance >= 0 ? (
                                 <TrendingUp className="w-4 h-4 text-green-500" />
@@ -472,7 +464,7 @@ export default function Strategy() {
                               )}
                               <span 
                                 className={cn(
-                                  "font-semibold text-sm",
+                                  "font-semibold text-xs sm:text-sm",
                                   performance >= 0 ? "text-green-500" : "text-red-500"
                                 )}
                               >
@@ -483,32 +475,32 @@ export default function Strategy() {
 
                           {sharpeRatio !== null && sharpeRatio !== undefined && (
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
-                              <span className="font-semibold text-sm">
+                              <span className="text-xs sm:text-sm text-muted-foreground">Sharpe Ratio</span>
+                              <span className="font-semibold text-xs sm:text-sm">
                                 {sharpeRatio.toFixed(2)}
                               </span>
                             </div>
                           )}
 
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Win Rate</span>
-                            <span className="font-semibold text-sm">
+                            <span className="text-xs sm:text-sm text-muted-foreground">Win Rate</span>
+                            <span className="font-semibold text-xs sm:text-sm">
                               {winRate.toFixed(1)}%
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Total Trades</span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">Total Trades</span>
                             <div className="flex items-center gap-1">
-                              <Activity className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-semibold text-sm">{trades}</span>
+                              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                              <span className="font-semibold text-xs sm:text-sm">{trades}</span>
                             </div>
                           </div>
                           
                           {botPerf && botPerf.max_drawdown !== null && (
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Max Drawdown</span>
-                              <span className="font-semibold text-sm text-red-500">
+                              <span className="text-xs sm:text-sm text-muted-foreground">Max Drawdown</span>
+                              <span className="font-semibold text-xs sm:text-sm text-red-500">
                                 {botPerf.max_drawdown.toFixed(2)}%
                               </span>
                             </div>
@@ -519,26 +511,26 @@ export default function Strategy() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-1.5 sm:gap-2 pt-1.5 sm:pt-2">
                     <Button 
                       variant="outline" 
-                      className="flex-1 min-w-0 px-2 sm:px-4"
+                      className="flex-1 min-w-0 h-8 sm:h-9 px-2 sm:px-3 text-[11px] sm:text-xs"
                       onClick={() => handleRunBacktest(strategy.id, strategy.name)}
                     >
-                      <Play className="w-4 h-4 mr-1 sm:mr-2 flex-shrink-0" />
-                      <span className="truncate">Backtest</span>
+                      <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Backtest</span>
                     </Button>
                     <Button 
                       className={cn(
-                        "flex-1 min-w-0 px-2 sm:px-4",
+                        "flex-1 min-w-0 h-8 sm:h-9 px-2 sm:px-3 text-[11px] sm:text-xs",
                         strategy.status === "live" 
                           ? "bg-green-500 hover:bg-green-600" 
                           : "bg-primary hover:bg-primary/90"
                       )}
                       onClick={() => handleGoLive(strategy.id)}
                     >
-                      <Zap className="w-3.5 h-3.5 mr-1 sm:mr-1.5 flex-shrink-0" />
-                      <span className="truncate">Live</span>
+                      <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Live</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -550,7 +542,7 @@ export default function Strategy() {
               className={cn(
                 "bg-card border-border border-dashed shadow-card hover:shadow-lg transition-all cursor-pointer",
                 "hover:border-primary/50 w-full",
-                "flex items-center justify-center min-h-[280px] sm:min-h-[320px]"
+                "flex items-center justify-center min-h-[220px] sm:min-h-[260px]"
               )}
               onClick={handleAddStrategy}
             >

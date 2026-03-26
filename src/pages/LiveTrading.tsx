@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
   Eye,
   EyeOff,
   Loader2,
@@ -161,7 +162,7 @@ export default function LiveTrading() {
   const [customSymbol, setCustomSymbol] = useState("");
   const [timeframe, setTimeframe] = useState("1h");
   const [riskPct, setRiskPct] = useState("1.0");
-  const [dryRun, setDryRun] = useState(true);
+  const [dryRun, setDryRun] = useState(false);
 
   // Inline credential entry (used when no saved credentials exist or user chooses manual)
   const [useInlineCreds, setUseInlineCreds] = useState(false);
@@ -171,6 +172,10 @@ export default function LiveTrading() {
   const [inlineTerminalPath, setInlineTerminalPath] = useState("");
   const [showInlinePassword, setShowInlinePassword] = useState(false);
   const [savingInlineCreds, setSavingInlineCreds] = useState(false);
+
+  // Collapsible section state
+  const [securitiesOpen, setSecuritiesOpen] = useState(false);
+  const [sessionConfigOpen, setSessionConfigOpen] = useState(false);
 
   // Dialogs
   const [confirmLiveDialog, setConfirmLiveDialog] = useState(false);
@@ -428,86 +433,109 @@ export default function LiveTrading() {
 
             {/* Securities selector */}
             <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Securities to Trade</CardTitle>
-                <CardDescription>Select symbols your bot will trade</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Selected chips */}
-                {selectedSymbols.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedSymbols.map((sym) => (
-                      <Badge key={sym} variant="secondary" className="gap-1 pr-1">
-                        {sym}
-                        <button
-                          onClick={() => toggleSymbol(sym)}
-                          disabled={hasRunningSession}
-                          title={`Remove ${sym}`}
-                          className="ml-0.5 rounded-full hover:bg-muted p-0.5 disabled:opacity-50"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
+              <CardHeader
+                className="pb-3 cursor-pointer select-none"
+                onClick={() => setSecuritiesOpen((v) => !v)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-base">Securities to Trade</CardTitle>
+                    {!securitiesOpen && (
+                      <CardDescription className="mt-0.5 truncate">
+                        {selectedSymbols.length > 0
+                          ? `${selectedSymbols.slice(0, 4).join(", ")}${selectedSymbols.length > 4 ? ` +${selectedSymbols.length - 4} more` : ""}`
+                          : "Select symbols your bot will trade"}
+                      </CardDescription>
+                    )}
                   </div>
-                )}
-
-                {/* Quick-pick grid */}
-                {Object.entries(SYMBOL_GROUPS).map(([group, syms]) => (
-                  <div key={group} className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                      {group}
-                    </p>
+                  <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform flex-shrink-0 ml-2", securitiesOpen && "rotate-180")} />
+                </div>
+              </CardHeader>
+              {securitiesOpen && (
+                <CardContent className="space-y-4 pt-0">
+                  {/* Selected chips */}
+                  {selectedSymbols.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {syms.map((sym) => (
-                        <button
-                          key={sym}
-                          onClick={() => toggleSymbol(sym)}
-                          disabled={hasRunningSession}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                            "disabled:opacity-50 disabled:cursor-not-allowed",
-                            selectedSymbols.includes(sym)
-                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                              : "bg-background text-foreground border-border hover:border-primary/60 hover:bg-primary/5"
-                          )}
-                        >
+                      {selectedSymbols.map((sym) => (
+                        <Badge key={sym} variant="secondary" className="gap-1 pr-1">
                           {sym}
-                        </button>
+                          <button
+                            onClick={() => toggleSymbol(sym)}
+                            disabled={hasRunningSession}
+                            title={`Remove ${sym}`}
+                            className="ml-0.5 rounded-full hover:bg-muted p-0.5 disabled:opacity-50"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
                       ))}
                     </div>
-                  </div>
-                ))}
+                  )}
 
-                {/* Custom symbol */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Custom (e.g. USDZAR)"
-                    value={customSymbol}
-                    onChange={(e) => setCustomSymbol(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addCustomSymbol()}
-                    disabled={hasRunningSession}
-                    className="bg-background text-sm h-8"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 flex-shrink-0"
-                    onClick={addCustomSymbol}
-                    disabled={hasRunningSession}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
+                  {/* Quick-pick grid */}
+                  {Object.entries(SYMBOL_GROUPS).map(([group, syms]) => (
+                    <div key={group} className="space-y-1.5">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                        {group}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {syms.map((sym) => (
+                          <button
+                            key={sym}
+                            onClick={() => toggleSymbol(sym)}
+                            disabled={hasRunningSession}
+                            className={cn(
+                              "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
+                              "disabled:opacity-50 disabled:cursor-not-allowed",
+                              selectedSymbols.includes(sym)
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "bg-background text-foreground border-border hover:border-primary/60 hover:bg-primary/5"
+                            )}
+                          >
+                            {sym}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Custom symbol */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Custom (e.g. USDZAR)"
+                      value={customSymbol}
+                      onChange={(e) => setCustomSymbol(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addCustomSymbol()}
+                      disabled={hasRunningSession}
+                      className="bg-background text-sm h-8"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 flex-shrink-0"
+                      onClick={addCustomSymbol}
+                      disabled={hasRunningSession}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
             </Card>
 
             {/* Session configuration */}
             <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Session Configuration</CardTitle>
+              <CardHeader
+                className="pb-3 cursor-pointer select-none"
+                onClick={() => setSessionConfigOpen((v) => !v)}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Session Configuration</CardTitle>
+                  <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", sessionConfigOpen && "rotate-180")} />
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              {sessionConfigOpen && (
+              <CardContent className="space-y-4 pb-2 pt-0">
                 {/* Broker account */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -665,36 +693,13 @@ export default function LiveTrading() {
                   </p>
                 </div>
 
-                {/* Dry-run toggle */}
-                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-                  <div>
-                    <p className="text-sm font-medium">Dry Run Mode</p>
-                    <p className="text-xs text-muted-foreground">
-                      Connect to MT5 but skip real orders
-                    </p>
-                  </div>
-                  <Switch checked={dryRun} onCheckedChange={setDryRun} disabled={hasRunningSession} />
-                </div>
-
-                {!dryRun && (
-                  <div className="flex items-start gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3">
-                    <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                      <strong>LIVE mode</strong> — real orders will be placed. Ensure
-                      sufficient margin and thorough backtesting.
-                    </p>
-                  </div>
-                )}
-
-                {/* Start / Stop */}
+              </CardContent>
+              )}
+              {/* Go Live / Stop — always visible */}
+              <div className="px-4 sm:px-6 pb-4 pt-2 space-y-2">
                 {!hasRunningSession ? (
                   <Button
-                    className={cn(
-                      "w-full",
-                      dryRun
-                        ? "bg-primary hover:bg-primary/90"
-                        : "bg-green-600 hover:bg-green-700 text-white"
-                    )}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
                     onClick={handleStartSession}
                     disabled={
                       startingSession ||
@@ -712,7 +717,7 @@ export default function LiveTrading() {
                     ) : (
                       <>
                         <Zap className="w-4 h-4 mr-2" />
-                        {dryRun ? "Start Dry Run" : "Go Live"}
+                        Go Live
                       </>
                     )}
                   </Button>
@@ -736,8 +741,6 @@ export default function LiveTrading() {
                     )}
                   </Button>
                 )}
-
-                {/* Link to broker settings */}
                 <button
                   onClick={() => navigate("/settings?tab=broker")}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -745,7 +748,7 @@ export default function LiveTrading() {
                   <Settings2 className="w-3 h-3" />
                   Manage broker accounts
                 </button>
-              </CardContent>
+              </div>
             </Card>
           </div>
 
