@@ -164,7 +164,7 @@ export default function LiveTrading() {
   const [customSymbol, setCustomSymbol] = useState("");
   const [timeframe, setTimeframe] = useState("1h");
   const [riskPct, setRiskPct] = useState("1.0");
-  const [slTpMode, setSlTpMode] = useState<"percentage" | "fixed_pips">("percentage");
+  const [slTpMode, setSlTpMode] = useState<"bot" | "percentage" | "fixed_pips">("bot");
   const [slPips, setSlPips] = useState("");
   const [tpPips, setTpPips] = useState("");
   const [dryRun, setDryRun] = useState(false);
@@ -323,6 +323,7 @@ export default function LiveTrading() {
       if (slPips) payload.sl_pips = parseFloat(slPips);
       if (tpPips) payload.tp_pips = parseFloat(tpPips);
     }
+    // "bot" and "percentage" modes: no sl_pips/tp_pips sent — backend uses strategy-computed values
 
     if (useInlineCreds || credentials.length === 0) {
       // Pass inline MT5 credentials directly
@@ -685,90 +686,148 @@ export default function LiveTrading() {
                   </Select>
                 </div>
 
-                {/* Risk % */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Risk per Trade (%)</Label>
-                  <Input
-                    type="number"
-                    value={riskPct}
-                    onChange={(e) => setRiskPct(e.target.value)}
-                    min="0.1"
-                    max="10"
-                    step="0.1"
-                    disabled={hasRunningSession}
-                    className="bg-background"
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    % of account balance risked per trade
-                  </p>
-                </div>
-
                 {/* SL / TP mode */}
                 <div className="space-y-2">
-                  <Label className="text-sm">Stop Loss / Take Profit</Label>
-                  <div className="flex rounded-md border border-border overflow-hidden text-xs">
-                    <button
-                      type="button"
-                      onClick={() => !hasRunningSession && setSlTpMode("percentage")}
-                      disabled={hasRunningSession}
-                      className={`flex-1 py-1.5 px-2 transition-colors ${
-                        slTpMode === "percentage"
-                          ? "bg-primary text-primary-foreground font-medium"
-                          : "bg-background text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      % (from strategy)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => !hasRunningSession && setSlTpMode("fixed_pips")}
-                      disabled={hasRunningSession}
-                      className={`flex-1 py-1.5 px-2 transition-colors ${
-                        slTpMode === "fixed_pips"
-                          ? "bg-primary text-primary-foreground font-medium"
-                          : "bg-background text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Fixed Pips
-                    </button>
-                  </div>
+                  <Label className="text-sm">Stop Loss / Take Profit Method</Label>
 
-                  {slTpMode === "fixed_pips" && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">SL (pips)</Label>
-                        <Input
-                          type="number"
-                          placeholder="e.g. 20"
-                          value={slPips}
-                          onChange={(e) => setSlPips(e.target.value)}
-                          min="1"
-                          step="1"
-                          disabled={hasRunningSession}
-                          className="bg-background h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">TP (pips)</Label>
-                        <Input
-                          type="number"
-                          placeholder="e.g. 40"
-                          value={tpPips}
-                          onChange={(e) => setTpPips(e.target.value)}
-                          min="1"
-                          step="1"
-                          disabled={hasRunningSession}
-                          className="bg-background h-8 text-sm"
-                        />
-                      </div>
+                  {/* Option: Bot inbuilt */}
+                  <label
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                      slTpMode === "bot"
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:bg-muted/50",
+                      hasRunningSession && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="slTpMode"
+                      value="bot"
+                      checked={slTpMode === "bot"}
+                      disabled={hasRunningSession}
+                      onChange={() => setSlTpMode("bot")}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-none">Bot inbuilt mechanism</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        The strategy script manages SL/TP internally. No session-level override.
+                      </p>
+                      {slTpMode === "bot" && (
+                        <div className="flex items-start gap-1.5 mt-2 rounded-md border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-1.5">
+                          <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0 mt-0.5" />
+                          <p className="text-[11px] text-yellow-600 dark:text-yellow-400">
+                            If the bot script does not set a stop loss or take profit, trades will run
+                            unprotected. Use this only with strategies you have verified handle exits correctly.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </label>
 
-                  <p className="text-[11px] text-muted-foreground">
-                    {slTpMode === "percentage"
-                      ? "SL/TP computed by the strategy bot. No session-level override."
-                      : "Fixed pip distance applied to every trade; overrides strategy if strategy provides none."}
-                  </p>
+                  {/* Option: Percentage */}
+                  <label
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                      slTpMode === "percentage"
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:bg-muted/50",
+                      hasRunningSession && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="slTpMode"
+                      value="percentage"
+                      checked={slTpMode === "percentage"}
+                      disabled={hasRunningSession}
+                      onChange={() => setSlTpMode("percentage")}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-none">Percentage-based risk</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Position sizing is controlled by risk %. SL/TP still come from the strategy logic.
+                      </p>
+                      {slTpMode === "percentage" && (
+                        <div className="space-y-1.5 mt-2">
+                          <Label className="text-xs text-muted-foreground">Risk per Trade (%)</Label>
+                          <Input
+                            type="number"
+                            value={riskPct}
+                            onChange={(e) => setRiskPct(e.target.value)}
+                            min="0.1"
+                            max="10"
+                            step="0.1"
+                            disabled={hasRunningSession}
+                            className="bg-background h-8 text-sm"
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            % of account balance risked per trade
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+
+                  {/* Option: Fixed Pips */}
+                  <label
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                      slTpMode === "fixed_pips"
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:bg-muted/50",
+                      hasRunningSession && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="slTpMode"
+                      value="fixed_pips"
+                      checked={slTpMode === "fixed_pips"}
+                      disabled={hasRunningSession}
+                      onChange={() => setSlTpMode("fixed_pips")}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-none">Fixed pips SL / TP</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Session-level pip distance applied to every trade. Overrides bot when the bot
+                        provides no exit levels.
+                      </p>
+                      {slTpMode === "fixed_pips" && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">SL (pips)</Label>
+                            <Input
+                              type="number"
+                              placeholder="e.g. 20"
+                              value={slPips}
+                              onChange={(e) => setSlPips(e.target.value)}
+                              min="1"
+                              step="1"
+                              disabled={hasRunningSession}
+                              className="bg-background h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">TP (pips)</Label>
+                            <Input
+                              type="number"
+                              placeholder="e.g. 40"
+                              value={tpPips}
+                              onChange={(e) => setTpPips(e.target.value)}
+                              min="1"
+                              step="1"
+                              disabled={hasRunningSession}
+                              className="bg-background h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </label>
                 </div>
 
               </CardContent>
@@ -1169,18 +1228,21 @@ export default function LiveTrading() {
             <p>
               Symbols: <strong>{selectedSymbols.join(", ")}</strong>
             </p>
-            <p>
-              Risk per trade: <strong>{riskPct}%</strong>
-            </p>
-            {slTpMode === "fixed_pips" && (slPips || tpPips) && (
+            {slTpMode === "percentage" && (
               <p>
-                Fixed SL/TP:{" "}
-                <strong>
-                  {slPips ? `SL ${slPips} pips` : "no SL"}{" / "}
-                  {tpPips ? `TP ${tpPips} pips` : "no TP"}
-                </strong>
+                Risk per trade: <strong>{riskPct}%</strong>
               </p>
             )}
+            <p>
+              SL/TP method:{" "}
+              <strong>
+                {slTpMode === "bot" && "Bot inbuilt (⚠ unprotected if bot omits exits)"}
+                {slTpMode === "percentage" && "Percentage-based (strategy-managed)"}
+                {slTpMode === "fixed_pips" && (
+                  <>Fixed pips — {slPips ? `SL ${slPips}p` : "no SL"} / {tpPips ? `TP ${tpPips}p` : "no TP"}</>
+                )}
+              </strong>
+            </p>
             <p>
               Timeframe: <strong>{timeframe}</strong>
             </p>
