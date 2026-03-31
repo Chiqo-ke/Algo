@@ -37,6 +37,10 @@ export interface BacktestConfig {
   symbol: string;
   start_date: string;
   end_date: string;
+  exit_mode: 'bot' | 'percentage' | 'fixed_pips';
+  risk_pct?: number;
+  sl_pips?: number;
+  tp_pips?: number;
 }
 
 // Removed period and interval options - now using date pickers
@@ -58,6 +62,10 @@ export function BacktestConfigDialog({
   const [useCustomSymbol, setUseCustomSymbol] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<BacktestTemplate | null>(null);
+  const [exitMode, setExitMode] = useState<'bot' | 'percentage' | 'fixed_pips'>('bot');
+  const [riskPct, setRiskPct] = useState<string>('2');
+  const [slPips, setSlPips] = useState<string>('');
+  const [tpPips, setTpPips] = useState<string>('');
 
   // Apply template configuration
   const applyTemplate = (template: BacktestTemplate) => {
@@ -137,10 +145,23 @@ export function BacktestConfigDialog({
       return;
     }
 
+    if (exitMode === 'fixed_pips' && !slPips && !tpPips) {
+      toast({
+        title: "Pips Required",
+        description: "Enter at least SL pips or TP pips for Fixed Pips mode",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const config: BacktestConfig = {
       symbol: finalSymbol,
       start_date: format(startDate, "yyyy-MM-dd"),
       end_date: format(endDate, "yyyy-MM-dd"),
+      exit_mode: exitMode,
+      ...(exitMode === 'percentage' && { risk_pct: parseFloat(riskPct) || 2.0 }),
+      ...(exitMode === 'fixed_pips' && slPips ? { sl_pips: parseFloat(slPips) } : {}),
+      ...(exitMode === 'fixed_pips' && tpPips ? { tp_pips: parseFloat(tpPips) } : {}),
     };
 
     onConfirm(config);
@@ -333,6 +354,80 @@ export function BacktestConfigDialog({
               />
               <p className="text-xs text-muted-foreground">End of backtest period</p>
             </div>
+
+            {/* Exit Mode */}
+            <div className="space-y-2">
+              <Label>Exit Mode</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['bot', 'percentage', 'fixed_pips'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setExitMode(mode)}
+                    className={`p-2 text-xs rounded-md border transition-colors ${
+                      exitMode === mode
+                        ? 'border-primary bg-primary/10 text-primary font-semibold'
+                        : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    {mode === 'bot' ? 'Bot Default' : mode === 'percentage' ? 'Risk %' : 'Fixed Pips'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {exitMode === 'bot' && "Use the strategy's built-in SL/TP logic."}
+                {exitMode === 'percentage' && "Size each trade as a percentage of equity."}
+                {exitMode === 'fixed_pips' && "Apply fixed pip distances for SL and TP."}
+              </p>
+            </div>
+
+            {/* Risk % input (percentage mode) */}
+            {exitMode === 'percentage' && (
+              <div className="space-y-2">
+                <Label htmlFor="riskPct">Risk Per Trade (%)</Label>
+                <Input
+                  id="riskPct"
+                  type="number"
+                  min="0.1"
+                  max="100"
+                  step="0.1"
+                  placeholder="e.g. 2"
+                  value={riskPct}
+                  onChange={(e) => setRiskPct(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Fraction of equity risked per trade (e.g. 2 = 2%)</p>
+              </div>
+            )}
+
+            {/* SL / TP pips inputs (fixed_pips mode) */}
+            {exitMode === 'fixed_pips' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="slPips">Stop Loss (pips)</Label>
+                  <Input
+                    id="slPips"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 20"
+                    value={slPips}
+                    onChange={(e) => setSlPips(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tpPips">Take Profit (pips)</Label>
+                  <Input
+                    id="tpPips"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 40"
+                    value={tpPips}
+                    onChange={(e) => setTpPips(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
 
