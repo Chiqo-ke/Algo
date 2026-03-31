@@ -109,6 +109,7 @@ interface LiveSession {
   risk_pct: string;
   sl_pips: number | null;
   tp_pips: number | null;
+  max_lots: number | null;
   pid: number | null;
   created_at: string;
   started_at: string | null;
@@ -167,6 +168,7 @@ export default function LiveTrading() {
   const [slTpMode, setSlTpMode] = useState<"bot" | "percentage" | "fixed_pips">("percentage");
   const [slPips, setSlPips] = useState("");
   const [tpPips, setTpPips] = useState("");
+  const [maxLots, setMaxLots] = useState("1.0");
   const [dryRun, setDryRun] = useState(false);
 
   // Inline credential entry (used when no saved credentials exist or user chooses manual)
@@ -318,6 +320,7 @@ export default function LiveTrading() {
       dry_run: dryRun,
       risk_pct: parseFloat(riskPct),
       exit_mode: slTpMode,
+      max_lots: parseFloat(maxLots) || 1.0,
     };
 
     if (slTpMode === "fixed_pips") {
@@ -831,6 +834,24 @@ export default function LiveTrading() {
                   </label>
                 </div>
 
+                {/* Max Position Size */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Max Position Size (lots)</Label>
+                  <Input
+                    type="number"
+                    value={maxLots}
+                    onChange={(e) => setMaxLots(e.target.value)}
+                    min="0.01"
+                    max="100"
+                    step="0.01"
+                    disabled={hasRunningSession}
+                    className="bg-background h-8 text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Hard cap on lots per trade, regardless of risk calculation. Default: 1.0 lot.
+                  </p>
+                </div>
+
               </CardContent>
               )}
               {/* Go Live / Stop — always visible */}
@@ -941,6 +962,12 @@ export default function LiveTrading() {
                           {" / "}
                           {activeSession.tp_pips != null ? `${activeSession.tp_pips}p` : "—"}
                         </p>
+                      </div>
+                    )}
+                    {activeSession.max_lots != null && (
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-0.5">Max Lots</p>
+                        <p className="font-semibold">{activeSession.max_lots}</p>
                       </div>
                     )}
                   </div>
@@ -1245,6 +1272,9 @@ export default function LiveTrading() {
               </strong>
             </p>
             <p>
+              Max lots: <strong>{maxLots || "1.0"} lot{parseFloat(maxLots || "1") !== 1 ? "s" : ""}</strong>
+            </p>
+            <p>
               Timeframe: <strong>{timeframe}</strong>
             </p>
           </div>
@@ -1303,3 +1333,4 @@ export default function LiveTrading() {
     </DashboardLayout>
   );
 }
+
