@@ -26,12 +26,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2, Zap } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2, Zap, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { strategyService, botPerformanceService } from "@/lib/services";
 import type { BotPerformance } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { apiGet, API_ENDPOINTS } from "@/lib/api";
 
 interface Strategy {
   id: number;
@@ -167,26 +168,50 @@ export default function Strategy() {
       logger.strategy.info("Fetching bot performance data", { strategyCount: strategies.length });
       const startTime = performance.now();
       
-      const { data, error } = await botPerformanceService.getAll();
-      
-      if (data && !error) {
-        const performanceMap = new Map<number, BotPerformance>();
-        // Handle both paginated and non-paginated responses
-        const performances = Array.isArray(data) ? data : (data as any).results || [];
-        performances.forEach((perf: BotPerformance) => {
-          performanceMap.set(perf.strategy_id, perf);
-        });
-        setBotPerformances(performanceMap);
-        
-        const duration = Math.round(performance.now() - startTime);
-        logger.strategy.info("Successfully loaded bot performance data", { 
-          performanceCount: performanceMap.size,
-          duration
-        });
-      } else if (error) {
-        const duration = Math.round(performance.now() - startTime);
-        logger.strategy.warn(`Failed to fetch bot performance data: ${error}`, { duration });
+      // Fetch both backtest bot-performance AND live analytics in parallel
+      const [backtestResult, liveResult] = await Promise.allSettled([
+        botPerformanceService.getAll(),
+        apiGet<BotPerformance[]>(API_ENDPOINTS.trading.liveAnalytics),
+      ]);
+
+      const performanceMap = new Map<number, BotPerformance>();
+
+      // Layer 1: backtest bot-performance (baseline)
+      if (backtestResult.status === 'fulfilled') {
+        const { data, error } = backtestResult.value;
+        if (data && !error) {
+          const performances = Array.isArray(data) ? data : (data as any).results || [];
+          performances.forEach((perf: BotPerformance) => {
+            performanceMap.set(perf.strategy_id, perf);
+          });
+        }
       }
+
+      // Layer 2: live analytics — overwrite with real live trade data where available
+      if (liveResult.status === 'fulfilled') {
+        const { data: liveData } = liveResult.value;
+        const liveItems: BotPerformance[] = Array.isArray(liveData)
+          ? liveData
+          : (liveData as any)?.results || [];
+        liveItems.forEach((live: BotPerformance) => {
+          const existing = performanceMap.get(live.strategy_id);
+          performanceMap.set(live.strategy_id, {
+            ...existing,
+            ...live,
+            total_trades: live.total_trades,
+            win_rate: live.win_rate,
+            total_return: live.total_return,
+            total_pnl: live.total_pnl,
+          } as BotPerformance);
+        });
+      }
+
+      setBotPerformances(performanceMap);
+      const duration = Math.round(performance.now() - startTime);
+      logger.strategy.info("Loaded bot performance data", { 
+        performanceCount: performanceMap.size,
+        duration
+      });
       setLoadingPerformance(false);
     };
 
@@ -451,6 +476,8 @@ export default function Strategy() {
                       const winRate = botPerf?.win_rate ?? parseFloat(strategy.winRate);
                       const trades = botPerf?.total_trades ?? strategy.trades;
                       const sharpeRatio = botPerf?.sharpe_ratio;
+                      const totalPnl = botPerf?.total_pnl ?? null;
+                      const isLiveData = totalPnl !== null && totalPnl !== undefined;
                       
                       return (
                         <>
@@ -479,6 +506,21 @@ export default function Strategy() {
                               <span className="font-semibold text-xs sm:text-sm">
                                 {sharpeRatio.toFixed(2)}
                               </span>
+                            </div>
+                          )}
+
+                          {isLiveData && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs sm:text-sm text-muted-foreground">Net P&amp;L (live)</span>
+                              <div className="flex items-center gap-1">
+                                <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                                <span className={cn(
+                                  "font-semibold text-xs sm:text-sm",
+                                  (totalPnl ?? 0) >= 0 ? "text-green-500" : "text-red-500"
+                                )}>
+                                  {(totalPnl ?? 0) >= 0 ? "+" : ""}${(totalPnl ?? 0).toFixed(2)}
+                                </span>
+                              </div>
                             </div>
                           )}
 

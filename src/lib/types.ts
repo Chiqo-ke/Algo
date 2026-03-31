@@ -618,28 +618,29 @@ export interface CodeGenerationResponse {
 // ============================================================================
 
 export interface BotPerformance {
-  id: number;
+  id?: number;
   strategy_id: number;
   strategy_name: string;
-  verification_status: 'pending' | 'testing' | 'verified' | 'failed';
+  verification_status: 'pending' | 'testing' | 'verified' | 'failed' | 'unverified';
   is_verified: boolean;
   total_trades: number;
-  entry_trades: number;
-  exit_trades: number;
+  entry_trades?: number;
+  exit_trades?: number;
   win_rate: number | null;
   total_return: number | null;
+  total_pnl?: number | null;
   sharpe_ratio: number | null;
   max_drawdown: number | null;
-  symbol_tested: string;
-  timeframe_tested: string;
-  test_period_start: string | null;
-  test_period_end: string | null;
-  trades_threshold: number;
-  verification_notes: string;
-  created_at: string;
-  updated_at: string;
-  last_test_at: string;
-  verified_at: string | null;
+  symbol_tested?: string;
+  timeframe_tested?: string;
+  test_period_start?: string | null;
+  test_period_end?: string | null;
+  trades_threshold?: number;
+  verification_notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_test_at?: string;
+  verified_at?: string | null;
   verification_badge: {
     status: string;
     label: string;

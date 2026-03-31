@@ -135,6 +135,7 @@ export const API_ENDPOINTS = {
     sessionPositions: (id: number) => `${API_BASE_URL}/trading/sessions/${id}/positions/`,
     sessionClosePosition: (id: number) => `${API_BASE_URL}/trading/sessions/${id}/close_position/`,
     sessionLogs: (id: number) => `${API_BASE_URL}/trading/sessions/${id}/logs/`,
+    liveAnalytics: `${API_BASE_URL}/trading/live-analytics/`,
   },
   // Production API
   production: {
