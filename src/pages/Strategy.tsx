@@ -55,6 +55,8 @@ export default function Strategy() {
   const [highlightedStrategyId, setHighlightedStrategyId] = useState<number | null>(null);
   const [botPerformances, setBotPerformances] = useState<Map<number, BotPerformance>>(new Map());
   const [_loadingPerformance, setLoadingPerformance] = useState(false);
+  // Set of strategy IDs that have a RUNNING live session
+  const [liveStrategyIds, setLiveStrategyIds] = useState<Set<number>>(new Set());
   
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -217,6 +219,21 @@ export default function Strategy() {
 
     fetchBotPerformances();
   }, [strategies]);
+
+  // Fetch which strategies currently have a RUNNING live session
+  useEffect(() => {
+    const fetchLiveSessions = async () => {
+      const { data } = await apiGet<{ results?: any[]; [k: string]: any }>(
+        API_ENDPOINTS.trading.sessions
+      );
+      const list: any[] = Array.isArray(data) ? data : data?.results ?? [];
+      const ids = new Set<number>(
+        list.filter((s) => s.status === "RUNNING").map((s) => s.strategy)
+      );
+      setLiveStrategyIds(ids);
+    };
+    fetchLiveSessions();
+  }, []);
 
   const handleAddStrategy = () => {
     logger.ui.info("User clicked Add Strategy button");
@@ -388,46 +405,15 @@ export default function Strategy() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      {/* Bot Verification Badge */}
-                      {(() => {
-                        const botPerf = botPerformances.get(strategy.id);
-                        if (botPerf) {
-                          const badge = botPerf.verification_badge;
-                          return (
-                            <div className="flex items-center gap-2 mt-1">
-                              {botPerf.is_verified ? (
-                                <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                  Verified Bot
-                                </Badge>
-                              ) : botPerf.verification_status === 'testing' ? (
-                                <Badge variant="secondary" className="bg-blue-500 hover:bg-blue-600">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Testing
-                                </Badge>
-                              ) : botPerf.verification_status === 'failed' ? (
-                                <Badge variant="destructive">
-                                  <XCircle className="w-3 h-3 mr-1" />
-                                  {badge.label}
-                                </Badge>
-                              ) : null}
-                              {botPerf.is_verified && (
-                                <span className="text-xs text-muted-foreground">
-                                  {botPerf.win_rate}% WR • {botPerf.total_trades} trades
-                                </span>
-                              )}
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <div className="flex items-center px-1.5 py-1.5 rounded-full border border-border bg-muted/30">
                         <span
                           className={cn(
                             "h-2.5 w-2.5 rounded-full",
-                            strategy.status === "live" ? "bg-green-500 animate-pulse" : "bg-red-500"
+                            liveStrategyIds.has(strategy.id)
+                              ? "bg-green-500 animate-pulse"
+                              : "bg-red-500"
                           )}
                           aria-hidden="true"
                         />

@@ -213,16 +213,33 @@ export default function LiveTrading() {
     const { data, error } = await apiGet<LiveSession[] | { results: LiveSession[] }>(API_ENDPOINTS.trading.sessions);
     if (!error && data) {
       const list: LiveSession[] = Array.isArray(data) ? data : (data as { results: LiveSession[] }).results ?? [];
-      const filtered = stratId ? list.filter((s) => s.strategy === stratId) : list;
-      setSessions(filtered);
+      // Filter by strategy when coming from a strategy card; always hide non-RUNNING sessions from UI
+      const byStrategy = stratId ? list.filter((s) => s.strategy === stratId) : list;
+      const running = byStrategy.filter((s) => s.status === "RUNNING");
+      setSessions(running);
     }
     setLoadingSessions(false);
   }, [stratId]);
 
+  // Fetch positions for a single session
   const fetchPositions = useCallback(async (sessionId: number) => {
     setLoadingPositions(true);
     const { data } = await apiGet<{ positions: Position[]; warning?: string }>(API_ENDPOINTS.trading.sessionPositions(sessionId));
     setPositions(data?.positions ?? []);
+    setLoadingPositions(false);
+  }, []);
+
+  // When on the main live-trading page (no stratId), fetch positions from ALL running sessions
+  const fetchAllPositions = useCallback(async (runningSessions: LiveSession[]) => {
+    if (runningSessions.length === 0) { setPositions([]); return; }
+    setLoadingPositions(true);
+    const results = await Promise.all(
+      runningSessions.map((s) =>
+        apiGet<{ positions: Position[]; warning?: string }>(API_ENDPOINTS.trading.sessionPositions(s.id))
+      )
+    );
+    const merged: Position[] = results.flatMap((r) => r.data?.positions ?? []);
+    setPositions(merged);
     setLoadingPositions(false);
   }, []);
 
@@ -244,13 +261,22 @@ export default function LiveTrading() {
     fetchSessions();
   }, [fetchCredentials, fetchSessions]);
 
-  // Poll positions every 10 seconds while a session is running
+  // Poll positions every 10 seconds while sessions are running
   useEffect(() => {
-    if (!activeSessionId) return;
-    fetchPositions(activeSessionId);
-    const id = setInterval(() => fetchPositions(activeSessionId), 10000);
-    return () => clearInterval(id);
-  }, [activeSessionId, fetchPositions]);
+    if (sessions.length === 0) { setPositions([]); return; }
+    if (stratId) {
+      // Strategy-scoped view: only poll the active session for this strategy
+      if (!activeSessionId) return;
+      fetchPositions(activeSessionId);
+      const id = setInterval(() => fetchPositions(activeSessionId), 10000);
+      return () => clearInterval(id);
+    } else {
+      // Main live-trading page: poll ALL running sessions
+      fetchAllPositions(sessions);
+      const id = setInterval(() => fetchAllPositions(sessions), 10000);
+      return () => clearInterval(id);
+    }
+  }, [activeSessionId, sessions, stratId, fetchPositions, fetchAllPositions]);
 
   // Poll subprocess activity log every 5 seconds while a session is running
   useEffect(() => {
@@ -387,9 +413,12 @@ export default function LiveTrading() {
   };
 
   const handleRefreshPositions = async () => {
-    if (!activeSessionId) return;
     setRefreshingPositions(true);
-    await fetchPositions(activeSessionId);
+    if (stratId && activeSessionId) {
+      await fetchPositions(activeSessionId);
+    } else {
+      await fetchAllPositions(sessions);
+    }
     setRefreshingPositions(false);
   };
 
@@ -1157,83 +1186,6 @@ export default function LiveTrading() {
               </CardContent>
             </Card>
 
-            {/* Session history */}
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Session History</CardTitle>
-                <CardDescription>Previous sessions for this strategy</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingSessions ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : sessions.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    No sessions yet
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2.5 gap-3"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span
-                            className={cn(
-                              "w-2 h-2 rounded-full flex-shrink-0",
-                              session.status === "RUNNING" && "bg-green-500 animate-pulse",
-                              session.status === "STOPPED" && "bg-gray-400",
-                              session.status === "ERROR" && "bg-red-500",
-                              session.status === "PENDING" && "bg-yellow-400"
-                            )}
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {session.symbols.join(", ")}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {session.timeframe} ·{" "}
-                              {session.dry_run ? "Dry Run" : "Live"} ·{" "}
-                              {new Date(session.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              session.status === "RUNNING" && "border-green-500/50 text-green-500",
-                              session.status === "STOPPED" && "border-gray-500/50 text-gray-500",
-                              session.status === "ERROR" && "border-red-500/50 text-red-500"
-                            )}
-                          >
-                            {session.status}
-                          </Badge>
-                          {session.status === "RUNNING" && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => handleStopSession(session.id)}
-                              disabled={stoppingSession === session.id}
-                            >
-                              {stoppingSession === session.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                "Stop"
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
