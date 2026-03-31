@@ -229,13 +229,17 @@ export default function LiveTrading() {
     setLoadingPositions(false);
   }, []);
 
-  // Fetch ALL open positions directly from MT5 — no session required
+  // Fetch ALL open positions from MT5 — no session required
+  // When stratId is provided, filters server-side to only that strategy's positions
   const fetchAllPositions = useCallback(async () => {
     setLoadingPositions(true);
-    const { data } = await apiGet<{ positions: Position[]; warning?: string }>(API_ENDPOINTS.trading.allPositions);
+    const url = stratId
+      ? API_ENDPOINTS.trading.allPositionsByStrategy(stratId)
+      : API_ENDPOINTS.trading.allPositions;
+    const { data } = await apiGet<{ positions: Position[]; warning?: string }>(url);
     setPositions(data?.positions ?? []);
     setLoadingPositions(false);
-  }, []);
+  }, [stratId]);
 
   const fetchLogs = useCallback(async (sessionId: number) => {
     const { data } = await apiGet<{ lines: string[]; last_modified_at: string | null; is_process_alive: boolean }>(
@@ -256,20 +260,13 @@ export default function LiveTrading() {
   }, [fetchCredentials, fetchSessions]);
 
   // Poll positions every 10 seconds
-  // Main page (/live-trading): always poll all MT5 positions directly — no session needed
-  // Strategy-scoped (?stratId): poll the specific session's positions
+  // Both main page and strategy-scoped view use fetchAllPositions —
+  // the URL is determined inside fetchAllPositions based on stratId
   useEffect(() => {
-    if (stratId) {
-      if (!activeSessionId) return;
-      fetchPositions(activeSessionId);
-      const id = setInterval(() => fetchPositions(activeSessionId), 10000);
-      return () => clearInterval(id);
-    } else {
-      fetchAllPositions();
-      const id = setInterval(() => fetchAllPositions(), 10000);
-      return () => clearInterval(id);
-    }
-  }, [activeSessionId, stratId, fetchPositions, fetchAllPositions]);
+    fetchAllPositions();
+    const id = setInterval(() => fetchAllPositions(), 10000);
+    return () => clearInterval(id);
+  }, [fetchAllPositions]);
 
   // Poll subprocess activity log every 5 seconds while a session is running
   useEffect(() => {
@@ -407,11 +404,7 @@ export default function LiveTrading() {
 
   const handleRefreshPositions = async () => {
     setRefreshingPositions(true);
-    if (stratId && activeSessionId) {
-      await fetchPositions(activeSessionId);
-    } else {
-      await fetchAllPositions();
-    }
+    await fetchAllPositions();
     setRefreshingPositions(false);
   };
 
