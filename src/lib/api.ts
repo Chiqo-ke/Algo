@@ -4,8 +4,18 @@ import { logger } from './logger';
 // Use environment variable, fallback to localhost for development
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
+// Public routes that don't require authentication - no toast or redirect on these
+const PUBLIC_PATHS = ['/', '/login', '/register', '/legal', '/docs'];
+
 // Handle session expiration - redirect to login and clear tokens
 function handleSessionExpired() {
+  // On public pages, silently clear tokens without showing a notification or redirecting
+  if (PUBLIC_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'))) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    return;
+  }
+
   logger.auth.warn('Session expired - redirecting to login');
   
   // Dispatch custom event for UI components to show notifications 

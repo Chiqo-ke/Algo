@@ -18,6 +18,10 @@ interface BacktestParams {
   symbol: string;
   interval: string;
   amount: string;
+  exit_mode: 'bot' | 'percentage' | 'fixed_pips';
+  risk_pct?: number;
+  sl_pips?: number;
+  tp_pips?: number;
 }
 
 interface BacktestResults {
@@ -72,6 +76,10 @@ export default function Backtesting() {
     symbol: backtestConfig?.symbol || "",
     interval: "1d",
     amount: "1000",
+    exit_mode: backtestConfig?.exit_mode || 'bot',
+    risk_pct: backtestConfig?.risk_pct,
+    sl_pips: backtestConfig?.sl_pips,
+    tp_pips: backtestConfig?.tp_pips,
   });
 
   const [isRunning, setIsRunning] = useState(false);
@@ -471,10 +479,14 @@ export default function Backtesting() {
       });
 
       // Execute backtest with user's selected parameters
-      const executePayload = {
+      const executePayload: Record<string, unknown> = {
         test_symbol: backtestParams.symbol,
         interval: backtestParams.interval,
         initial_capital: initialCapital,
+        exit_mode: backtestParams.exit_mode || 'bot',
+        ...(backtestParams.risk_pct !== undefined && { risk_pct: backtestParams.risk_pct }),
+        ...(backtestParams.sl_pips !== undefined && { sl_pips: backtestParams.sl_pips }),
+        ...(backtestParams.tp_pips !== undefined && { tp_pips: backtestParams.tp_pips }),
       };
 
       logger.backtest.info("Executing backtest with params", executePayload);
@@ -713,6 +725,80 @@ export default function Backtesting() {
                 <p className="text-xs text-muted-foreground">Starting capital for the simulation (default: $1,000)</p>
               </div>
             </div>
+
+            {/* Exit Mode */}
+            <div className="space-y-2">
+              <Label>Exit Mode</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['bot', 'percentage', 'fixed_pips'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setBacktestParams({ ...backtestParams, exit_mode: mode })}
+                    className={`p-2 text-xs rounded-md border transition-colors ${
+                      backtestParams.exit_mode === mode
+                        ? 'border-primary bg-primary/10 text-primary font-semibold'
+                        : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    {mode === 'bot' ? 'Bot Default' : mode === 'percentage' ? 'Risk %' : 'Fixed Pips'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {backtestParams.exit_mode === 'bot' && "Use the strategy's built-in SL/TP logic."}
+                {backtestParams.exit_mode === 'percentage' && "Size each trade as a percentage of equity."}
+                {backtestParams.exit_mode === 'fixed_pips' && "Apply fixed pip distances for SL and TP."}
+              </p>
+            </div>
+
+            {/* Risk % input (percentage mode) */}
+            {backtestParams.exit_mode === 'percentage' && (
+              <div className="space-y-2">
+                <Label htmlFor="riskPct">Risk Per Trade (%)</Label>
+                <Input
+                  id="riskPct"
+                  type="number"
+                  min="0.1"
+                  max="100"
+                  step="0.1"
+                  placeholder="e.g. 2"
+                  value={backtestParams.risk_pct ?? ''}
+                  onChange={(e) => setBacktestParams({ ...backtestParams, risk_pct: parseFloat(e.target.value) || undefined })}
+                />
+                <p className="text-xs text-muted-foreground">Fraction of equity risked per trade (e.g. 2 = 2%)</p>
+              </div>
+            )}
+
+            {/* SL / TP pips inputs (fixed_pips mode) */}
+            {backtestParams.exit_mode === 'fixed_pips' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="slPipsBacktest">Stop Loss (pips)</Label>
+                  <Input
+                    id="slPipsBacktest"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 20"
+                    value={backtestParams.sl_pips ?? ''}
+                    onChange={(e) => setBacktestParams({ ...backtestParams, sl_pips: parseFloat(e.target.value) || undefined })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tpPipsBacktest">Take Profit (pips)</Label>
+                  <Input
+                    id="tpPipsBacktest"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 40"
+                    value={backtestParams.tp_pips ?? ''}
+                    onChange={(e) => setBacktestParams({ ...backtestParams, tp_pips: parseFloat(e.target.value) || undefined })}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Run Button */}
             <div className="flex justify-end pt-4">

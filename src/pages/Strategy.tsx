@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,78 +88,90 @@ export default function Strategy() {
   }, [location, toast, navigate]);
 
   // Fetch strategies from API
-  useEffect(() => {
-    const fetchStrategies = async () => {
-      setLoading(true);
-      logger.strategy.info("Fetching strategies from API");
-      const startTime = performance.now();
-      
-      const { data, error } = await strategyService.getAll();
-      
-      if (error) {
-        const duration = Math.round(performance.now() - startTime);
-        logger.strategy.error("Failed to fetch strategies", new Error(error), { duration });
-        toast({
-          title: "Error loading strategies",
-          description: error,
-          variant: "destructive",
-        });
-        // Don't load example/mock strategies here — show empty state instead
-        setStrategies([]);
-      } else if (data) {
-        // Handle paginated response - Django REST framework returns {count, next, previous, results}
-        const strategiesList = (data as any).results || data;
-        
-        if (!Array.isArray(strategiesList)) {
-          logger.strategy.error("Invalid strategies response format", undefined, { 
-            receivedType: typeof strategiesList,
-            data: strategiesList 
-          });
-          setStrategies([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Transform API data to match UI expectations
-        const transformedStrategies: Strategy[] = strategiesList.map((strategy: any) => {
-          // Map Django status to UI status
-          let uiStatus: "live" | "testing" | "paused" = "paused";
-          if (strategy.status === "active") {
-            uiStatus = "live";
-          } else if (strategy.status === "validating" || strategy.status === "valid") {
-            uiStatus = "testing";
-          }
-          
-          // Extract category from tags if available
-          const category = Array.isArray(strategy.tags) && strategy.tags.length > 0 
-            ? strategy.tags[0] 
-            : undefined;
-          
-          return {
-            id: strategy.id,
-            name: strategy.name,
-            status: uiStatus,
-            performance: 0, // Will be populated from backtest results
-            profitLoss: "$0",
-            winRate: "0%",
-            trades: 0,
-            category: category,
-            description: strategy.description || "",
-          };
-        });
-        
-        const duration = Math.round(performance.now() - startTime);
-        logger.strategy.info("Successfully loaded strategies", { 
-          count: transformedStrategies.length,
-          duration
-        });
-        setStrategies(transformedStrategies);
-      }
-      setLoading(false);
-    };
+  const fetchStrategies = useCallback(async () => {
+    setLoading(true);
+    logger.strategy.info("Fetching strategies from API");
+    const startTime = performance.now();
 
-    fetchStrategies();
+    const { data, error } = await strategyService.getAll();
+
+    if (error) {
+      const duration = Math.round(performance.now() - startTime);
+      logger.strategy.error("Failed to fetch strategies", new Error(error), { duration });
+      toast({
+        title: "Error loading strategies",
+        description: error,
+        variant: "destructive",
+      });
+      setStrategies([]);
+    } else if (data) {
+      // Handle paginated response - Django REST framework returns {count, next, previous, results}
+      const strategiesList = (data as any).results || data;
+
+      if (!Array.isArray(strategiesList)) {
+        logger.strategy.error("Invalid strategies response format", undefined, {
+          receivedType: typeof strategiesList,
+          data: strategiesList,
+        });
+        setStrategies([]);
+        setLoading(false);
+        return;
+      }
+
+      // Transform API data to match UI expectations
+      const transformedStrategies: Strategy[] = strategiesList.map((strategy: any) => {
+        // Map Django status to UI status
+        let uiStatus: "live" | "testing" | "paused" = "paused";
+        if (strategy.status === "active") {
+          uiStatus = "live";
+        } else if (strategy.status === "validating" || strategy.status === "valid") {
+          uiStatus = "testing";
+        }
+
+        // Extract category from tags if available
+        const category =
+          Array.isArray(strategy.tags) && strategy.tags.length > 0
+            ? strategy.tags[0]
+            : undefined;
+
+        return {
+          id: strategy.id,
+          name: strategy.name,
+          status: uiStatus,
+          performance: 0, // Will be populated from backtest results
+          profitLoss: "$0",
+          winRate: "0%",
+          trades: 0,
+          category,
+          description: strategy.description || "",
+        };
+      });
+
+      const duration = Math.round(performance.now() - startTime);
+      logger.strategy.info("Successfully loaded strategies", {
+        count: transformedStrategies.length,
+        duration,
+      });
+      setStrategies(transformedStrategies);
+    }
+    setLoading(false);
   }, [toast]);
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchStrategies();
+  }, [fetchStrategies]);
+
+  // Re-fetch when user returns to this page (e.g. after starting/stopping a live trade)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchStrategies();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchStrategies]);
 
   // Fetch bot performance data for all strategies
   useEffect(() => {
