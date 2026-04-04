@@ -109,6 +109,7 @@ interface LiveSession {
   risk_pct: string;
   sl_pips: number | null;
   tp_pips: number | null;
+  max_lots: number | null;
   pid: number | null;
   created_at: string;
   started_at: string | null;
@@ -167,6 +168,7 @@ export default function LiveTrading() {
   const [slTpMode, setSlTpMode] = useState<"bot" | "percentage" | "fixed_pips">("percentage");
   const [slPips, setSlPips] = useState("");
   const [tpPips, setTpPips] = useState("");
+  const [maxLots, setMaxLots] = useState("1.0");
   const [dryRun, setDryRun] = useState(false);
 
   // Inline credential entry (used when no saved credentials exist or user chooses manual)
@@ -211,18 +213,33 @@ export default function LiveTrading() {
     const { data, error } = await apiGet<LiveSession[] | { results: LiveSession[] }>(API_ENDPOINTS.trading.sessions);
     if (!error && data) {
       const list: LiveSession[] = Array.isArray(data) ? data : (data as { results: LiveSession[] }).results ?? [];
-      const filtered = stratId ? list.filter((s) => s.strategy === stratId) : list;
-      setSessions(filtered);
+      // Filter by strategy when coming from a strategy card; always hide non-RUNNING sessions from UI
+      const byStrategy = stratId ? list.filter((s) => s.strategy === stratId) : list;
+      const running = byStrategy.filter((s) => s.status === "RUNNING");
+      setSessions(running);
     }
     setLoadingSessions(false);
   }, [stratId]);
 
+  // Fetch positions for a single session (strategy-scoped view)
   const fetchPositions = useCallback(async (sessionId: number) => {
     setLoadingPositions(true);
     const { data } = await apiGet<{ positions: Position[]; warning?: string }>(API_ENDPOINTS.trading.sessionPositions(sessionId));
     setPositions(data?.positions ?? []);
     setLoadingPositions(false);
   }, []);
+
+  // Fetch ALL open positions from MT5 — no session required
+  // When stratId is provided, filters server-side to only that strategy's positions
+  const fetchAllPositions = useCallback(async () => {
+    setLoadingPositions(true);
+    const url = stratId
+      ? API_ENDPOINTS.trading.allPositionsByStrategy(stratId)
+      : API_ENDPOINTS.trading.allPositions;
+    const { data } = await apiGet<{ positions: Position[]; warning?: string }>(url);
+    setPositions(data?.positions ?? []);
+    setLoadingPositions(false);
+  }, [stratId]);
 
   const fetchLogs = useCallback(async (sessionId: number) => {
     const { data } = await apiGet<{ lines: string[]; last_modified_at: string | null; is_process_alive: boolean }>(
@@ -242,13 +259,14 @@ export default function LiveTrading() {
     fetchSessions();
   }, [fetchCredentials, fetchSessions]);
 
-  // Poll positions every 10 seconds while a session is running
+  // Poll positions every 10 seconds
+  // Both main page and strategy-scoped view use fetchAllPositions —
+  // the URL is determined inside fetchAllPositions based on stratId
   useEffect(() => {
-    if (!activeSessionId) return;
-    fetchPositions(activeSessionId);
-    const id = setInterval(() => fetchPositions(activeSessionId), 10000);
+    fetchAllPositions();
+    const id = setInterval(() => fetchAllPositions(), 10000);
     return () => clearInterval(id);
-  }, [activeSessionId, fetchPositions]);
+  }, [fetchAllPositions]);
 
   // Poll subprocess activity log every 5 seconds while a session is running
   useEffect(() => {
@@ -318,6 +336,7 @@ export default function LiveTrading() {
       dry_run: dryRun,
       risk_pct: parseFloat(riskPct),
       exit_mode: slTpMode,
+      max_lots: parseFloat(maxLots) || 1.0,
     };
 
     if (slTpMode === "fixed_pips") {
@@ -384,9 +403,8 @@ export default function LiveTrading() {
   };
 
   const handleRefreshPositions = async () => {
-    if (!activeSessionId) return;
     setRefreshingPositions(true);
-    await fetchPositions(activeSessionId);
+    await fetchAllPositions();
     setRefreshingPositions(false);
   };
 
@@ -831,6 +849,24 @@ export default function LiveTrading() {
                   </label>
                 </div>
 
+                {/* Max Position Size */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Max Position Size (lots)</Label>
+                  <Input
+                    type="number"
+                    value={maxLots}
+                    onChange={(e) => setMaxLots(e.target.value)}
+                    min="0.01"
+                    max="100"
+                    step="0.01"
+                    disabled={hasRunningSession}
+                    className="bg-background h-8 text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Hard cap on lots per trade, regardless of risk calculation. Default: 1.0 lot.
+                  </p>
+                </div>
+
               </CardContent>
               )}
               {/* Go Live / Stop — always visible */}
@@ -941,6 +977,12 @@ export default function LiveTrading() {
                           {" / "}
                           {activeSession.tp_pips != null ? `${activeSession.tp_pips}p` : "—"}
                         </p>
+                      </div>
+                    )}
+                    {activeSession.max_lots != null && (
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-0.5">Max Lots</p>
+                        <p className="font-semibold">{activeSession.max_lots}</p>
                       </div>
                     )}
                   </div>
@@ -1130,83 +1172,6 @@ export default function LiveTrading() {
               </CardContent>
             </Card>
 
-            {/* Session history */}
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Session History</CardTitle>
-                <CardDescription>Previous sessions for this strategy</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingSessions ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : sessions.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    No sessions yet
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2.5 gap-3"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span
-                            className={cn(
-                              "w-2 h-2 rounded-full flex-shrink-0",
-                              session.status === "RUNNING" && "bg-green-500 animate-pulse",
-                              session.status === "STOPPED" && "bg-gray-400",
-                              session.status === "ERROR" && "bg-red-500",
-                              session.status === "PENDING" && "bg-yellow-400"
-                            )}
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {session.symbols.join(", ")}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {session.timeframe} ·{" "}
-                              {session.dry_run ? "Dry Run" : "Live"} ·{" "}
-                              {new Date(session.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              session.status === "RUNNING" && "border-green-500/50 text-green-500",
-                              session.status === "STOPPED" && "border-gray-500/50 text-gray-500",
-                              session.status === "ERROR" && "border-red-500/50 text-red-500"
-                            )}
-                          >
-                            {session.status}
-                          </Badge>
-                          {session.status === "RUNNING" && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => handleStopSession(session.id)}
-                              disabled={stoppingSession === session.id}
-                            >
-                              {stoppingSession === session.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                "Stop"
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -1243,6 +1208,9 @@ export default function LiveTrading() {
                   <>Fixed pips — {slPips ? `SL ${slPips}p` : "no SL"} / {tpPips ? `TP ${tpPips}p` : "no TP"}</>
                 )}
               </strong>
+            </p>
+            <p>
+              Max lots: <strong>{maxLots || "1.0"} lot{parseFloat(maxLots || "1") !== 1 ? "s" : ""}</strong>
             </p>
             <p>
               Timeframe: <strong>{timeframe}</strong>
@@ -1303,3 +1271,4 @@ export default function LiveTrading() {
     </DashboardLayout>
   );
 }
+
