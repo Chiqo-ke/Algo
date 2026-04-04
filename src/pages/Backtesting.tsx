@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Play, Edit, Loader2, CheckCircle2, XCircle, ChevronsUpDown, Check } from "lucide-react";
+import { ArrowLeft, Play, Edit, Loader2, CheckCircle2, XCircle, ChevronsUpDown, Check, TrendingUp, TrendingDown, Activity, BarChart2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,11 @@ import { symbolService, strategyService, backtestService, type Symbol, type Stra
 import { API_ENDPOINTS, apiPost } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import {
+  AreaChart, Area, ComposedChart, Line, BarChart, Bar,
+  PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine,
+} from "recharts";
 
 interface BacktestParams {
   symbol: string;
@@ -22,26 +27,6 @@ interface BacktestParams {
   risk_pct?: number;
   sl_pips?: number;
   tp_pips?: number;
-}
-
-interface BacktestResults {
-  dailyStats: {
-    day: string;
-    profit: number;
-    trades: number;
-  }[];
-  symbolStats: {
-    symbol: string;
-    trades: number;
-    profit: number;
-    percentage: number;
-  }[];
-  summary: {
-    totalTrades: number;
-    winRate: number;
-    totalProfit: number;
-    averageTrade: number;
-  };
 }
 
 export default function Backtesting() {
@@ -84,7 +69,7 @@ export default function Backtesting() {
 
   const [isRunning, setIsRunning] = useState(false);
   const [hasResults, setHasResults] = useState(false);
-  const [results, setResults] = useState<BacktestResults | null>(null);
+  const [rawResults, setRawResults] = useState<LatestBacktestResult | null>(null);
 
   // Validation state
   const [isValidating, setIsValidating] = useState(false);
@@ -100,47 +85,14 @@ export default function Backtesting() {
   // Track if this is the first backtest run after bot generation
   const [hasRunFirstBacktest, setHasRunFirstBacktest] = useState(false);
 
-  // Helper function to display backtest results (moved to component level for accessibility)
+  // Helper function to display backtest results
   const displayResults = (savedResults: LatestBacktestResult) => {
-    // Convert string values to numbers (Django returns DecimalField as strings)
-    const totalTrades = Number(savedResults.total_trades) || 0;
-    const winRate = Number(savedResults.win_rate) || 0;
-    const netProfit = Number(savedResults.net_profit) || 0;
-
-    // Build per-symbol stats from saved symbol_stats if available
-    const perSymbolStats = Array.isArray(savedResults.symbol_stats) && savedResults.symbol_stats.length > 0
-      ? savedResults.symbol_stats.map((s) => ({
-          symbol: s.symbol,
-          trades: Number(s.trades) || 0,
-          profit: Number(s.net_profit) || 0,
-          percentage: netProfit !== 0 ? Math.round((Number(s.net_profit) / netProfit) * 100) : 0,
-        }))
-      : [{
-          symbol: savedResults.symbol || backtestParams.symbol || "N/A",
-          trades: totalTrades,
-          profit: netProfit,
-          percentage: 100,
-        }];
-
-    const transformedResults: BacktestResults = {
-      dailyStats: [],
-      symbolStats: perSymbolStats,
-      summary: {
-        totalTrades: totalTrades,
-        winRate: winRate,
-        totalProfit: netProfit,
-        averageTrade: totalTrades > 0
-          ? netProfit / totalTrades
-          : 0,
-      },
-    };
-
-    setResults(transformedResults);
+    setRawResults(savedResults);
     setHasResults(true);
   };
 
   // Handler for when streaming backtest completes
-  const handleStreamingComplete = (streamResults?: {
+  const handleStreamingComplete = (_streamResults?: {
     totalTrades: number;
     winningTrades: number;
     losingTrades: number;
@@ -151,42 +103,18 @@ export default function Backtesting() {
     finalEquity?: number;
   }) => {
     setIsRunning(false);
-    
-    // Mark that we've completed the first backtest run
     setHasRunFirstBacktest(true);
-    
-    // If we got results from the stream, update the results state
-    if (streamResults && streamResults.totalTrades > 0) {
-      const transformedResults: BacktestResults = {
-        dailyStats: [], // Daily stats would need to be computed from trades
-        symbolStats: [{
-          symbol: backtestParams.symbol,
-          trades: streamResults.totalTrades,
-          profit: streamResults.pnl,
-          percentage: 100,
-        }],
-        summary: {
-          totalTrades: streamResults.totalTrades,
-          winRate: streamResults.winRate,
-          totalProfit: streamResults.pnl,
-          averageTrade: streamResults.totalTrades > 0 
-            ? streamResults.pnl / streamResults.totalTrades 
-            : 0,
-        },
-      };
-      setResults(transformedResults);
-      setHasResults(true);
-      
-      logger.backtest.info("Stream backtest results received", {
-        totalTrades: streamResults.totalTrades,
-        winRate: streamResults.winRate,
-        pnl: streamResults.pnl,
+
+    // Fetch updated results from DB after streaming completes
+    if (strategyId) {
+      backtestService.getLatestResult(strategyId).then(({ data }) => {
+        if (data) displayResults(data);
       });
     }
-    
+
     toast({
       title: "Backtest completed",
-      description: `Real-time backtest finished with ${streamResults?.totalTrades || 0} trades`,
+      description: `Real-time backtest finished`,
     });
   };
 
@@ -468,7 +396,7 @@ export default function Backtesting() {
 
     setIsRunning(true);
     setHasResults(false);
-    setResults(null);
+    setRawResults(null);
 
     try {
       logger.backtest.info("Starting direct backtest execution", { 
@@ -542,6 +470,69 @@ export default function Backtesting() {
       setIsRunning(false);
     }
   };
+
+  // ── Derived chart data ───────────────────────────────────────────────────
+
+  // Equity curve enriched with a synthetic Buy-and-Hold line
+  const equityChartData = useMemo(() => {
+    if (!rawResults?.equity_curve?.length) return [];
+    const curve = rawResults.equity_curve;
+    const initial = Number(rawResults.initial_balance) || 1000;
+    const bhReturn = Number(rawResults.buy_hold_return_pct) || 0;
+    const n = curve.length;
+    return curve.map((pt, i) => ({
+      timestamp: pt.timestamp.split('T')[0],
+      equity: Number(pt.equity),
+      drawdown: pt.drawdown_pct !== undefined ? -(Number(pt.drawdown_pct) * 100) : undefined,
+      buyHold: initial * (1 + (bhReturn / 100) * (i / Math.max(n - 1, 1))),
+    }));
+  }, [rawResults]);
+
+  // Weekly P&L bar chart from trade list
+  const weeklyPnL = useMemo(() => {
+    if (!rawResults?.trades?.length) return [];
+    const buckets: Record<string, number> = {};
+    for (const t of rawResults.trades) {
+      const d = new Date(t.exit_time || t.entry_time);
+      if (isNaN(d.getTime())) continue;
+      const jan1 = new Date(d.getFullYear(), 0, 1);
+      const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+      const key = `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+      buckets[key] = (buckets[key] || 0) + Number(t.pnl);
+    }
+    return Object.entries(buckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week, pnl]) => ({ week, pnl: Number(pnl.toFixed(2)) }));
+  }, [rawResults]);
+
+  const dailyPnL = useMemo(() => {
+    if (!rawResults?.trades?.length) return [];
+    const buckets: Record<string, number> = {};
+    for (const t of rawResults.trades) {
+      const d = new Date(t.exit_time || t.entry_time);
+      if (isNaN(d.getTime())) continue;
+      const key = d.toISOString().split('T')[0];
+      buckets[key] = (buckets[key] || 0) + Number(t.pnl);
+    }
+    return Object.entries(buckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, pnl]) => ({ day, pnl: Number(pnl.toFixed(2)) }));
+  }, [rawResults]);
+
+  // Win/loss pie
+  const winLossPie = useMemo(() => {
+    if (!rawResults) return [];
+    return [
+      { name: 'Wins', value: Number(rawResults.winning_trades) || 0 },
+      { name: 'Losses', value: Number(rawResults.losing_trades) || 0 },
+    ];
+  }, [rawResults]);
+
+  const fmt = (v: number | null | undefined, decimals = 2, suffix = '') =>
+    v != null ? `${Number(v).toFixed(decimals)}${suffix}` : '—';
+  const fmtMoney = (v: number | null | undefined) =>
+    v != null ? `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+  const PIE_COLORS = ['#22c55e', '#ef4444'];
 
   return (
     <DashboardLayout>
@@ -702,12 +693,18 @@ export default function Backtesting() {
                   onChange={(e) => setBacktestParams({ ...backtestParams, interval: e.target.value })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
+                  <option value="1m">1 Minute (1m)</option>
+                  <option value="3m">3 Minutes (3m)</option>
+                  <option value="5m">5 Minutes (5m)</option>
+                  <option value="15m">15 Minutes (15m)</option>
+                  <option value="30m">30 Minutes (30m)</option>
+                  <option value="45m">45 Minutes (45m)</option>
                   <option value="1h">1 Hour (1h)</option>
                   <option value="2h">2 Hours (2h)</option>
                   <option value="4h">4 Hours (4h)</option>
                   <option value="1d">1 Day (1d)</option>
                 </select>
-                <p className="text-xs text-muted-foreground">Data bar interval for the backtest</p>
+                <p className="text-xs text-muted-foreground">Data bar interval for the backtest. Shorter intervals (minutes) fetch ~5000 bars of recent data.</p>
               </div>
 
               {/* Amount */}
@@ -843,58 +840,207 @@ export default function Backtesting() {
           </CardContent>
         </Card>
 
-        {/* Backtest Results Display */}
-        {hasResults && results && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Backtest Results</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Summary Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
-                  <p className="text-xs md:text-sm text-muted-foreground truncate">Total Trades</p>
-                  <p className="text-lg md:text-2xl font-bold break-all">{results.summary.totalTrades}</p>
-                </div>
-                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
-                  <p className="text-xs md:text-sm text-muted-foreground truncate">Win Rate</p>
-                  <p className="text-lg md:text-2xl font-bold break-all">{results.summary.winRate.toFixed(2)}%</p>
-                </div>
-                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
-                  <p className="text-xs md:text-sm text-muted-foreground truncate">Total Profit</p>
-                  <p className={`text-lg md:text-2xl font-bold break-all ${results.summary.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ${results.summary.totalProfit.toFixed(2)}
-                  </p>
-                </div>
-                <div className="p-3 md:p-4 bg-muted/20 rounded-lg min-w-0 overflow-hidden">
-                  <p className="text-xs md:text-sm text-muted-foreground truncate">Avg Trade</p>
-                  <p className={`text-lg md:text-2xl font-bold break-all ${results.summary.averageTrade >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ${results.summary.averageTrade.toFixed(2)}
-                  </p>
-                </div>
-              </div>
+        {/* ── BACKTEST REPORT ──────────────────────────────────────────── */}
+        {hasResults && rawResults && (
+          <div className="space-y-6">
 
-              {/* Symbol Stats */}
-              {results.symbolStats && results.symbolStats.length > 0 && (
-                <div>
-                  <h3 className="text-base md:text-lg font-semibold mb-3">Performance by Symbol</h3>
+            {/* 1 ─ KPI Summary Row */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-primary" />
+                  Performance Summary — {rawResults.symbol} · {rawResults.timeframe}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+                  {[
+                    { label: 'Net P/L', value: fmtMoney(Number(rawResults.net_profit)), color: Number(rawResults.net_profit) >= 0 ? 'text-green-500' : 'text-red-500' },
+                    { label: 'Total Return', value: fmt(Number(rawResults.total_return_pct), 2, '%'), color: Number(rawResults.total_return_pct) >= 0 ? 'text-green-500' : 'text-red-500' },
+                    { label: 'Win Rate', value: fmt(Number(rawResults.win_rate), 2, '%'), color: Number(rawResults.win_rate) >= 50 ? 'text-green-500' : 'text-yellow-500' },
+                    { label: 'Profit Factor', value: rawResults.profit_factor != null ? fmt(Number(rawResults.profit_factor)) : '—', color: rawResults.profit_factor != null && Number(rawResults.profit_factor) >= 1 ? 'text-green-500' : 'text-red-500' },
+                    { label: 'Max Drawdown', value: fmt(Number(rawResults.max_drawdown), 2, '%'), color: 'text-red-500' },
+                    { label: 'Sharpe Ratio', value: rawResults.sharpe_ratio != null ? fmt(Number(rawResults.sharpe_ratio)) : '—', color: rawResults.sharpe_ratio != null && Number(rawResults.sharpe_ratio) >= 1 ? 'text-green-500' : 'text-yellow-500' },
+                    { label: 'Total Trades', value: String(rawResults.total_trades), color: 'text-foreground' },
+                    { label: 'Buy & Hold', value: rawResults.buy_hold_return_pct != null ? fmt(Number(rawResults.buy_hold_return_pct), 2, '%') : '—', color: rawResults.buy_hold_return_pct != null && Number(rawResults.buy_hold_return_pct) >= 0 ? 'text-blue-500' : 'text-red-500' },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="p-3 bg-muted/20 rounded-lg flex flex-col gap-1">
+                      <p className="text-xs text-muted-foreground leading-tight">{kpi.label}</p>
+                      <p className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 2 ─ Equity Curve + Buy & Hold */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Equity Curve
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {equityChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <ComposedChart data={equityChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                      <XAxis dataKey="timestamp" tick={{ fontSize: 11 }} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `$${Number(v).toLocaleString()}`} width={70} />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [`$${Number(value).toFixed(2)}`, name === 'equity' ? 'Strategy' : 'Buy & Hold']}
+                        labelFormatter={(l) => `Date: ${l}`}
+                        contentStyle={{ fontSize: 12 }}
+                      />
+                      <Legend iconType="line" />
+                      <Area type="monotone" dataKey="equity" stroke="#6366f1" fill="#6366f120" strokeWidth={2} name="equity" dot={false} />
+                      <Line type="monotone" dataKey="buyHold" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 5" name="buyHold" dot={false} />
+                      <ReferenceLine y={Number(rawResults.initial_balance)} stroke="#f59e0b" strokeDasharray="3 3" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Equity curve data is populated for canonical JSON strategies. Run a backtest to generate the chart.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 3 ─ Drawdown Chart */}
+            {equityChartData.length > 0 && equityChartData.some(d => d.drawdown !== undefined) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingDown className="w-5 h-5 text-red-500" />
+                    Drawdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <AreaChart data={equityChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                      <XAxis dataKey="timestamp" tick={{ fontSize: 11 }} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `${Number(v).toFixed(1)}%`} width={55} />
+                      <Tooltip formatter={(v: number) => [`${Number(v).toFixed(2)}%`, 'Drawdown']} contentStyle={{ fontSize: 12 }} />
+                      <ReferenceLine y={0} stroke="#6b7280" />
+                      <Area type="monotone" dataKey="drawdown" stroke="#ef4444" fill="#ef444430" strokeWidth={1.5} name="Drawdown %" dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 4 ─ Win/Loss breakdown + Trade Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader><CardTitle className="text-base">Win / Loss Distribution</CardTitle></CardHeader>
+                <CardContent className="flex items-center gap-6">
+                  <PieChart width={160} height={160}>
+                    <Pie data={winLossPie} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                      {winLossPie.map((_e, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => [v, '']} />
+                  </PieChart>
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
+                      <span className="text-sm">Wins: <strong>{rawResults.winning_trades}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
+                      <span className="text-sm">Losses: <strong>{rawResults.losing_trades}</strong></span>
+                    </div>
+                    <div className="text-sm text-muted-foreground pt-2 border-t border-border">
+                      Win rate: <strong>{fmt(Number(rawResults.win_rate), 1, '%')}</strong>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <BarChart2 className="w-4 h-4 text-primary" />
+                    Daily P&amp;L
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {dailyPnL.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={dailyPnL} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                        <XAxis dataKey="day" tick={{ fontSize: 9 }} tickLine={false} interval="preserveStartEnd" />
+                        <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `$${v}`} width={55} />
+                        <Tooltip formatter={(v: number) => [`$${Number(v).toFixed(2)}`, 'P&L']} contentStyle={{ fontSize: 12 }} />
+                        <ReferenceLine y={0} stroke="#6b7280" />
+                        <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+                          {dailyPnL.map((entry, i) => (
+                            <Cell key={i} fill={entry.pnl >= 0 ? '#22c55e' : '#ef4444'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      Daily P&amp;L data available after running a backtest.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 5 ─ Weekly P&L Bar Chart */}
+            {weeklyPnL.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart2 className="w-5 h-5 text-primary" />
+                    Weekly P&amp;L
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={weeklyPnL} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                      <XAxis dataKey="week" tick={{ fontSize: 10 }} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `$${v}`} width={60} />
+                      <Tooltip formatter={(v: number) => [`$${Number(v).toFixed(2)}`, 'P&L']} contentStyle={{ fontSize: 12 }} />
+                      <ReferenceLine y={0} stroke="#6b7280" />
+                      <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+                        {weeklyPnL.map((entry, i) => (
+                          <Cell key={i} fill={entry.pnl >= 0 ? '#22c55e' : '#ef4444'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 6 ─ Per-Symbol Breakdown */}
+            {Array.isArray(rawResults.symbol_stats) && rawResults.symbol_stats.length > 1 && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Performance by Symbol</CardTitle></CardHeader>
+                <CardContent>
                   <div className="space-y-2">
-                    {results.symbolStats.map((stat, index) => (
-                      <div key={index} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/10 rounded-lg">
-                        <span className="font-medium truncate max-w-[40%] sm:max-w-none">{stat.symbol}</span>
-                        <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                          <span className="text-sm text-muted-foreground whitespace-nowrap">{stat.trades} trades</span>
-                          <span className={`font-semibold whitespace-nowrap ${stat.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            ${stat.profit.toFixed(2)}
+                    {rawResults.symbol_stats.map((s, i) => (
+                      <div key={i} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/10 rounded-lg">
+                        <span className="font-mono font-medium">{s.symbol}</span>
+                        <div className="flex items-center gap-4 text-sm flex-wrap">
+                          <span className="text-muted-foreground">{s.trades} trades</span>
+                          <span className="text-muted-foreground">{fmt(Number(s.win_rate), 1, '% WR')}</span>
+                          <span className={Number(s.net_profit) >= 0 ? 'text-green-500 font-semibold' : 'text-red-500 font-semibold'}>
+                            {fmtMoney(Number(s.net_profit))}
                           </span>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
       </div>
 

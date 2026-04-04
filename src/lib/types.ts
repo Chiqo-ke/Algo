@@ -344,6 +344,10 @@ export interface LatestBacktestResult {
   final_equity: number | null;
   max_drawdown: number;
   sharpe_ratio: number | null;
+  profit_factor: number | null;
+  buy_hold_return_pct: number | null;
+  best_trade_pct: number | null;
+  worst_trade_pct: number | null;
   trades: Array<{
     entry_time: string;
     exit_time: string;
@@ -356,6 +360,7 @@ export interface LatestBacktestResult {
   equity_curve: Array<{
     timestamp: string;
     equity: number;
+    drawdown_pct?: number;
   }>;
   symbol_stats: Array<{
     symbol: string;
