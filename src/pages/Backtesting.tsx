@@ -27,6 +27,7 @@ interface BacktestParams {
   risk_pct?: number;
   sl_pips?: number;
   tp_pips?: number;
+  lot_size?: number;
 }
 
 export default function Backtesting() {
@@ -65,6 +66,7 @@ export default function Backtesting() {
     risk_pct: backtestConfig?.risk_pct,
     sl_pips: backtestConfig?.sl_pips,
     tp_pips: backtestConfig?.tp_pips,
+    lot_size: 0.01,
   });
 
   const [isRunning, setIsRunning] = useState(false);
@@ -415,6 +417,7 @@ export default function Backtesting() {
         ...(backtestParams.risk_pct !== undefined && { risk_pct: backtestParams.risk_pct }),
         ...(backtestParams.sl_pips !== undefined && { sl_pips: backtestParams.sl_pips }),
         ...(backtestParams.tp_pips !== undefined && { tp_pips: backtestParams.tp_pips }),
+        ...(backtestParams.lot_size !== undefined && backtestParams.lot_size > 0 && { lot_size: backtestParams.lot_size }),
       };
 
       logger.backtest.info("Executing backtest with params", executePayload);
@@ -486,6 +489,39 @@ export default function Backtesting() {
       drawdown: pt.drawdown_pct !== undefined ? -(Number(pt.drawdown_pct) * 100) : undefined,
       buyHold: initial * (1 + (bhReturn / 100) * (i / Math.max(n - 1, 1))),
     }));
+  }, [rawResults]);
+
+  // Monthly bucketed equity for bar charts (solves mobile line-compression issue)
+  const monthlyEquityData = useMemo(() => {
+    if (!rawResults?.equity_curve?.length) return [];
+    const initial = Number(rawResults.initial_balance) || 1000;
+    
+    // Group last known point per month
+    const buckets: Record<string, { eq: number; dd: number }> = {};
+    for (const pt of rawResults.equity_curve) {
+      const monthStr = pt.timestamp.substring(0, 7); // YYYY-MM
+      buckets[monthStr] = {
+        eq: Number(pt.equity),
+        dd: pt.drawdown_pct !== undefined ? -(Number(pt.drawdown_pct) * 100) : 0,
+      };
+    }
+    
+    let prevEq = initial;
+    return Object.entries(buckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([ym, data]) => {
+        const netPnL = data.eq - prevEq;
+        prevEq = data.eq;
+        const [y, m] = ym.split('-');
+        const dateObj = new Date(parseInt(y), parseInt(m) - 1, 1);
+        return {
+          monthKey: ym,
+          label: dateObj.toLocaleString('default', { month: 'short', year: '2-digit' }),
+          equity: data.eq,
+          pnl: netPnL,
+          drawdown: data.dd,
+        };
+      });
   }, [rawResults]);
 
   // Weekly P&L bar chart from trade list
@@ -721,6 +757,25 @@ export default function Backtesting() {
                 />
                 <p className="text-xs text-muted-foreground">Starting capital for the simulation (default: $1,000)</p>
               </div>
+
+              {/* Lot Size */}
+              <div className="space-y-2">
+                <Label htmlFor="lotSize">Position Size (lots)</Label>
+                <select
+                  id="lotSize"
+                  title="Lot size for position sizing"
+                  aria-label="Lot size for position sizing"
+                  value={backtestParams.lot_size ?? 0.01}
+                  onChange={(e) => setBacktestParams({ ...backtestParams, lot_size: parseFloat(e.target.value) })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value={0.001}>0.001 lot — Nano (100 units)</option>
+                  <option value={0.01}>0.01 lot — Micro (1,000 units)</option>
+                  <option value={0.1}>0.1 lot — Mini (10,000 units)</option>
+                  <option value={1.0}>1.0 lot — Standard (100,000 units)</option>
+                </select>
+                <p className="text-xs text-muted-foreground">Fixed position size in standard lots. Micro (0.01) is a good starting point for $1,000 capital.</p>
+              </div>
             </div>
 
             {/* Exit Mode */}
@@ -878,27 +933,77 @@ export default function Backtesting() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-primary" />
-                  Equity Curve
+                  <span className="hidden sm:inline">Equity Curve</span>
+                  <span className="inline sm:hidden">Monthly Equity Growth</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {equityChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <ComposedChart data={equityChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis dataKey="timestamp" tick={{ fontSize: 11 }} tickLine={false} interval="preserveStartEnd" />
-                      <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `$${Number(v).toLocaleString()}`} width={70} />
-                      <Tooltip
-                        formatter={(value: number, name: string) => [`$${Number(value).toFixed(2)}`, name === 'equity' ? 'Strategy' : 'Buy & Hold']}
-                        labelFormatter={(l) => `Date: ${l}`}
-                        contentStyle={{ fontSize: 12 }}
-                      />
-                      <Legend iconType="line" />
-                      <Area type="monotone" dataKey="equity" stroke="#6366f1" fill="#6366f120" strokeWidth={2} name="equity" dot={false} />
-                      <Line type="monotone" dataKey="buyHold" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 5" name="buyHold" dot={false} />
-                      <ReferenceLine y={Number(rawResults.initial_balance)} stroke="#f59e0b" strokeDasharray="3 3" />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                  <>
+                    {/* DESKTOP/TABLET: Area Chart */}
+                    <div className="hidden sm:block">
+                      <ResponsiveContainer width="100%" height={280}>
+                        <ComposedChart data={equityChartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                          <XAxis 
+                            dataKey="timestamp" 
+                            tick={{ fontSize: 10 }} 
+                            tickLine={false} 
+                            axisLine={false}
+                            minTickGap={30}
+                            tickFormatter={(t) => {
+                              const d = new Date(t);
+                              return isNaN(d.getTime()) ? t : `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear().toString().slice(-2)}`;
+                            }}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10 }} 
+                            tickLine={false} 
+                            axisLine={false}
+                            tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : `$${v}`} 
+                            width={45} 
+                          />
+                          <Tooltip
+                            formatter={(value: number, name: string) => [`$${Number(value).toFixed(2)}`, name === 'equity' ? 'Strategy' : 'Buy & Hold']}
+                            labelFormatter={(l) => `Date: ${l}`}
+                            contentStyle={{ fontSize: 12 }}
+                          />
+                          <Legend iconType="line" />
+                          <Area type="monotone" dataKey="equity" stroke="#6366f1" fill="#6366f120" strokeWidth={2} name="equity" dot={false} />
+                          <Line type="monotone" dataKey="buyHold" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 5" name="buyHold" dot={false} />
+                          <ReferenceLine y={Number(rawResults.initial_balance)} stroke="#f59e0b" strokeDasharray="3 3" />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* MOBILE: Bucketed Bar Chart for clean readability avoiding squished lines */}
+                    <div className="block sm:hidden">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={monthlyEquityData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} minTickGap={20} />
+                          <YAxis 
+                            tick={{ fontSize: 9 }} 
+                            tickLine={false} 
+                            axisLine={false} 
+                            width={40}
+                            tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} 
+                          />
+                          <Tooltip 
+                            formatter={(value: number) => [`$${Number(value).toFixed(2)}`, 'Monthly P&L']} 
+                            labelFormatter={(l) => `Month: ${l}`}
+                            contentStyle={{ fontSize: 12 }} 
+                          />
+                          <ReferenceLine y={0} stroke="#6b7280" />
+                          <Bar dataKey="pnl" radius={[2, 2, 0, 0]}>
+                            {monthlyEquityData.map((d, i) => (
+                              <Cell key={i} fill={d.pnl >= 0 ? '#22c55e' : '#ef4444'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     Equity curve data is populated for canonical JSON strategies. Run a backtest to generate the chart.
@@ -912,21 +1017,63 @@ export default function Backtesting() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingDown className="w-5 h-5 text-red-500" />
-                    Drawdown
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <AreaChart data={equityChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis dataKey="timestamp" tick={{ fontSize: 11 }} tickLine={false} interval="preserveStartEnd" />
-                      <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `${Number(v).toFixed(1)}%`} width={55} />
-                      <Tooltip formatter={(v: number) => [`${Number(v).toFixed(2)}%`, 'Drawdown']} contentStyle={{ fontSize: 12 }} />
-                      <ReferenceLine y={0} stroke="#6b7280" />
-                      <Area type="monotone" dataKey="drawdown" stroke="#ef4444" fill="#ef444430" strokeWidth={1.5} name="Drawdown %" dot={false} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                      <TrendingDown className="w-5 h-5 text-red-500" />
+                      <span className="hidden sm:inline">Drawdown</span>
+                      <span className="inline sm:hidden">Max Drawdown (Monthly)</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="hidden sm:block">
+                      <ResponsiveContainer width="100%" height={180}>
+                        <AreaChart data={equityChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                          <XAxis 
+                            dataKey="timestamp" 
+                            tick={{ fontSize: 10 }} 
+                            tickLine={false} 
+                            axisLine={false}
+                            minTickGap={30}
+                            tickFormatter={(t) => {
+                              const d = new Date(t);
+                              return isNaN(d.getTime()) ? t : `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear().toString().slice(-2)}`;
+                            }}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10 }} 
+                            tickLine={false} 
+                            axisLine={false}
+                            tickFormatter={(v) => `${Number(v).toFixed(0)}%`} 
+                            width={35} 
+                          />
+                          <Tooltip formatter={(v: number) => [`${Number(v).toFixed(2)}%`, 'Drawdown']} contentStyle={{ fontSize: 12 }} />
+                          <ReferenceLine y={0} stroke="#6b7280" />
+                          <Area type="monotone" dataKey="drawdown" stroke="#ef4444" fill="#ef444430" strokeWidth={1.5} name="Drawdown %" dot={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="block sm:hidden">
+                      <ResponsiveContainer width="100%" height={160}>
+                        <BarChart data={monthlyEquityData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} minTickGap={20} />
+                          <YAxis 
+                            tick={{ fontSize: 9 }} 
+                            tickLine={false} 
+                            axisLine={false} 
+                            width={35}
+                            tickFormatter={(v) => `${Math.round(v)}%`} 
+                          />
+                          <Tooltip 
+                            formatter={(value: number) => [`${Number(value).toFixed(2)}%`, 'Max Drawdown']} 
+                            labelFormatter={(l) => `Month: ${l}`}
+                            contentStyle={{ fontSize: 12 }} 
+                          />
+                          <ReferenceLine y={0} stroke="#6b7280" />
+                          <Bar dataKey="drawdown" fill="#ef4444" radius={[0, 0, 2, 2]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                 </CardContent>
               </Card>
             )}
@@ -968,10 +1115,26 @@ export default function Backtesting() {
                 <CardContent>
                   {dailyPnL.length > 0 ? (
                     <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={dailyPnL} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                        <XAxis dataKey="day" tick={{ fontSize: 9 }} tickLine={false} interval="preserveStartEnd" />
-                        <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `$${v}`} width={55} />
+                      <BarChart data={dailyPnL} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                        <XAxis 
+                          dataKey="day" 
+                          tick={{ fontSize: 9 }} 
+                          tickLine={false} 
+                          axisLine={false}
+                          minTickGap={25}
+                          tickFormatter={(t) => {
+                            const d = new Date(t);
+                            return isNaN(d.getTime()) ? t : `${d.getMonth() + 1}/${d.getDate()}`;
+                          }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 9 }} 
+                          tickLine={false} 
+                          axisLine={false}
+                          tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} 
+                          width={40} 
+                        />
                         <Tooltip formatter={(v: number) => [`$${Number(v).toFixed(2)}`, 'P&L']} contentStyle={{ fontSize: 12 }} />
                         <ReferenceLine y={0} stroke="#6b7280" />
                         <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
@@ -1001,10 +1164,23 @@ export default function Backtesting() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={weeklyPnL} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis dataKey="week" tick={{ fontSize: 10 }} tickLine={false} interval="preserveStartEnd" />
-                      <YAxis tick={{ fontSize: 11 }} tickLine={false} tickFormatter={(v) => `$${v}`} width={60} />
+                    <BarChart data={weeklyPnL} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" vertical={false} />
+                      <XAxis 
+                        dataKey="week" 
+                        tick={{ fontSize: 9 }} 
+                        tickLine={false} 
+                        axisLine={false}
+                        minTickGap={20}
+                        tickFormatter={(t) => t.replace('-W', ' W')}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 9 }} 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} 
+                        width={40} 
+                      />
                       <Tooltip formatter={(v: number) => [`$${Number(v).toFixed(2)}`, 'P&L']} contentStyle={{ fontSize: 12 }} />
                       <ReferenceLine y={0} stroke="#6b7280" />
                       <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
@@ -1055,3 +1231,4 @@ export default function Backtesting() {
     </DashboardLayout>
   );
 }
+
