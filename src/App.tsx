@@ -8,6 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
 import SessionExpirationHandler from "@/components/SessionExpirationHandler";
 import { TutorProvider } from "@/context/TutorContext";
 
@@ -30,6 +31,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const ErrorPage = lazy(() => import("./pages/ErrorPage"));
 const DemoPage = lazy(() => import("./pages/Demo").then(module => ({ default: module.DemoPage })));
 const Docs = lazy(() => import("./pages/Docs"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -121,6 +123,14 @@ const App = () => (
                   <ProtectedRoute>
                     <Settings />
                   </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <Admin />
+                  </AdminRoute>
                 }
               />
               <Route

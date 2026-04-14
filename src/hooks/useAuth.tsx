@@ -6,18 +6,52 @@ interface User {
   id: number;
   username: string;
   email: string;
+  first_name?: string;
+  last_name?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
+  is_admin?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function normalizeUserPayload(payload: unknown): User | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const record = payload as Record<string, unknown>;
+  const source = record.user && typeof record.user === "object"
+    ? (record.user as Record<string, unknown>)
+    : record;
+
+  const id = source.id;
+  const username = source.username;
+  const email = source.email;
+
+  if (typeof id !== "number" || typeof username !== "string" || typeof email !== "string") {
+    return null;
+  }
+
+  return {
+    id,
+    username,
+    email,
+    first_name: typeof source.first_name === "string" ? source.first_name : undefined,
+    last_name: typeof source.last_name === "string" ? source.last_name : undefined,
+    is_staff: Boolean(source.is_staff),
+    is_superuser: Boolean(source.is_superuser),
+    is_admin: Boolean(source.is_admin),
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -30,10 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token) {
         try {
           logger.auth.info("Checking authentication with stored token");
-          const { data, error } = await apiGet<User>(API_ENDPOINTS.auth.user);
-          if (data && !error) {
-            setUser(data);
-            logger.auth.info("User authenticated successfully", { username: data.username, userId: data.id });
+          const { data, error } = await apiGet<unknown>(API_ENDPOINTS.auth.user);
+          const normalizedUser = normalizeUserPayload(data);
+          if (normalizedUser && !error) {
+            setUser(normalizedUser);
+            logger.auth.info("User authenticated successfully", {
+              username: normalizedUser.username,
+              userId: normalizedUser.id,
+              isStaff: normalizedUser.is_staff,
+              isSuperuser: normalizedUser.is_superuser,
+            });
           } else {
             // Token is invalid or expired, clear it
             logger.auth.warn("Token invalid or expired, clearing tokens", { error });
@@ -64,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         access: string;
         refresh: string;
       };
-      user: User;
+      user: unknown;
     }>(API_ENDPOINTS.auth.login, { username, password });
 
     if (error) {
@@ -75,10 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data) {
       localStorage.setItem("access_token", data.tokens.access);
       localStorage.setItem("refresh_token", data.tokens.refresh);
-      setUser(data.user);
+      const normalizedUser = normalizeUserPayload(data.user);
+      setUser(normalizedUser);
       logger.auth.info("Login successful", { 
-        username: data.user.username, 
-        userId: data.user.id,
+        username: normalizedUser?.username,
+        userId: normalizedUser?.id,
+        isStaff: normalizedUser?.is_staff,
+        isSuperuser: normalizedUser?.is_superuser,
         duration: Math.round(performance.now() - startTime)
       });
     }
@@ -104,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         access: string;
         refresh: string;
       };
-      user: User;
+      user: unknown;
       message: string;
     }>(API_ENDPOINTS.auth.register, payload);
 
@@ -121,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data && data.tokens) {
       localStorage.setItem("access_token", data.tokens.access);
       localStorage.setItem("refresh_token", data.tokens.refresh);
-      setUser(data.user);
+      setUser(normalizeUserPayload(data.user));
     }
   };
 
@@ -154,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         isLoading,
+        isAdmin: Boolean(user?.is_admin || user?.is_staff || user?.is_superuser),
         login,
         register,
         logout,
