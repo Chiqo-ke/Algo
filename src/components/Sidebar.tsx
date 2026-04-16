@@ -5,7 +5,6 @@ import {
   Bot, 
   GraduationCap, 
   Settings,
-  Shield,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -27,14 +26,13 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
-  const { logout, isAdmin } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: Bot, label: "Strategy", path: "/strategy" },
     { icon: Zap, label: "Live Trading", path: "/live-trading" },
     { icon: GraduationCap, label: "Learning Hub", path: "/learning" },
-    ...(isAdmin ? [{ icon: Shield, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
