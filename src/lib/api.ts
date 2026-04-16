@@ -148,6 +148,7 @@ export const API_ENDPOINTS = {
     allPositions: `${API_BASE_URL}/trading/sessions/all_positions/`,
     allPositionsByStrategy: (strategyId: number) => `${API_BASE_URL}/trading/sessions/all_positions/?strategy_id=${strategyId}`,
     liveAnalytics: `${API_BASE_URL}/trading/live-analytics/`,
+    tradeHistory: (strategyId: number) => `${API_BASE_URL}/trading/sessions/trade_history/?strategy_id=${strategyId}`,
   },
   // Production API
   production: {

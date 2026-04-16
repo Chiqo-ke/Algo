@@ -131,6 +131,28 @@ interface Position {
   magic?: number;
 }
 
+interface TradeRecord {
+  id: number;
+  timestamp: string;
+  symbol: string;
+  side: "buy" | "sell";
+  entry_price: number;
+  exit_price: number;
+  volume: number;
+  profit: number;
+  commission: number;
+  swap: number;
+  duration_seconds: number | null;
+  session_id: string;
+}
+
+interface TradeHistoryResponse {
+  trades: TradeRecord[];
+  total_trades: number;
+  total_pnl: number;
+  win_rate: number;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function LiveTrading() {
@@ -143,16 +165,16 @@ export default function LiveTrading() {
   // Data state
   const [credentials, setCredentials] = useState<BrokerCredential[]>([]);
   const [sessions, setSessions] = useState<LiveSession[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
+  const [tradeHistory, setTradeHistory] = useState<TradeRecord[]>([]);
+  const [tradeHistoryStats, setTradeHistoryStats] = useState<{ total_trades: number; total_pnl: number; win_rate: number } | null>(null);
 
   // Loading flags
   const [loadingCredentials, setLoadingCredentials] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(true);
-  const [loadingPositions, setLoadingPositions] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [startingSession, setStartingSession] = useState(false);
-  const [closingTrade, setClosingTrade] = useState<number | null>(null);
   const [stoppingSession, setStoppingSession] = useState<number | null>(null);
-  const [refreshingPositions, setRefreshingPositions] = useState(false);
+  const [refreshingHistory, setRefreshingHistory] = useState(false);
 
   // Session activity log
   const [sessionLogs, setSessionLogs] = useState<string[]>([]);
@@ -186,7 +208,6 @@ export default function LiveTrading() {
 
   // Dialogs
   const [confirmLiveDialog, setConfirmLiveDialog] = useState(false);
-  const [closeConfirmDialog, setCloseConfirmDialog] = useState<Position | null>(null);
 
   // Derived
   const activeSession = sessions.find((s) => s.status === "RUNNING");
@@ -221,25 +242,27 @@ export default function LiveTrading() {
     setLoadingSessions(false);
   }, [stratId]);
 
-  // Fetch positions for a single session (strategy-scoped view)
-  const fetchPositions = useCallback(async (sessionId: number) => {
-    setLoadingPositions(true);
-    const { data } = await apiGet<{ positions: Position[]; warning?: string }>(API_ENDPOINTS.trading.sessionPositions(sessionId));
-    setPositions(data?.positions ?? []);
-    setLoadingPositions(false);
-  }, []);
-
-  // Fetch ALL open positions from MT5 — no session required
-  // When stratId is provided, filters server-side to only that strategy's positions
-  const fetchAllPositions = useCallback(async () => {
-    setLoadingPositions(true);
-    const url = stratId
-      ? API_ENDPOINTS.trading.allPositionsByStrategy(stratId)
-      : API_ENDPOINTS.trading.allPositions;
-    const { data } = await apiGet<{ positions: Position[]; warning?: string }>(url);
-    setPositions(data?.positions ?? []);
-    setLoadingPositions(false);
+  // Fetch closed trade history for this bot strategy
+  const fetchTradeHistory = useCallback(async () => {
+    if (!stratId) return;
+    setLoadingHistory(true);
+    const { data } = await apiGet<TradeHistoryResponse>(
+      API_ENDPOINTS.trading.tradeHistory(stratId)
+    );
+    setTradeHistory(data?.trades ?? []);
+    setTradeHistoryStats(
+      data
+        ? { total_trades: data.total_trades, total_pnl: data.total_pnl, win_rate: data.win_rate }
+        : null
+    );
+    setLoadingHistory(false);
   }, [stratId]);
+
+  const handleRefreshHistory = async () => {
+    setRefreshingHistory(true);
+    await fetchTradeHistory();
+    setRefreshingHistory(false);
+  };
 
   const fetchLogs = useCallback(async (sessionId: number) => {
     const { data } = await apiGet<{ lines: string[]; last_modified_at: string | null; is_process_alive: boolean }>(
@@ -259,14 +282,10 @@ export default function LiveTrading() {
     fetchSessions();
   }, [fetchCredentials, fetchSessions]);
 
-  // Poll positions every 10 seconds
-  // Both main page and strategy-scoped view use fetchAllPositions —
-  // the URL is determined inside fetchAllPositions based on stratId
+  // Fetch trade history when strategy is selected
   useEffect(() => {
-    fetchAllPositions();
-    const id = setInterval(() => fetchAllPositions(), 10000);
-    return () => clearInterval(id);
-  }, [fetchAllPositions]);
+    if (stratId) fetchTradeHistory();
+  }, [stratId, fetchTradeHistory]);
 
   // Poll subprocess activity log every 5 seconds while a session is running
   useEffect(() => {
@@ -378,34 +397,9 @@ export default function LiveTrading() {
       toast({ title: "Failed to stop session", description: error, variant: "destructive" });
     } else {
       toast({ title: "Session stopped", description: "Trading session has been stopped" });
-      setPositions([]);
       await fetchSessions();
     }
     setStoppingSession(null);
-  };
-
-  const handleClosePosition = async () => {
-    if (!closeConfirmDialog || !activeSessionId) return;
-    const { ticket } = closeConfirmDialog;
-    setClosingTrade(ticket);
-    setCloseConfirmDialog(null);
-
-    const { error } = await apiPost(API_ENDPOINTS.trading.sessionClosePosition(activeSessionId), {
-      ticket,
-    });
-    if (error) {
-      toast({ title: "Failed to close trade", description: error, variant: "destructive" });
-    } else {
-      toast({ title: "Trade closed", description: `Position #${ticket} closed` });
-      await fetchPositions(activeSessionId);
-    }
-    setClosingTrade(null);
-  };
-
-  const handleRefreshPositions = async () => {
-    setRefreshingPositions(true);
-    await fetchAllPositions();
-    setRefreshingPositions(false);
   };
 
   const handleSaveInlineCreds = async () => {
@@ -1054,120 +1048,135 @@ export default function LiveTrading() {
               </Card>
             )}
 
-            {/* Open positions */}
+            {/* Trade History */}
             <Card className="bg-card border-border">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">Open Positions</CardTitle>
-                    <CardDescription>Live MT5 positions — auto-refreshes every 10s</CardDescription>
+                    <CardTitle className="text-base">Trade History</CardTitle>
+                    <CardDescription>Closed trades for this bot across all sessions</CardDescription>
                   </div>
-                  {activeSessionId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRefreshPositions}
-                      disabled={refreshingPositions || loadingPositions}
-                    >
-                      <RefreshCw
-                        className={cn(
-                          "w-3.5 h-3.5 mr-1.5",
-                          (refreshingPositions || loadingPositions) && "animate-spin"
-                        )}
-                      />
-                      Refresh
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefreshHistory}
+                    disabled={refreshingHistory || loadingHistory}
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "w-3.5 h-3.5 mr-1.5",
+                        (refreshingHistory || loadingHistory) && "animate-spin"
+                      )}
+                    />
+                    Refresh
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                {!activeSessionId ? (
+                {!stratId ? (
                   <div className="py-14 text-center text-muted-foreground">
                     <Activity className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">Start a session to see open positions</p>
+                    <p className="text-sm">Select a bot to view its trade history</p>
                   </div>
-                ) : loadingPositions && positions.length === 0 ? (
+                ) : loadingHistory && tradeHistory.length === 0 ? (
                   <div className="flex items-center justify-center py-14">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : positions.length === 0 ? (
+                ) : tradeHistory.length === 0 ? (
                   <div className="py-14 text-center text-muted-foreground">
                     <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">No open positions</p>
+                    <p className="text-sm">No closed trades yet for this bot</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto -mx-2 px-2">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Symbol</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Volume</TableHead>
-                          <TableHead>Open</TableHead>
-                          <TableHead>Current</TableHead>
-                          <TableHead>P&amp;L</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {positions.map((pos) => (
-                          <TableRow key={pos.ticket}>
-                            <TableCell className="font-medium">{pos.symbol}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-xs gap-0.5",
-                                  pos.type === "buy"
-                                    ? "border-green-500/40 text-green-600 bg-green-500/5"
-                                    : "border-red-500/40 text-red-500 bg-red-500/5"
-                                )}
-                              >
-                                {pos.type === "buy" ? (
-                                  <TrendingUp className="w-3 h-3" />
-                                ) : (
-                                  <TrendingDown className="w-3 h-3" />
-                                )}
-                                {pos.type.toUpperCase()}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{pos.volume}</TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {pos.open_price.toFixed(5)}
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {pos.current_price.toFixed(5)}
-                            </TableCell>
-                            <TableCell>
-                              <span
-                                className={cn(
-                                  "font-semibold text-sm",
-                                  pos.profit >= 0 ? "text-green-500" : "text-red-500"
-                                )}
-                              >
-                                {pos.profit >= 0 ? "+" : ""}${pos.profit.toFixed(2)}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => setCloseConfirmDialog(pos)}
-                                disabled={closingTrade === pos.ticket}
-                              >
-                                {closingTrade === pos.ticket ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  "Close"
-                                )}
-                              </Button>
-                            </TableCell>
+                  <>
+                    {tradeHistoryStats && (
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                          <p className="text-xs text-muted-foreground mb-1">Total Trades</p>
+                          <p className="text-lg font-semibold">{tradeHistoryStats.total_trades}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                          <p className="text-xs text-muted-foreground mb-1">Win Rate</p>
+                          <p className={cn("text-lg font-semibold", tradeHistoryStats.win_rate >= 50 ? "text-green-500" : "text-red-500")}>
+                            {tradeHistoryStats.win_rate.toFixed(1)}%
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                          <p className="text-xs text-muted-foreground mb-1">Total P&L</p>
+                          <p className={cn("text-lg font-semibold", tradeHistoryStats.total_pnl >= 0 ? "text-green-500" : "text-red-500")}>
+                            {tradeHistoryStats.total_pnl >= 0 ? "+" : ""}${tradeHistoryStats.total_pnl.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="overflow-x-auto -mx-2 px-2">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Time</TableHead>
+                            <TableHead>Symbol</TableHead>
+                            <TableHead>Dir</TableHead>
+                            <TableHead>Vol</TableHead>
+                            <TableHead>Entry</TableHead>
+                            <TableHead>Exit</TableHead>
+                            <TableHead>P&amp;L</TableHead>
+                            <TableHead>Duration</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {tradeHistory.map((trade) => {
+                            const durationStr =
+                              trade.duration_seconds != null
+                                ? trade.duration_seconds < 3600
+                                  ? `${Math.floor(trade.duration_seconds / 60)}m`
+                                  : trade.duration_seconds < 86400
+                                  ? `${Math.floor(trade.duration_seconds / 3600)}h`
+                                  : `${Math.floor(trade.duration_seconds / 86400)}d`
+                                : "—";
+                            const tradeDate = new Date(trade.timestamp);
+                            const dateStr = tradeDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                            const timeStr = tradeDate.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+                            return (
+                              <TableRow key={trade.id}>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  <div>{dateStr}</div>
+                                  <div>{timeStr}</div>
+                                </TableCell>
+                                <TableCell className="font-medium text-sm">{trade.symbol}</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-xs gap-0.5",
+                                      trade.side === "buy"
+                                        ? "border-green-500/40 text-green-600 bg-green-500/5"
+                                        : "border-red-500/40 text-red-500 bg-red-500/5"
+                                    )}
+                                  >
+                                    {trade.side === "buy" ? (
+                                      <TrendingUp className="w-3 h-3" />
+                                    ) : (
+                                      <TrendingDown className="w-3 h-3" />
+                                    )}
+                                    {trade.side.toUpperCase()}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">{trade.volume}</TableCell>
+                                <TableCell className="font-mono text-xs">{trade.entry_price.toFixed(5)}</TableCell>
+                                <TableCell className="font-mono text-xs">{trade.exit_price.toFixed(5)}</TableCell>
+                                <TableCell>
+                                  <span className={cn("font-semibold text-sm", trade.profit >= 0 ? "text-green-500" : "text-red-500")}>
+                                    {trade.profit >= 0 ? "+" : ""}${trade.profit.toFixed(2)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">{durationStr}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -1228,46 +1237,6 @@ export default function LiveTrading() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Confirm close position dialog ── */}
-      <Dialog
-        open={!!closeConfirmDialog}
-        onOpenChange={(open) => !open && setCloseConfirmDialog(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Close Position #{closeConfirmDialog?.ticket}</DialogTitle>
-            <DialogDescription>
-              Close{" "}
-              <strong>
-                {closeConfirmDialog?.type?.toUpperCase()} {closeConfirmDialog?.volume}{" "}
-                {closeConfirmDialog?.symbol}
-              </strong>{" "}
-              at market?
-              <br />
-              Current P&amp;L:{" "}
-              <span
-                className={
-                  closeConfirmDialog && closeConfirmDialog.profit >= 0
-                    ? "text-green-500 font-semibold"
-                    : "text-red-500 font-semibold"
-                }
-              >
-                {closeConfirmDialog
-                  ? `${closeConfirmDialog.profit >= 0 ? "+" : ""}$${closeConfirmDialog.profit.toFixed(2)}`
-                  : ""}
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCloseConfirmDialog(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleClosePosition}>
-              Close Position
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 }
