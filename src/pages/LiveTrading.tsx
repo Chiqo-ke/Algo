@@ -131,6 +131,28 @@ interface Position {
   magic?: number;
 }
 
+interface TradeRecord {
+  id: number;
+  timestamp: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  entry_price: number;
+  exit_price: number;
+  volume: number;
+  profit: number;
+  commission: number;
+  swap: number;
+  duration_seconds: number | null;
+  session_id: string;
+}
+
+interface TradeHistoryResponse {
+  trades: TradeRecord[];
+  total_trades: number;
+  total_pnl: number;
+  win_rate: number;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function LiveTrading() {
@@ -143,16 +165,16 @@ export default function LiveTrading() {
   // Data state
   const [credentials, setCredentials] = useState<BrokerCredential[]>([]);
   const [sessions, setSessions] = useState<LiveSession[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
+  const [tradeHistory, setTradeHistory] = useState<TradeRecord[]>([]);
+  const [tradeHistoryStats, setTradeHistoryStats] = useState<{ total_trades: number; total_pnl: number; win_rate: number } | null>(null);
 
   // Loading flags
   const [loadingCredentials, setLoadingCredentials] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(true);
-  const [loadingPositions, setLoadingPositions] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [startingSession, setStartingSession] = useState(false);
-  const [closingTrade, setClosingTrade] = useState<number | null>(null);
   const [stoppingSession, setStoppingSession] = useState<number | null>(null);
-  const [refreshingPositions, setRefreshingPositions] = useState(false);
+  const [refreshingHistory, setRefreshingHistory] = useState(false);
 
   // Session activity log
   const [sessionLogs, setSessionLogs] = useState<string[]>([]);
@@ -186,7 +208,6 @@ export default function LiveTrading() {
 
   // Dialogs
   const [confirmLiveDialog, setConfirmLiveDialog] = useState(false);
-  const [closeConfirmDialog, setCloseConfirmDialog] = useState<Position | null>(null);
 
   // Derived
   const activeSession = sessions.find((s) => s.status === "RUNNING");
@@ -221,24 +242,16 @@ export default function LiveTrading() {
     setLoadingSessions(false);
   }, [stratId]);
 
-  // Fetch positions for a single session (strategy-scoped view)
-  const fetchPositions = useCallback(async (sessionId: number) => {
-    setLoadingPositions(true);
-    const { data } = await apiGet<{ positions: Position[]; warning?: string }>(API_ENDPOINTS.trading.sessionPositions(sessionId));
-    setPositions(data?.positions ?? []);
-    setLoadingPositions(false);
-  }, []);
-
-  // Fetch ALL open positions from MT5 — no session required
-  // When stratId is provided, filters server-side to only that strategy's positions
-  const fetchAllPositions = useCallback(async () => {
-    setLoadingPositions(true);
-    const url = stratId
-      ? API_ENDPOINTS.trading.allPositionsByStrategy(stratId)
-      : API_ENDPOINTS.trading.allPositions;
-    const { data } = await apiGet<{ positions: Position[]; warning?: string }>(url);
-    setPositions(data?.positions ?? []);
-    setLoadingPositions(false);
+  // Fetch trade history for this strategy across all sessions
+  const fetchTradeHistory = useCallback(async () => {
+    if (!stratId) return;
+    setLoadingHistory(true);
+    const { data } = await apiGet<TradeHistoryResponse>(
+      API_ENDPOINTS.trading.tradeHistory(stratId)
+    );
+    setTradeHistory(data?.trades ?? []);
+    setTradeHistoryStats(data ? { total_trades: data.total_trades, total_pnl: data.total_pnl, win_rate: data.win_rate } : null);
+    setLoadingHistory(false);
   }, [stratId]);
 
   const fetchLogs = useCallback(async (sessionId: number) => {
@@ -259,14 +272,10 @@ export default function LiveTrading() {
     fetchSessions();
   }, [fetchCredentials, fetchSessions]);
 
-  // Poll positions every 10 seconds
-  // Both main page and strategy-scoped view use fetchAllPositions —
-  // the URL is determined inside fetchAllPositions based on stratId
+  // Fetch trade history when strategy is selected
   useEffect(() => {
-    fetchAllPositions();
-    const id = setInterval(() => fetchAllPositions(), 10000);
-    return () => clearInterval(id);
-  }, [fetchAllPositions]);
+    if (stratId) fetchTradeHistory();
+  }, [stratId, fetchTradeHistory]);
 
   // Poll subprocess activity log every 5 seconds while a session is running
   useEffect(() => {
@@ -378,34 +387,15 @@ export default function LiveTrading() {
       toast({ title: "Failed to stop session", description: error, variant: "destructive" });
     } else {
       toast({ title: "Session stopped", description: "Trading session has been stopped" });
-      setPositions([]);
       await fetchSessions();
     }
     setStoppingSession(null);
   };
 
-  const handleClosePosition = async () => {
-    if (!closeConfirmDialog || !activeSessionId) return;
-    const { ticket } = closeConfirmDialog;
-    setClosingTrade(ticket);
-    setCloseConfirmDialog(null);
-
-    const { error } = await apiPost(API_ENDPOINTS.trading.sessionClosePosition(activeSessionId), {
-      ticket,
-    });
-    if (error) {
-      toast({ title: "Failed to close trade", description: error, variant: "destructive" });
-    } else {
-      toast({ title: "Trade closed", description: `Position #${ticket} closed` });
-      await fetchPositions(activeSessionId);
-    }
-    setClosingTrade(null);
-  };
-
-  const handleRefreshPositions = async () => {
-    setRefreshingPositions(true);
-    await fetchAllPositions();
-    setRefreshingPositions(false);
+  const handleRefreshHistory = async () => {
+    setRefreshingHistory(true);
+    await fetchTradeHistory();
+    setRefreshingHistory(false);
   };
 
   const handleSaveInlineCreds = async () => {

@@ -26,13 +26,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2, Zap, DollarSign } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2, Zap, DollarSign, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { strategyService, botPerformanceService } from "@/lib/services";
 import type { BotPerformance } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { apiGet, API_ENDPOINTS } from "@/lib/api";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Strategy {
   id: number;
@@ -65,6 +66,14 @@ export default function Strategy() {
   const [newStrategyName, setNewStrategyName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
+
+  // Account-filtered closed positions
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string>("");
+  const [closedCountsByStrategy, setClosedCountsByStrategy] = useState<Map<number, number>>(new Map());
+  const [accountLabel, setAccountLabel] = useState<string>("");
+  const [brokerCredentials, setBrokerCredentials] = useState<{ id: number; label: string; mt5_login: number; mt5_server: string }[]>([]);
+  const [loadingCredentials, setLoadingCredentials] = useState(false);
+  const [loadingClosedCounts, setLoadingClosedCounts] = useState(false);
 
   // Show success message if redirected from Dashboard after strategy creation
   useEffect(() => {
@@ -247,6 +256,46 @@ export default function Strategy() {
     fetchLiveSessions();
   }, []);
 
+  // Fetch broker credentials for account selector
+  useEffect(() => {
+    const fetchCredentials = async () => {
+      setLoadingCredentials(true);
+      const { data } = await apiGet<{ results?: any[]; [k: string]: any } | any[]>(
+        API_ENDPOINTS.trading.credentials
+      );
+      const list: any[] = Array.isArray(data) ? data : (data as any)?.results ?? [];
+      setBrokerCredentials(list);
+      if (list.length > 0) {
+        const def = list.find((c: any) => c.is_default) ?? list[0];
+        setSelectedCredentialId(String(def.id));
+      }
+      setLoadingCredentials(false);
+    };
+    fetchCredentials();
+  }, []);
+
+  // Fetch closed positions count per bot for the selected broker account
+  useEffect(() => {
+    if (!selectedCredentialId) return;
+    const fetchClosedCounts = async () => {
+      setLoadingClosedCounts(true);
+      const { data } = await apiGet<{
+        credential_id: number;
+        account_label: string;
+        mt5_login: number;
+        bots: { strategy_id: number; strategy_name: string; closed_count: number }[];
+      }>(API_ENDPOINTS.trading.closedPositionsCount(Number(selectedCredentialId)));
+      if (data) {
+        setAccountLabel(data.account_label ?? "");
+        const map = new Map<number, number>();
+        (data.bots ?? []).forEach((b) => map.set(b.strategy_id, b.closed_count));
+        setClosedCountsByStrategy(map);
+      }
+      setLoadingClosedCounts(false);
+    };
+    fetchClosedCounts();
+  }, [selectedCredentialId]);
+
   const handleAddStrategy = () => {
     logger.ui.info("User clicked Add Strategy button");
     navigate("/dashboard");
@@ -382,6 +431,31 @@ export default function Strategy() {
             Manage and monitor your trading strategies
           </p>
         </div>
+
+        {/* Broker Account Filter */}
+        {brokerCredentials.length > 0 && (
+          <div className="mb-4 sm:mb-6 flex items-center gap-3">
+            <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Broker account:</span>
+            <Select
+              value={selectedCredentialId}
+              onValueChange={setSelectedCredentialId}
+              disabled={loadingCredentials}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="Select account…" />
+              </SelectTrigger>
+              <SelectContent>
+                {brokerCredentials.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.label} ({c.mt5_server}:{c.mt5_login})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {loadingClosedCounts && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          </div>
+        )}
 
         {/* Loading State */}
         {loading ? (
@@ -536,6 +610,20 @@ export default function Strategy() {
                               <span className="font-semibold text-xs sm:text-sm">{trades}</span>
                             </div>
                           </div>
+
+                          {selectedCredentialId && closedCountsByStrategy.has(strategy.id) && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs sm:text-sm text-muted-foreground">
+                                Closed ({accountLabel || "account"})
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
+                                <span className="font-semibold text-xs sm:text-sm text-green-500">
+                                  {closedCountsByStrategy.get(strategy.id)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                           
                           {botPerf && botPerf.max_drawdown !== null && (
                             <div className="flex items-center justify-between">
