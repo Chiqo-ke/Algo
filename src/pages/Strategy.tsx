@@ -26,13 +26,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2, Zap, DollarSign, Filter } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Activity, Loader2, Play, CheckCircle2, XCircle, Clock, MoreVertical, Trash2, Edit2, Zap, DollarSign, Filter, Code2, Save, X } from "lucide-react";
+import Editor from "@monaco-editor/react";
 import { cn } from "@/lib/utils";
 import { strategyService, botPerformanceService } from "@/lib/services";
 import type { BotPerformance } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
-import { apiGet, API_ENDPOINTS } from "@/lib/api";
+import { apiGet, apiPatch, API_ENDPOINTS } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Strategy {
@@ -66,6 +67,12 @@ export default function Strategy() {
   const [newStrategyName, setNewStrategyName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
+
+  // Script editor dialog state
+  const [scriptDialogOpen, setScriptDialogOpen] = useState(false);
+  const [scriptCode, setScriptCode] = useState("");
+  const [isLoadingScript, setIsLoadingScript] = useState(false);
+  const [isSavingScript, setIsSavingScript] = useState(false);
 
   // Account-filtered closed positions
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>("");
@@ -419,6 +426,35 @@ export default function Strategy() {
     setRenameDialogOpen(true);
   };
 
+  // Open script editor dialog
+  const openScriptDialog = async (strategy: Strategy) => {
+    setSelectedStrategy(strategy);
+    setScriptCode("");
+    setIsLoadingScript(true);
+    setScriptDialogOpen(true);
+    const { data, error } = await apiGet<{ strategy_code?: string }>(API_ENDPOINTS.strategies.detail(strategy.id));
+    setIsLoadingScript(false);
+    if (error || !data) {
+      toast({ title: "Failed to load script", description: error ?? "Unknown error", variant: "destructive" });
+      setScriptDialogOpen(false);
+      return;
+    }
+    setScriptCode(data.strategy_code ?? "# No script code found");
+  };
+
+  // Save script
+  const handleSaveScript = async () => {
+    if (!selectedStrategy) return;
+    setIsSavingScript(true);
+    const { error } = await apiPatch(API_ENDPOINTS.strategies.detail(selectedStrategy.id), { strategy_code: scriptCode });
+    setIsSavingScript(false);
+    if (error) {
+      toast({ title: "Failed to save script", description: error, variant: "destructive" });
+    } else {
+      toast({ title: "Script saved", description: `${selectedStrategy.name} script updated successfully` });
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-4 sm:p-6 md:p-8">
@@ -524,6 +560,13 @@ export default function Strategy() {
                           >
                             <Edit2 className="mr-2 h-4 w-4" />
                             <span>Rename</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => openScriptDialog(strategy)}
+                            className="cursor-pointer"
+                          >
+                            <Code2 className="mr-2 h-4 w-4" />
+                            <span>Script</span>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -769,6 +812,79 @@ export default function Strategy() {
               </>
             ) : (
               "Rename"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Script Editor Dialog */}
+    <Dialog open={scriptDialogOpen} onOpenChange={(open) => { if (!isSavingScript) setScriptDialogOpen(open); }}>
+      <DialogContent className="max-w-5xl w-full h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="flex items-center gap-2">
+                <Code2 className="h-5 w-5 text-primary" />
+                {selectedStrategy?.name} — Script
+              </DialogTitle>
+              <DialogDescription>
+                Edit the Python bot script. Changes are saved in-place under the same strategy name.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 min-h-0 relative">
+          {isLoadingScript ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Editor
+              height="100%"
+              language="python"
+              theme="vs-dark"
+              value={scriptCode}
+              onChange={(value) => setScriptCode(value ?? "")}
+              options={{
+                fontSize: 14,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                wordWrap: "on",
+                lineNumbers: "on",
+                renderLineHighlight: "all",
+                automaticLayout: true,
+                tabSize: 4,
+                insertSpaces: true,
+              }}
+            />
+          )}
+        </div>
+
+        <DialogFooter className="px-6 py-4 border-t border-border flex-shrink-0">
+          <Button
+            variant="outline"
+            onClick={() => setScriptDialogOpen(false)}
+            disabled={isSavingScript}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Close
+          </Button>
+          <Button
+            onClick={handleSaveScript}
+            disabled={isSavingScript || isLoadingScript}
+          >
+            {isSavingScript ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Script
+              </>
             )}
           </Button>
         </DialogFooter>
