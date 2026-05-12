@@ -274,8 +274,8 @@ export default function LiveTrading() {
 
   const fetchPositions = useCallback(async (sessionId: number, quiet = false) => {
     if (!quiet) setLoadingPositions(true);
-    const { data } = await apiGet<Position[]>(API_ENDPOINTS.trading.sessionPositions(sessionId));
-    setPositions(data ?? []);
+    const { data } = await apiGet<{ positions: Position[] }>(API_ENDPOINTS.trading.sessionPositions(sessionId));
+    setPositions(data?.positions ?? []);
     if (!quiet) setLoadingPositions(false);
   }, []);
 
