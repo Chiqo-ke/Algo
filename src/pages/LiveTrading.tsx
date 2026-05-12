@@ -206,6 +206,13 @@ export default function LiveTrading() {
   const [securitiesOpen, setSecuritiesOpen] = useState(false);
   const [sessionConfigOpen, setSessionConfigOpen] = useState(false);
 
+  // Open positions state
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [loadingPositions, setLoadingPositions] = useState(false);
+  const [refreshingPositions, setRefreshingPositions] = useState(false);
+  const [closeConfirmDialog, setCloseConfirmDialog] = useState<Position | null>(null);
+  const [closingTrade, setClosingTrade] = useState<number | null>(null);
+
   // Dialogs
   const [confirmLiveDialog, setConfirmLiveDialog] = useState(false);
 
@@ -265,6 +272,29 @@ export default function LiveTrading() {
     }
   }, []);
 
+  const fetchPositions = useCallback(async (sessionId: number, quiet = false) => {
+    if (!quiet) setLoadingPositions(true);
+    const { data } = await apiGet<Position[]>(API_ENDPOINTS.trading.sessionPositions(sessionId));
+    setPositions(data ?? []);
+    if (!quiet) setLoadingPositions(false);
+  }, []);
+
+  const handleRefreshPositions = async () => {
+    if (!activeSessionId) return;
+    setRefreshingPositions(true);
+    await fetchPositions(activeSessionId, true);
+    setRefreshingPositions(false);
+  };
+
+  const handleClosePosition = async () => {
+    if (!closeConfirmDialog || !activeSessionId) return;
+    setClosingTrade(closeConfirmDialog.ticket);
+    setCloseConfirmDialog(null);
+    await apiPost(API_ENDPOINTS.trading.sessionClosePosition(activeSessionId), { ticket: closeConfirmDialog.ticket });
+    setClosingTrade(null);
+    await fetchPositions(activeSessionId, true);
+  };
+
   // ─── Effects ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -289,6 +319,17 @@ export default function LiveTrading() {
     const id = setInterval(() => fetchLogs(activeSessionId), 5000);
     return () => clearInterval(id);
   }, [activeSessionId, fetchLogs]);
+
+  // Poll open positions every 10 seconds while a session is running
+  useEffect(() => {
+    if (!activeSessionId) {
+      setPositions([]);
+      return;
+    }
+    fetchPositions(activeSessionId);
+    const id = setInterval(() => fetchPositions(activeSessionId, true), 10000);
+    return () => clearInterval(id);
+  }, [activeSessionId, fetchPositions]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
